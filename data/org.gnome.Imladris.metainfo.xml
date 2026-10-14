@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.gnome.Imladris</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Imladris</name>
+  <summary>Native GTK4 and Libadwaita Markdown Editor</summary>
+  <description>
+    <p>
+      Imladris is a native Linux Markdown editor built with Vala, GTK4, Libadwaita, GtkSourceView 5, and WebKitGTK.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Dual-engine architecture with GtkSourceView 5 editor and live WebKitGTK 6.0 rendering</li>
+      <li>Asynchronous background Markdown parsing via libcmark</li>
+      <li>Synchronized cursor and rendered preview scroll alignment</li>
+      <li>Floating contextual formatting popover on text selection</li>
+      <li>Multi-tab document management with unsaved changes safety prompts</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">org.gnome.Imladris.desktop</launchable>
+  <url type="homepage">https://github.com/Antux912012/imladris-next-md-editor</url>
+  <url type="bugtracker">https://github.com/Antux912012/imladris-next-md-editor/issues</url>
+  <provides>
+    <binary>imladris</binary>
+  </provides>
+  <developer id="com.github.antux912012">
+    <name>Antonio De Gaetano</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-14"/>
+  </releases>
+</component>

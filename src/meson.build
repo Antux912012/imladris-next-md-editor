@@ -28,8 +28,5 @@ executable(
   sources,
   resources,
   dependencies: dependencies,
-  vala_args: [
-    '--pkg', 'cmark',
-  ],
   install: true
 )

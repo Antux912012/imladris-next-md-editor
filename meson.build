@@ -34,4 +34,41 @@ resources = gnome.compile_resources(
   c_name: 'imladris'
 )
 
+# Desktop File & Metainfo installation for Flatpak
+install_data(
+  'data/org.gnome.Imladris.desktop',
+  install_dir: get_option('datadir') / 'applications'
+)
+
+install_data(
+  'data/org.gnome.Imladris.metainfo.xml',
+  install_dir: get_option('datadir') / 'metainfo'
+)
+
+install_data(
+  'data/icons/scalable/apps/org.gnome.Imladris.svg',
+  install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps'
+)
+
+install_data(
+  'data/org.gnome.Imladris.gschema.xml',
+  install_dir: get_option('datadir') / 'glib-2.0/schemas'
+)
+
+gnome.post_install(
+  glib_compile_schemas: true,
+  update_desktop_database: true,
+)
+
+# Validation Tests
+desktop_file_validate = find_program('desktop-file-validate', required: false)
+if desktop_file_validate.found()
+  test('validate-desktop', desktop_file_validate, args: [meson.current_source_dir() / 'data/org.gnome.Imladris.desktop'])
+endif
+
+appstreamcli = find_program('appstreamcli', required: false)
+if appstreamcli.found()
+  test('validate-metainfo', appstreamcli, args: ['validate', '--no-net', meson.current_source_dir() / 'data/org.gnome.Imladris.metainfo.xml'])
+endif
+
 subdir('src')

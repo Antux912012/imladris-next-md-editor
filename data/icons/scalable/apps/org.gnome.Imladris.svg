@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c71d8"/>
+      <stop offset="100%" stop-color="#26a269"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8ff0a4"/>
+      <stop offset="100%" stop-color="#33d17a"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Base Icon Shape -->
+  <rect x="16" y="14" width="96" height="100" rx="20" ry="20" fill="url(#bg)" filter="url(#shadow)"/>
+
+  <!-- Document Page Inset -->
+  <rect x="24" y="22" width="80" height="84" rx="14" ry="14" fill="#ffffff" fill-opacity="0.95"/>
+
+  <!-- Decorative Editor Lines -->
+  <rect x="36" y="34" width="34" height="6" rx="3" fill="#1c71d8" fill-opacity="0.8"/>
+  <rect x="36" y="46" width="56" height="4" rx="2" fill="#5e5c64" fill-opacity="0.4"/>
+  <rect x="36" y="56" width="48" height="4" rx="2" fill="#5e5c64" fill-opacity="0.4"/>
+  <rect x="36" y="66" width="52" height="4" rx="2" fill="#5e5c64" fill-opacity="0.4"/>
+
+  <!-- Imladris Elven Leaf & Quill Symbol -->
+  <g transform="translate(68, 62)">
+    <path d="M 6,38 C 6,38 34,28 34,4 C 34,4 12,12 6,38 Z" fill="url(#leaf)" filter="url(#shadow)"/>
+    <path d="M 6,38 C 14,24 22,14 34,4" stroke="#1b6e40" stroke-width="2" stroke-linecap="round"/>
+    <path d="M 16,24 C 20,20 25,18 29,17" stroke="#1b6e40" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M 12,30 C 15,28 19,25 22,23" stroke="#1b6e40" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Markdown 'M' Symbol Badge -->
+  <rect x="32" y="78" width="28" height="18" rx="4" fill="#1c71d8"/>
+  <path d="M 36,92 L 36,82 L 40,87 L 44,82 L 44,92 M 49,85 L 53,89 L 57,85 M 53,82 L 53,89" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
