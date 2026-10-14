@@ -50,6 +50,14 @@ install_data(
   install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps'
 )
 
+icon_sizes = ['16x16', '24x24', '32x32', '48x48', '64x64', '128x128', '256x256', '512x512']
+foreach size : icon_sizes
+  install_data(
+    'data/icons/hicolor' / size / 'apps/org.gnome.Imladris.png',
+    install_dir: get_option('datadir') / 'icons/hicolor' / size / 'apps'
+  )
+endforeach
+
 install_data(
   'data/org.gnome.Imladris.gschema.xml',
   install_dir: get_option('datadir') / 'glib-2.0/schemas'
@@ -58,6 +66,7 @@ install_data(
 gnome.post_install(
   glib_compile_schemas: true,
   update_desktop_database: true,
+  gtk_update_icon_cache: true,
 )
 
 # Validation Tests
