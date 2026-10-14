@@ -17,7 +17,25 @@ namespace Imladris {
                     }
                     location_changed (_location);
                     notify_property ("location");
+                    notify_property ("is-jupyter");
                 }
+            }
+        }
+
+        public bool is_jupyter {
+            get {
+                return _location != null && _location.get_basename ().has_suffix (".ipynb");
+            }
+        }
+
+        public string document_type {
+            get {
+                if (_location == null) return "markdown";
+                string base_name = _location.get_basename ().down ();
+                if (base_name.has_suffix (".ipynb")) return "jupyter";
+                if (base_name.has_suffix (".qmd")) return "quarto";
+                if (base_name.has_suffix (".rmd")) return "rmarkdown";
+                return "markdown";
             }
         }
 

@@ -6,5 +6,5 @@ Icon=org.gnome.Imladris
 Terminal=false
 Type=Application
 Categories=GNOME;GTK;Utility;TextEditor;
-MimeType=text/markdown;text/x-markdown;text/plain;
+MimeType=text/markdown;text/x-markdown;text/plain;application/x-ipynb+json;application/json;text/x-r-markdown;
 StartupNotify=true

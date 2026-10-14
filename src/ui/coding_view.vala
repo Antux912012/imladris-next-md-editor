@@ -185,5 +185,118 @@ namespace Imladris {
             source_buffer.end_user_action ();
             source_view.grab_focus ();
         }
+
+        public bool get_current_code_chunk (out string language, out string code) {
+            language = "python";
+            code = "";
+
+            Gtk.TextIter start, end;
+            if (source_buffer.get_selection_bounds (out start, out end)) {
+                string sel = source_buffer.get_text (start, end, false).strip ();
+                if (sel.length > 0) {
+                    code = sel;
+                    if (sel.has_prefix ("```")) {
+                        int first_nl = sel.index_of ("\n");
+                        if (first_nl > 0) {
+                            string header = sel.slice (3, first_nl).strip ();
+                            if (header.has_prefix ("{") && header.has_suffix ("}")) {
+                                language = header.slice (1, header.length - 1).strip ();
+                            } else if (header.length > 0) {
+                                language = header;
+                            }
+                            int last_fence = sel.last_index_of ("```");
+                            if (last_fence > first_nl) {
+                                code = sel.slice (first_nl + 1, last_fence).strip ();
+                            }
+                        }
+                    }
+                    return true;
+                }
+            }
+
+            Gtk.TextIter cursor;
+            source_buffer.get_iter_at_mark (out cursor, source_buffer.get_insert ());
+
+            Gtk.TextIter line_start = cursor;
+            line_start.set_line_offset (0);
+
+            Gtk.TextIter scan = line_start;
+            bool found_start = false;
+            Gtk.TextIter chunk_start_iter = scan;
+            string detected_lang = "python";
+
+            while (true) {
+                Gtk.TextIter line_end = scan;
+                if (!line_end.ends_line ()) {
+                    line_end.forward_to_line_end ();
+                }
+                string line_str = source_buffer.get_text (scan, line_end, false).strip ();
+
+                if (line_str.has_prefix ("```")) {
+                    string tag = line_str.substring (3).strip ();
+                    if (tag.has_prefix ("{") && tag.has_suffix ("}")) {
+                        detected_lang = tag.slice (1, tag.length - 1).strip ();
+                        found_start = true;
+                        chunk_start_iter = scan;
+                        break;
+                    } else if (tag.length > 0) {
+                        detected_lang = tag;
+                        found_start = true;
+                        chunk_start_iter = scan;
+                        break;
+                    }
+                }
+
+                if (scan.get_line () == 0) {
+                    break;
+                }
+                scan.backward_line ();
+            }
+
+            if (!found_start) {
+                Gtk.TextIter cur_line_end = cursor;
+                if (!cur_line_end.ends_line ()) {
+                    cur_line_end.forward_to_line_end ();
+                }
+                string cur_line_text = source_buffer.get_text (line_start, cur_line_end, false).strip ();
+                if (cur_line_text.length > 0) {
+                    code = cur_line_text;
+                    language = "python";
+                    return true;
+                }
+                return false;
+            }
+
+            Gtk.TextIter forward_scan = chunk_start_iter;
+            forward_scan.forward_line ();
+            Gtk.TextIter content_start = forward_scan;
+            Gtk.TextIter content_end = forward_scan;
+
+            while (true) {
+                Gtk.TextIter curr_end = forward_scan;
+                if (!curr_end.ends_line ()) {
+                    curr_end.forward_to_line_end ();
+                }
+                string line_str = source_buffer.get_text (forward_scan, curr_end, false).strip ();
+
+                if (line_str == "```") {
+                    content_end = forward_scan;
+                    break;
+                }
+
+                if (!forward_scan.forward_line ()) {
+                    content_end = forward_scan;
+                    break;
+                }
+            }
+
+            if (cursor.compare (chunk_start_iter) >= 0 && cursor.compare (content_end) <= 0) {
+                language = detected_lang;
+                code = source_buffer.get_text (content_start, content_end, false);
+                return true;
+            }
+
+            return false;
+        }
     }
 }

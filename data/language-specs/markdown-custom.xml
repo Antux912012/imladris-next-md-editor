@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language id="markdown-custom" name="Markdown (Imladris)" version="2.0" _section="Markup">
   <metadata>
-    <property name="mimetypes">text/x-markdown;text/markdown</property>
-    <property name="globs">*.md;*.markdown</property>
+    <property name="mimetypes">text/x-markdown;text/markdown;text/x-r-markdown;application/x-ipynb+json</property>
+    <property name="globs">*.md;*.markdown;*.qmd;*.Rmd;*.rmd;*.ipynb</property>
   </metadata>
 
   <styles>

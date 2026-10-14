@@ -16,6 +16,8 @@ namespace Imladris {
                 { "save", on_save_file },
                 { "save-as", on_save_file_as },
                 { "close-tab", on_close_tab },
+                { "toggle-terminal", on_toggle_terminal },
+                { "run-chunk", on_run_chunk },
                 { "about", on_about },
                 { "quit", on_quit }
             };
@@ -26,6 +28,8 @@ namespace Imladris {
             set_accels_for_action ("app.save", { "<Primary>s" });
             set_accels_for_action ("app.save-as", { "<Primary><Shift>s" });
             set_accels_for_action ("app.close-tab", { "<Primary>w" });
+            set_accels_for_action ("app.toggle-terminal", { "<Primary>grave" });
+            set_accels_for_action ("app.run-chunk", { "<Primary>Return", "<Shift>Return" });
             set_accels_for_action ("app.quit", { "<Primary>q" });
         }
 
@@ -97,6 +101,18 @@ namespace Imladris {
         private void on_close_tab () {
             if (active_app_window != null) {
                 active_app_window.close_current_tab ();
+            }
+        }
+
+        private void on_toggle_terminal () {
+            if (active_app_window != null) {
+                active_app_window.toggle_terminal ();
+            }
+        }
+
+        private void on_run_chunk () {
+            if (active_app_window != null) {
+                active_app_window.run_current_chunk ();
             }
         }
 

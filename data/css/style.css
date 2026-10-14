@@ -62,3 +62,15 @@ tabbar {
     border-bottom: 1px solid @borders;
     background-color: @headerbar_bg_color;
 }
+
+/* Embedded Terminal Panel */
+.imladris-terminal-container {
+    border-top: 1px solid @borders;
+    background-color: @view_bg_color;
+}
+
+.imladris-terminal-header {
+    background-color: alpha(currentColor, 0.04);
+    border-bottom: 1px solid alpha(currentColor, 0.08);
+}
+

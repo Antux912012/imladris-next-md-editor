@@ -10,6 +10,7 @@
         "--socket=wayland",
         "--device=dri",
         "--filesystem=host",
+        "--talk-name=org.freedesktop.Flatpak",
         "--metadata=X-DConf=default-settings"
     ],
     "cleanup": [
@@ -34,6 +35,23 @@
                     "type": "archive",
                     "url": "https://github.com/commonmark/cmark/archive/refs/tags/0.31.1.tar.gz",
                     "sha256": "3da93db5469c30588cfeb283d9d62edfc6ded9eb0edc10a4f5bbfb7d722ea802"
+                }
+            ]
+        },
+        {
+            "name": "vte",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dvapi=true",
+                "-Dgnutls=false",
+                "-Dgtk3=false",
+                "-Dgtk4=true"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://gitlab.gnome.org/GNOME/vte/-/archive/0.78.0/vte-0.78.0.tar.gz",
+                    "sha256": "82e19d11780fed4b66400f000829ce5ca113efbbfb7975815f26ed93e4c05f2d"
                 }
             ]
         },

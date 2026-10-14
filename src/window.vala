@@ -41,11 +41,11 @@ namespace Imladris {
             };
             header_bar.pack_start (open_btn);
 
-            var save_btn = new Gtk.Button.from_icon_name ("document-save-symbolic") {
-                tooltip_text = "Save Document (Ctrl+S)",
-                action_name = "app.save"
+            var run_btn = new Gtk.Button.from_icon_name ("media-playback-start-symbolic") {
+                tooltip_text = "Run Code Chunk (Ctrl+Enter)",
+                action_name = "app.run-chunk"
             };
-            header_bar.pack_end (save_btn);
+            header_bar.pack_start (run_btn);
 
             var primary_menu = build_primary_menu ();
             var menu_btn = new Gtk.MenuButton () {
@@ -54,6 +54,18 @@ namespace Imladris {
                 tooltip_text = "Main Menu"
             };
             header_bar.pack_end (menu_btn);
+
+            var term_btn = new Gtk.Button.from_icon_name ("utilities-terminal-symbolic") {
+                tooltip_text = "Toggle Terminal (Ctrl+`)",
+                action_name = "app.toggle-terminal"
+            };
+            header_bar.pack_end (term_btn);
+
+            var save_btn = new Gtk.Button.from_icon_name ("document-save-symbolic") {
+                tooltip_text = "Save Document (Ctrl+S)",
+                action_name = "app.save"
+            };
+            header_bar.pack_end (save_btn);
 
             tab_view = new Adw.TabView ();
             tab_bar = new Adw.TabBar () {
@@ -291,6 +303,30 @@ namespace Imladris {
             }
         }
 
+        public void toggle_terminal () {
+            var page = tab_view.selected_page;
+            if (page != null && tab_pages.has_key (page)) {
+                var content = tab_pages.get (page);
+                content.terminal_visible = !content.terminal_visible;
+            }
+        }
+
+        public void run_current_chunk () {
+            var page = tab_view.selected_page;
+            if (page != null && tab_pages.has_key (page)) {
+                var content = tab_pages.get (page);
+                string language;
+                string code;
+                if (content.coding_view.get_current_code_chunk (out language, out code)) {
+                    content.terminal_visible = true;
+                    content.terminal_view.execute_code_chunk (language, code);
+                    show_toast ("Running %s chunk in terminal...".printf (language));
+                } else {
+                    show_toast ("No code chunk or text selected at cursor.");
+                }
+            }
+        }
+
         private void setup_shortcuts () {
             var controller = new Gtk.ShortcutController ();
             controller.set_scope (Gtk.ShortcutScope.LOCAL);
@@ -308,6 +344,27 @@ namespace Imladris {
                 return true;
             });
             controller.add_shortcut (new Gtk.Shortcut (trigger_i, action_i));
+
+            var trigger_term = Gtk.ShortcutTrigger.parse_string ("<Primary>grave");
+            var action_term = new Gtk.CallbackAction ((widget, args) => {
+                toggle_terminal ();
+                return true;
+            });
+            controller.add_shortcut (new Gtk.Shortcut (trigger_term, action_term));
+
+            var trigger_run = Gtk.ShortcutTrigger.parse_string ("<Primary>Return");
+            var action_run = new Gtk.CallbackAction ((widget, args) => {
+                run_current_chunk ();
+                return true;
+            });
+            controller.add_shortcut (new Gtk.Shortcut (trigger_run, action_run));
+
+            var trigger_run_shift = Gtk.ShortcutTrigger.parse_string ("<Shift>Return");
+            var action_run_shift = new Gtk.CallbackAction ((widget, args) => {
+                run_current_chunk ();
+                return true;
+            });
+            controller.add_shortcut (new Gtk.Shortcut (trigger_run_shift, action_run_shift));
 
             add_controller (controller);
         }

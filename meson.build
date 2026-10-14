@@ -24,6 +24,8 @@ gtk4_dep = dependency('gtk4', version: '>= 4.10')
 adw_dep = dependency('libadwaita-1', version: '>= 1.4')
 gtksource_dep = dependency('gtksourceview-5', version: '>= 5.6')
 webkit_dep = dependency('webkitgtk-6.0', version: '>= 2.40')
+vte_dep = dependency('vte-2.91-gtk4', version: '>= 0.70')
+json_glib_dep = dependency('json-glib-1.0')
 gee_dep = dependency('gee-0.8')
 cmark_dep = dependency('libcmark', fallback: ['cmark', 'cmark_dep'])
 

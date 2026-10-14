@@ -5,8 +5,23 @@ namespace Imladris {
         public PreviewView preview_view { get; private set; }
         public ViewManager view_manager { get; private set; }
         public Adw.ViewStack view_stack { get; private set; }
+        public Imladris.UI.TerminalView terminal_view { get; private set; }
 
-        private Gtk.Paned paned;
+        public bool terminal_visible {
+            get { return terminal_view.visible; }
+            set {
+                terminal_view.visible = value;
+                if (value) {
+                    if (vertical_paned.position < 150) {
+                        vertical_paned.position = 450;
+                    }
+                    terminal_view.grab_focus_terminal ();
+                }
+            }
+        }
+
+        private Gtk.Paned horizontal_paned;
+        private Gtk.Paned vertical_paned;
         private uint parse_timeout_id = 0;
 
         public TabPageContent (DocumentModel document) {
@@ -21,22 +36,39 @@ namespace Imladris {
             hexpand = true;
             vexpand = true;
 
-            paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
-            paned.hexpand = true;
-            paned.vexpand = true;
-            paned.add_css_class ("imladris-split-pane");
+            vertical_paned = new Gtk.Paned (Gtk.Orientation.VERTICAL);
+            vertical_paned.hexpand = true;
+            vertical_paned.vexpand = true;
+
+            horizontal_paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
+            horizontal_paned.hexpand = true;
+            horizontal_paned.vexpand = true;
+            horizontal_paned.add_css_class ("imladris-split-pane");
 
             coding_view = new CodingView (document);
             preview_view = new PreviewView ();
 
-            paned.set_start_child (coding_view);
-            paned.set_end_child (preview_view);
-            paned.set_resize_start_child (true);
-            paned.set_resize_end_child (true);
-            paned.set_shrink_start_child (false);
-            paned.set_shrink_end_child (false);
+            horizontal_paned.set_start_child (coding_view);
+            horizontal_paned.set_end_child (preview_view);
+            horizontal_paned.set_resize_start_child (true);
+            horizontal_paned.set_resize_end_child (true);
+            horizontal_paned.set_shrink_start_child (false);
+            horizontal_paned.set_shrink_end_child (false);
 
-            append (paned);
+            terminal_view = new Imladris.UI.TerminalView (true);
+            terminal_view.visible = false;
+            terminal_view.close_requested.connect (() => {
+                terminal_visible = false;
+            });
+
+            vertical_paned.set_start_child (horizontal_paned);
+            vertical_paned.set_end_child (terminal_view);
+            vertical_paned.set_resize_start_child (true);
+            vertical_paned.set_resize_end_child (true);
+            vertical_paned.set_shrink_start_child (false);
+            vertical_paned.set_shrink_end_child (false);
+
+            append (vertical_paned);
 
             // Setup auxiliary ViewStack for Adw.ViewSwitcher
             view_stack = new Adw.ViewStack ();
@@ -45,7 +77,7 @@ namespace Imladris {
             view_stack.add_titled_with_icon (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0), "preview", "Preview", "view-continuous-symbolic");
             view_stack.set_visible_child_name ("split");
 
-            view_manager = new ViewManager (paned, coding_view, preview_view, document);
+            view_manager = new ViewManager (horizontal_paned, coding_view, preview_view, document);
 
             view_stack.notify["visible-child-name"].connect (() => {
                 string name = view_stack.visible_child_name;
