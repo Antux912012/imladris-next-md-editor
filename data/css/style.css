@@ -1,0 +1,64 @@
+/* Imladris: Modern Libadwaita CSS Styling */
+
+/* Main editor container */
+.imladris-editor-container {
+    background-color: @view_bg_color;
+    color: @view_fg_color;
+}
+
+/* Source View editor styling */
+.imladris-editor {
+    font-family: monospace;
+    font-size: 11pt;
+    padding: 8px 12px;
+    background-color: @view_bg_color;
+    color: @view_fg_color;
+}
+
+/* Split view paned separator */
+.imladris-split-pane {
+    background-color: @window_bg_color;
+}
+
+.imladris-split-pane separator {
+    background-color: @borders;
+    min-width: 1px;
+    min-height: 1px;
+}
+
+/* Rendered preview container */
+.imladris-preview-box {
+    background-color: @view_bg_color;
+}
+
+/* Contextual formatting popover */
+.imladris-contextual-popover {
+    border-radius: 10px;
+    padding: 6px;
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.imladris-formatting-bar {
+    border-spacing: 4px;
+}
+
+.imladris-formatting-bar button {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.imladris-formatting-bar button:hover {
+    background-color: alpha(@accent_bg_color, 0.2);
+    color: @accent_color;
+}
+
+/* Tab bar adjustments */
+tabbar {
+    border-bottom: 1px solid @borders;
+    background-color: @headerbar_bg_color;
+}

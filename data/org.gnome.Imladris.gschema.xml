@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="imladris">
+  <schema id="org.gnome.Imladris" path="/org/gnome/Imladris/">
+    <key name="window-width" type="i">
+      <default>1024</default>
+      <summary>Window width</summary>
+      <description>Default width of the window.</description>
+    </key>
+    <key name="window-height" type="i">
+      <default>720</default>
+      <summary>Window height</summary>
+      <description>Default height of the window.</description>
+    </key>
+    <key name="is-maximized" type="b">
+      <default>false</default>
+      <summary>Window maximized state</summary>
+      <description>Whether the window should open maximized.</description>
+    </key>
+    <key name="default-view-mode" type="s">
+      <default>'split'</default>
+      <summary>Default view mode</summary>
+      <description>The active view mode: source, preview, or split.</description>
+    </key>
+    <key name="show-line-numbers" type="b">
+      <default>true</default>
+      <summary>Show line numbers</summary>
+      <description>Whether line numbers are shown in the editor.</description>
+    </key>
+  </schema>
+</schemalist>

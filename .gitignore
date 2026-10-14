@@ -1,0 +1,7 @@
+# Build directory
+build/
+subprojects/cmark/
+subprojects/packagecache/
+*.o
+*.so
+*.a

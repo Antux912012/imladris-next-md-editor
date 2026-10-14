@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Imladris
+Comment=Native GTK4 and Libadwaita Markdown Editor
+Exec=imladris %F
+Icon=accessories-text-editor
+Terminal=false
+Type=Application
+Categories=GNOME;GTK;Utility;TextEditor;
+MimeType=text/markdown;text/x-markdown;text/plain;
+StartupNotify=true

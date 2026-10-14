@@ -1,0 +1,9 @@
+[wrap-git]
+url = https://github.com/commonmark/cmark.git
+revision = 0.31.1
+depth = 1
+method = cmake
+
+[provide]
+libcmark = cmark_dep
+cmark = cmark_dep
