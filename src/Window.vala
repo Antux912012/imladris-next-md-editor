@@ -134,6 +134,11 @@ namespace Imladris {
             tier3_box.append (RibbonFactory.create_compact_button ("applications-internet-symbolic", "HTML", false, false, true, null, "app.export_html"));
             tier3_box.append (RibbonFactory.create_compact_button ("edit-undo-symbolic"));
             tier3_box.append (RibbonFactory.create_compact_button ("edit-redo-symbolic"));
+            var ai_quick_btn = RibbonFactory.create_compact_button ("system-run-symbolic", "AI Assistant");
+            ((Gtk.Button) ai_quick_btn).clicked.connect (() => {
+                trigger_ai_assistant ();
+            });
+            tier3_box.append (ai_quick_btn);
             tier3_box.append (RibbonFactory.create_vseparator ());
 
             tab_view = new Adw.TabView ();
@@ -196,13 +201,20 @@ namespace Imladris {
             add_document_tab ("Document1.qmd", "markdown");
         }
 
-        private DocumentPage? get_active_document () {
+        public DocumentPage? get_active_document () {
             if (tab_view.selected_page == null) return null;
             return tab_view.selected_page.child as DocumentPage;
         }
 
+        public void trigger_ai_assistant () {
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.show_ai_assistant ();
+            }
+        }
+
         public void add_document_tab (string title, string lang_id) {
-            var doc_page = new DocumentPage (title, lang_id);
+            var doc_page = new DocumentPage (title, lang_id, this);
             doc_page.stats_changed.connect ((words, lines, badge) => {
                 status_badge_lbl.label = badge;
                 status_words_lbl.label = @"Words: $words | Lines: $lines";
@@ -429,6 +441,11 @@ namespace Imladris {
                 RibbonFactory.create_compact_button ("view-refresh-symbolic", "Convert .ipynb ↔ .qmd"),
                 RibbonFactory.create_compact_button ("folder-saved-search-symbolic", "Manage renv / venv")
             }));
+            var btn_comp_ai = (Gtk.Button) RibbonFactory.create_tall_button ("system-run-symbolic", "AI Coding\nAssistant");
+            btn_comp_ai.clicked.connect (() => {
+                trigger_ai_assistant ();
+            });
+            box.append (btn_comp_ai);
 
             return box;
         }
@@ -478,6 +495,12 @@ namespace Imladris {
                 if (d != null) d.console_revealer.reveal_child = btn_preview.active;
             });
             box.append (btn_preview);
+
+            var btn_web_ai = (Gtk.Button) RibbonFactory.create_tall_button ("system-run-symbolic", "AI Web\nAssistant");
+            btn_web_ai.clicked.connect (() => {
+                trigger_ai_assistant ();
+            });
+            box.append (btn_web_ai);
 
             return box;
         }

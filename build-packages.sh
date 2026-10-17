@@ -6,7 +6,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${PROJECT_DIR}"
 
 APP_ID="org.gnome.Imladris"
-VERSION="0.3.0"
+VERSION="0.4.0"
 ARCH="amd64"
 
 echo "=== Building Imladris v${VERSION} Packaging (.deb & Flatpak ONLY) ==="
@@ -34,14 +34,15 @@ Priority: optional
 Architecture: ${ARCH}
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Antonio De Gaetano <antux912012@users.noreply.github.com>
-Depends: libc6 (>= 2.34), libglib2.0-0t64 | libglib2.0-0 (>= 2.76), libgtk-4-1 (>= 4.12), libadwaita-1-0 (>= 1.5), libgtksourceview-5-0 (>= 5.10), libwebkitgtk-6.0-4 (>= 2.40)
+Depends: libc6 (>= 2.34), libglib2.0-0t64 | libglib2.0-0 (>= 2.76), libgtk-4-1 (>= 4.12), libadwaita-1-0 (>= 1.5), libgtksourceview-5-0 (>= 5.10), libwebkitgtk-6.0-4 (>= 2.40), libsoup-3.0-0, libjson-glib-1.0-0
 Homepage: https://github.com/Antux912012/imladris-next-md-editor
-Description: Native Polyglot Studio and Markdown Editor
+Description: Native Polyglot Studio with AI Assistance, Auto-Completion and MCP Server
  Imladris is a native Linux Markdown and Polyglot Studio built with
  Vala, GTK4, Libadwaita, GtkSourceView 5, and WebKitGTK 6.0.
+ Features Dual AI Assistance (Online OpenAI-compatible + Offline llama.cpp),
+ Model Context Protocol (MCP) server, and polyglot auto-completion.
  Supports Quarto (.qmd), R Markdown (.Rmd), Jupyter (.ipynb),
- TypeScript (.ts), HTML5 (.html), and Markdown (.md) with
- live interactive WebKit preview and async execution engine.
+ TypeScript (.ts), HTML5 (.html), and Markdown (.md).
 EOF
 
 cat <<'EOF' > deb-root/DEBIAN/postinst

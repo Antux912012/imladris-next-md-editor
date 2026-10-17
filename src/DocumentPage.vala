@@ -10,11 +10,15 @@ namespace Imladris {
         public Gtk.Revealer console_revealer { get; private set; }
         public string doc_type { get; private set; }
 
+        public AssistantPanel? assistant_panel { get; private set; default = null; }
+        private Window? parent_window;
+
         public signal void stats_changed (int words, int lines, string lang_badge);
 
-        public DocumentPage (string title, string lang_id) {
+        public DocumentPage (string title, string lang_id, Window? win = null) {
             Object (orientation: Gtk.Orientation.VERTICAL, spacing: 0);
             this.doc_type = lang_id;
+            this.parent_window = win;
 
             var paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
                 hexpand = true,
@@ -50,6 +54,9 @@ namespace Imladris {
                 monospace = true
             };
 
+            // Setup Auto-Completion (Words & Snippets for Polyglot Languages)
+            setup_completion ();
+
             var editor_scroller = new Gtk.ScrolledWindow () {
                 child = source_view,
                 hexpand = true,
@@ -57,7 +64,7 @@ namespace Imladris {
             };
             paned.set_start_child (editor_scroller);
 
-            // 2. Setup Collapsible Right Split Pane (WebKit.WebView + Console Stack)
+            // 2. Setup Collapsible Right Split Pane (WebKit.WebView + Assistant + Console Stack)
             console_revealer = new Gtk.Revealer () {
                 transition_type = Gtk.RevealerTransitionType.SLIDE_LEFT,
                 reveal_child = true
@@ -107,7 +114,13 @@ namespace Imladris {
             settings.enable_javascript = true;
             right_stack.add_titled (web_view, "preview", "Live Preview");
 
-            // Page 2: Execution & Render Output Console
+            // Page 2: Dual Online & Offline AI Assistant
+            if (parent_window != null) {
+                assistant_panel = new AssistantPanel (parent_window);
+                right_stack.add_titled (assistant_panel, "assistant", "AI Assistant");
+            }
+
+            // Page 3: Execution & Render Output Console
             console_view = new Gtk.TextView () {
                 editable = false,
                 monospace = true,
@@ -279,6 +292,25 @@ export function summarize(points: DataPoint[]): number {
             } else {
                 refresh_live_preview ();
             }
+        }
+
+        public void show_ai_assistant () {
+            console_revealer.reveal_child = true;
+            right_stack.visible_child_name = "assistant";
+        }
+
+        private void setup_completion () {
+            var completion = source_view.get_completion ();
+
+            var words_provider = new GtkSource.CompletionWords ("Document Vocabulary");
+            words_provider.register (source_buffer);
+            words_provider.minimum_word_size = 2;
+            words_provider.priority = 10;
+            completion.add_provider (words_provider);
+
+            var snippets_provider = new GtkSource.CompletionSnippets ();
+            snippets_provider.priority = 20;
+            completion.add_provider (snippets_provider);
         }
 
         public void apply_tag_or_syntax (string tag_name, string md_wrapper) {

@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.3.0',
+  version: '0.4.0',
   default_options: ['warning_level=1']
 )
 
@@ -10,6 +10,8 @@ deps = [
   dependency('libadwaita-1', version: '>= 1.5'),
   dependency('gtksourceview-5', version: '>= 5.10'),
   dependency('webkitgtk-6.0'),
+  dependency('libsoup-3.0'),
+  dependency('json-glib-1.0'),
   dependency('gio-2.0'),
   dependency('glib-2.0'),
 ]
@@ -28,6 +30,10 @@ sources = files(
   'src/PopoverFactory.vala',
   'src/DocumentPage.vala',
   'src/ExecutionEngine.vala',
+  'src/AiClient.vala',
+  'src/LlamaServerManager.vala',
+  'src/McpServer.vala',
+  'src/AssistantPanel.vala',
   'src/Window.vala',
 )
 

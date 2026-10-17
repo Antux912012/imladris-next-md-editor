@@ -3,20 +3,20 @@
 </p>
 
 <h1 align="center">Imladris</h1>
-<h3 align="center">Polyglot Scientific & Web Studio for Linux</h3>
+<h3 align="center">Polyglot Scientific & Web Studio with AI & MCP</h3>
 
 <p align="center">
   <a href="https://github.com/Antux912012/imladris-next-md-editor/releases"><img src="https://img.shields.io/github/v/release/Antux912012/imladris-next-md-editor?include_prereleases&style=flat-square&color=blue" alt="Release"></a>
   <a href="https://gitlab.gnome.org/GNOME/libadwaita"><img src="https://img.shields.io/badge/platform-Linux%20(GTK4%20%2F%20Libadwaita)-blue?style=flat-square" alt="Platform"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.3.0"><img src="https://img.shields.io/badge/Flatpak-supported-blue?style=flat-square&logo=flatpak" alt="Flatpak"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.3.0"><img src="https://img.shields.io/badge/Debian%20.deb-supported-red?style=flat-square&logo=debian" alt="Debian"></a>
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.4.0"><img src="https://img.shields.io/badge/Flatpak-supported-blue?style=flat-square&logo=flatpak" alt="Flatpak"></a>
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.4.0"><img src="https://img.shields.io/badge/Debian%20.deb-supported-red?style=flat-square&logo=debian" alt="Debian"></a>
 </p>
 
 <p align="center">
   <img src="data/screenshots/imladris-screenshot.png" alt="Imladris Polyglot Studio Screenshot" width="850">
 </p>
 
-**Imladris** is a native Linux polyglot document studio and Markdown editor built with **Vala**, **GTK4**, **Libadwaita**, **GtkSourceView 5**, and **WebKitGTK 6.0**. It combines high-performance source editing with live interactive rendering and asynchronous execution for scientific computing, web development, and technical writing.
+**Imladris** is a native Linux polyglot document studio and Markdown editor built with **Vala**, **GTK4**, **Libadwaita**, **GtkSourceView 5**, and **WebKitGTK 6.0**. It features **Dual-Mode AI Assistance** (Online OpenAI-compatible + Offline `llama.cpp` with Qwen 2.5 Coder), an embedded **Model Context Protocol (MCP)** server, and smart language auto-completion.
 
 ---
 
@@ -35,18 +35,24 @@
 
 ## ✨ Features
 
+- **🤖 Dual-Engine AI Assistance:**
+  - **Online:** Connects to any OpenAI-compatible endpoint (OpenAI, DeepSeek, OpenRouter, Groq, vLLM) with customizable Base URL, API key, and model choice.
+  - **Offline (`llama.cpp` / Ollama):** Runs locally via `llama-server` sidecar or Ollama. Includes built-in one-click downloader for optimized **Qwen 2.5 Coder** models (`1.5B` and `7B` GGUF).
+  - **Interactive Assistant Panel:** Integrated side panel with conversation history, quick action pills (*Explain*, *Fix Syntax*, *Add R Plot*), and one-click *Insert at Cursor*.
+- **⚡ Smart Language Auto-Completion:**
+  - GtkSourceView 5 completion subsystem with `GtkSource.CompletionWords` and `GtkSource.CompletionSnippets`.
+  - Automatic suggestions and code completions across `.md`, `.html`, `.Rmd`, `.ipynb`, `.ts`, and Python.
+- **🔌 Embedded Model Context Protocol (MCP) Server:**
+  - Standard JSON-RPC MCP server (`imladris --mcp-server`) exposing editor tools:
+    - `get_active_document`: Inspect buffer, line count, and language.
+    - `insert_text`: Programmatically insert text at cursor.
+    - `insert_code_chunk`: Insert `{r}`, `{python}`, or `{ts}` chunks with options.
+    - `execute_code`: Asynchronously execute CLI scripts.
+    - `render_document`: Trigger Quarto HTML/PDF render pipeline.
+    - `get_open_tabs`: Inspect all open tabs in the workspace.
 - **🌐 Embedded WebKitGTK 6.0 Live Preview:** Real-time HTML5, CSS, and Reveal.js rendering directly inside an expandable right-hand split pane.
-- **⚡ Asynchronous Execution Engine:** Non-blocking background execution of `quarto`, `Rscript`, `python3`, `tsc`, and `deno` via `GLib.Subprocess` with live terminal streaming.
-- **🎛 Dynamic 9-Tab Ribbon Deck:** Modern Libadwaita ribbon categorized into:
-  - **Home:** Font family/size, bold/italic/underline, color palette, style presets (H1–H3), find & replace.
-  - **Insert:** 6×6 interactive Markdown table grid picker, image/figure links, LaTeX math, citations, cross-references.
-  - **Computation:** Code chunk insertion (`{r}`, `{python}`, `{ts}`), chunk execution, chunk options matrix (`echo`, `eval`, `warning`, `cache`).
-  - **Web & Publish:** Quarto HTML/PDF rendering, TypeScript compilation, Reveal.js export, and live WebKit toggle.
-  - **Page Layout:** Document margins, orientation, size, and columns.
-  - **References:** Table of contents generator, footnotes, BibTeX citations.
-  - **Review:** Word count, spell checking, and annotations.
-  - **View:** Source editor / visual mode toggling, line numbers, word wrap, and zoom scale.
-  - **Section:** YAML frontmatter inspector and section splitting.
+- **⚡ Asynchronous Execution Engine:** Non-blocking background execution of `quarto`, `Rscript`, `python3`, `tsc`, and `deno` via `GLib.Subprocess`.
+- **🎛 Dynamic 9-Tab Ribbon Deck:** Modern Libadwaita ribbon categorized into *Home*, *Insert*, *Computation*, *Web & Publish*, *Page Layout*, *References*, *Review*, *View*, and *Section*.
 - **🎨 Native GNOME HIG & Libadwaita:** Adaptive toolbar view, multi-tab document tabs (`Adw.TabView`), and dark titlebar styling.
 
 ---
@@ -56,12 +62,12 @@
 Official releases are distributed exclusively as **Debian packages (`.deb`)** and **Flatpak bundles (`.flatpak`)**. AppImage builds are intentionally excluded.
 
 ### Option 1: Debian / Ubuntu / Pop!_OS (`.deb`)
-Download the latest `.deb` package from the [v0.3.0 Release](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.3.0):
+Download the latest `.deb` package from the [v0.4.0 Release](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.4.0):
 
 ```bash
 # Download and install
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.3.0/imladris_0.3.0_amd64.deb
-sudo dpkg -i imladris_0.3.0_amd64.deb
+wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.4.0/imladris_0.4.0_amd64.deb
+sudo dpkg -i imladris_0.4.0_amd64.deb
 
 # Fix missing dependencies if needed
 sudo apt-get install -f
@@ -71,9 +77,31 @@ sudo apt-get install -f
 Download the standalone single-file bundle:
 
 ```bash
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.3.0/Imladris.flatpak
+wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.4.0/Imladris.flatpak
 flatpak install --user Imladris.flatpak
 flatpak run org.gnome.Imladris
+```
+
+---
+
+## 🔌 Running as an MCP Server
+
+Imladris can run headlessly as an MCP server over stdio for external AI agents (e.g. Claude Desktop, Antigravity):
+
+```bash
+imladris --mcp-server
+```
+
+Example configuration for Claude Desktop (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "imladris": {
+      "command": "imladris",
+      "args": ["--mcp-server"]
+    }
+  }
+}
 ```
 
 ---
@@ -88,6 +116,8 @@ flatpak run org.gnome.Imladris
 - `libadwaita-1` (>= 1.5)
 - `gtksourceview-5` (>= 5.10)
 - `webkitgtk-6.0` (>= 2.40)
+- `libsoup-3.0` (>= 3.0)
+- `json-glib-1.0` (>= 1.0)
 - `glib-2.0` (>= 2.76)
 
 ### Building via GNOME SDK (Recommended)
