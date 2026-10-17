@@ -11,10 +11,14 @@ namespace Imladris {
 
         construct {
             ActionEntry[] action_entries = {
+                { "new", on_new_document },
                 { "new-tab", on_new_tab },
+                { "new-project", on_new_project },
                 { "open", on_open_file },
                 { "save", on_save_file },
                 { "save-as", on_save_file_as },
+                { "export_pdf", on_export_pdf },
+                { "print", on_print_document },
                 { "close-tab", on_close_tab },
                 { "toggle-terminal", on_toggle_terminal },
                 { "run-chunk", on_run_chunk },
@@ -23,21 +27,23 @@ namespace Imladris {
             };
             add_action_entries (action_entries, this);
 
-            set_accels_for_action ("app.new-tab", { "<Primary>n" });
-            set_accels_for_action ("app.open", { "<Primary>o" });
-            set_accels_for_action ("app.save", { "<Primary>s" });
+            set_accels_for_action ("app.new", { "<Control>n" });
+            set_accels_for_action ("app.new-project", { "<Primary><Shift>n" });
+            set_accels_for_action ("app.open", { "<Control>o" });
+            set_accels_for_action ("app.save", { "<Control>s" });
             set_accels_for_action ("app.save-as", { "<Primary><Shift>s" });
+            set_accels_for_action ("app.print", { "<Control>p" });
             set_accels_for_action ("app.close-tab", { "<Primary>w" });
             set_accels_for_action ("app.toggle-terminal", { "<Primary>grave" });
             set_accels_for_action ("app.run-chunk", { "<Primary>Return", "<Shift>Return" });
-            set_accels_for_action ("app.quit", { "<Primary>q" });
+            set_accels_for_action ("app.quit", { "<Control>q" });
         }
 
         protected override void startup () {
             base.startup ();
 
             var provider = new Gtk.CssProvider ();
-            provider.load_from_resource ("/org/gnome/Imladris/css/style.css");
+            provider.load_from_resource ("/org/imladris/app/style.css");
             var display = Gdk.Display.get_default ();
             if (display != null) {
                 Gtk.StyleContext.add_provider_for_display (
@@ -74,19 +80,33 @@ namespace Imladris {
             }
         }
 
+        private void on_new_document () {
+            if (active_app_window != null) {
+                active_app_window.add_document_tab ("Untitled");
+            }
+        }
+
         private void on_new_tab () {
             if (active_app_window != null) {
-                active_app_window.create_new_tab ();
+                active_app_window.add_document_tab ("Untitled");
+            }
+        }
+
+        private void on_new_project () {
+            if (active_app_window != null) {
+                active_app_window.present_welcome_or_new_project ();
             }
         }
 
         private void on_open_file () {
+            message ("Action: Open Document triggered");
             if (active_app_window != null) {
                 active_app_window.prompt_open_file ();
             }
         }
 
         private void on_save_file () {
+            message ("Action: Save Document triggered");
             if (active_app_window != null) {
                 active_app_window.save_current_tab (false);
             }
@@ -95,6 +115,20 @@ namespace Imladris {
         private void on_save_file_as () {
             if (active_app_window != null) {
                 active_app_window.save_current_tab (true);
+            }
+        }
+
+        private void on_export_pdf () {
+            message ("Action: Export to PDF triggered");
+            if (active_app_window != null) {
+                active_app_window.show_toast ("Export to PDF triggered");
+            }
+        }
+
+        private void on_print_document () {
+            message ("Action: Print Document triggered");
+            if (active_app_window != null) {
+                active_app_window.show_toast ("Print Document triggered");
             }
         }
 
@@ -121,10 +155,10 @@ namespace Imladris {
                 string[] developers = { "Imladris Team", "DeepMind Team" };
                 var dialog = new Adw.AboutDialog () {
                     application_name = "Imladris",
-                    application_icon = "accessories-text-editor",
+                    application_icon = "org.gnome.Imladris",
                     developer_name = "Imladris Developers",
                     version = "0.1.0",
-                    comments = "A native GTK4 & Libadwaita Markdown Editor with asynchronous libcmark rendering and WebKit preview.",
+                    comments = "A native GTK4 & Libadwaita Document & Markdown Studio with 3-Tier Ribbon UI.",
                     website = "https://github.com/imladris-editor/imladris",
                     issue_url = "https://github.com/imladris-editor/imladris/issues",
                     license_type = Gtk.License.GPL_3_0,

@@ -170,6 +170,65 @@ img {
 input[type="checkbox"] {
     margin-right: 0.5em;
 }
+
+.document-frontmatter-card {
+    background-color: var(--code-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.document-frontmatter-card .frontmatter-title {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 2em;
+    font-weight: 700;
+    border-bottom: none;
+    padding-bottom: 0;
+    letter-spacing: -0.02em;
+}
+
+.document-frontmatter-card .frontmatter-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 24px;
+    font-size: 0.9em;
+    opacity: 0.88;
+}
+
+.document-frontmatter-card .frontmatter-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.document-frontmatter-card .frontmatter-label {
+    font-weight: 600;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+}
+
+.document-frontmatter-card .frontmatter-badge {
+    background: var(--link-color);
+    color: #ffffff;
+    font-size: 0.75em;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.document-frontmatter-card .frontmatter-abstract {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-color);
+    font-size: 0.92em;
+    line-height: 1.5;
+}
 </style>
 <script>
 window.scrollToLine = function(targetLine) {

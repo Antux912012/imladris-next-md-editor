@@ -1,6 +1,7 @@
 # Build directory
 build/
 build-dir/
+builddir/
 .flatpak-builder/
 repo/
 *.flatpak
