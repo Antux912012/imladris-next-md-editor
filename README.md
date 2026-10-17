@@ -1,10 +1,20 @@
-# Imladris 🌿
-### Polyglot Scientific & Web Studio for Linux
+<p align="center">
+  <img src="data/icons/hicolor/256x256/apps/org.gnome.Imladris.png" alt="Imladris Logo" width="128" height="128">
+</p>
 
-[![Release](https://img.shields.io/github/v/release/Antux912012/imladris-next-md-editor?include_prereleases&style=flat-square&color=blue)](https://github.com/Antux912012/imladris-next-md-editor/releases)
-[![Platform](https://img.shields.io/badge/platform-Linux%20(GTK4%20%2F%20Libadwaita)-blue?style=flat-square)](https://gitlab.gnome.org/GNOME/libadwaita)
-[![Flatpak](https://img.shields.io/badge/Flatpak-supported-blue?style=flat-square&logo=flatpak)](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.3.0)
-[![Debian](https://img.shields.io/badge/Debian%20.deb-supported-red?style=flat-square&logo=debian)](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.3.0)
+<h1 align="center">Imladris</h1>
+<h3 align="center">Polyglot Scientific & Web Studio for Linux</h3>
+
+<p align="center">
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases"><img src="https://img.shields.io/github/v/release/Antux912012/imladris-next-md-editor?include_prereleases&style=flat-square&color=blue" alt="Release"></a>
+  <a href="https://gitlab.gnome.org/GNOME/libadwaita"><img src="https://img.shields.io/badge/platform-Linux%20(GTK4%20%2F%20Libadwaita)-blue?style=flat-square" alt="Platform"></a>
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.3.0"><img src="https://img.shields.io/badge/Flatpak-supported-blue?style=flat-square&logo=flatpak" alt="Flatpak"></a>
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.3.0"><img src="https://img.shields.io/badge/Debian%20.deb-supported-red?style=flat-square&logo=debian" alt="Debian"></a>
+</p>
+
+<p align="center">
+  <img src="data/screenshots/imladris-screenshot.png" alt="Imladris Polyglot Studio Screenshot" width="850">
+</p>
 
 **Imladris** is a native Linux polyglot document studio and Markdown editor built with **Vala**, **GTK4**, **Libadwaita**, **GtkSourceView 5**, and **WebKitGTK 6.0**. It combines high-performance source editing with live interactive rendering and asynchronous execution for scientific computing, web development, and technical writing.
 
