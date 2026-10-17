@@ -36,8 +36,29 @@ ninja -C build
 ### Using the GNOME SDK (Flatpak)
 
 ```bash
-flatpak run --filesystem=host --command=bash org.gnome.Sdk//50 -c "meson setup build && ninja -C build && ./build/src/imladris"
+flatpak run --filesystem=host --command=bash org.gnome.Sdk//50 -c "meson setup builddir && ninja -C builddir && ./builddir/imladris"
 ```
+
+## Packaging & Distribution
+
+> **Note:** Official builds are distributed exclusively as **Flatpak** (`.flatpak`) and **Debian** (`.deb`) packages. AppImage packaging is intentionally excluded.
+
+### Building Flatpak & .deb Packages
+
+Run the packaging script to generate both packages:
+```bash
+./build-packages.sh
+```
+
+- **Flatpak Bundle:** `Imladris.flatpak`
+  ```bash
+  flatpak install --user Imladris.flatpak
+  ```
+- **Debian Package:** `imladris_0.3.0_amd64.deb`
+  ```bash
+  sudo dpkg -i imladris_0.3.0_amd64.deb
+  ```
+
 
 ## Keyboard Shortcuts
 

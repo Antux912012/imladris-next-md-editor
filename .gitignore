@@ -2,11 +2,16 @@
 build/
 build-dir/
 builddir/
+build-deb/
+deb-root/
 .flatpak-builder/
 repo/
 *.flatpak
+*.deb
+*.AppImage
 subprojects/cmark/
 subprojects/packagecache/
 *.o
 *.so
 *.a
+

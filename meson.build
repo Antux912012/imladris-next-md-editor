@@ -38,3 +38,19 @@ executable('imladris',
   vala_args: ['--target-glib=2.76'],
   install: true
 )
+
+install_data(
+  'data/org.gnome.Imladris.desktop',
+  install_dir: get_option('datadir') / 'applications'
+)
+
+install_data(
+  'data/org.gnome.Imladris.metainfo.xml',
+  install_dir: get_option('datadir') / 'metainfo'
+)
+
+install_subdir(
+  'data/icons/hicolor',
+  install_dir: get_option('datadir') / 'icons'
+)
+

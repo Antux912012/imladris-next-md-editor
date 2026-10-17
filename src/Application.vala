@@ -18,7 +18,7 @@ namespace Imladris {
 
         public Application () {
             Object (
-                application_id: "org.imladris.app",
+                application_id: "org.gnome.Imladris",
                 flags: GLib.ApplicationFlags.DEFAULT_FLAGS
             );
         }
