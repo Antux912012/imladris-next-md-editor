@@ -1,0 +1,50 @@
+name: Imladris Continuous Integration
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flatpak-build:
+    name: Build & Validate Flatpak (GNOME 50)
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
+      options: --privileged
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure container user environment
+        run: |
+          cat <<EOF> /etc/passwd
+          root:x:0:0:root:/root:/bin/bash
+          EOF
+          cat <<EOF> /etc/group
+          root:x:0:
+          EOF
+          git config --global --add safe.directory "*" || true
+
+      - name: Add Flathub remote for dependencies
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Build Flatpak manifest
+        run: |
+          flatpak-builder build-dir \
+            --user \
+            --install-deps-from=flathub \
+            --disable-rofiles-fuse \
+            --disable-updates \
+            --force-clean \
+            --default-branch=stable \
+            --repo=repo \
+            org.gnome.Imladris.json
