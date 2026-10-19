@@ -75,11 +75,13 @@ namespace Imladris {
         }
 
         private void on_open_document () {
-            message ("Open file dialog requested");
+            var win = this.active_window as Window;
+            if (win != null) win.open_document_async.begin ();
         }
 
         private void on_save_document () {
-            message ("Save current buffer requested");
+            var win = this.active_window as Window;
+            if (win != null) win.save_document_async.begin ();
         }
 
         private void on_export_pdf () {

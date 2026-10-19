@@ -117,6 +117,7 @@ namespace Imladris {
 
             string[] argv = {
                 server_bin,
+                "--host", "127.0.0.1",
                 "-m", model_path,
                 "--port", port.to_string (),
                 "-c", "8192",

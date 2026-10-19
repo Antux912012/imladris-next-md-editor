@@ -11,7 +11,9 @@ namespace Imladris {
         public string doc_type { get; private set; }
 
         public AssistantPanel? assistant_panel { get; private set; default = null; }
+        public GLib.File? file_location { get; set; default = null; }
         private Window? parent_window;
+        private uint update_debounce_id = 0;
 
         public signal void stats_changed (int words, int lines, string lang_badge);
 
@@ -146,9 +148,24 @@ namespace Imladris {
             refresh_live_preview ();
 
             source_buffer.changed.connect (() => {
-                emit_buffer_stats ();
-                refresh_live_preview ();
+                if (update_debounce_id != 0) {
+                    GLib.Source.remove (update_debounce_id);
+                    update_debounce_id = 0;
+                }
+                update_debounce_id = GLib.Timeout.add (250, () => {
+                    update_debounce_id = 0;
+                    emit_buffer_stats ();
+                    refresh_live_preview ();
+                    return GLib.Source.REMOVE;
+                });
             });
+        }
+
+        ~DocumentPage () {
+            if (update_debounce_id != 0) {
+                GLib.Source.remove (update_debounce_id);
+                update_debounce_id = 0;
+            }
         }
 
         private void setup_text_tags () {
@@ -220,7 +237,7 @@ export function summarize(points: DataPoint[]): number {
         public void refresh_live_preview () {
             string raw = source_buffer.text;
             if (doc_type == "html") {
-                web_view.load_html (raw, "file:///");
+                web_view.load_html (raw, null);
                 return;
             }
 
@@ -281,7 +298,7 @@ export function summarize(points: DataPoint[]): number {
 </body>
 </html>""".printf (doc_type.up (), escaped);
 
-            web_view.load_html (html, "file:///");
+            web_view.load_html (html, null);
         }
 
         public void show_live_preview (string? uri = null) {

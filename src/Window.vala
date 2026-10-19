@@ -213,8 +213,14 @@ namespace Imladris {
             }
         }
 
-        public void add_document_tab (string title, string lang_id) {
+        public void add_document_tab (string title, string lang_id, string? initial_text = null, GLib.File? file = null) {
             var doc_page = new DocumentPage (title, lang_id, this);
+            if (initial_text != null) {
+                doc_page.source_buffer.text = initial_text;
+            }
+            if (file != null) {
+                doc_page.file_location = file;
+            }
             doc_page.stats_changed.connect ((words, lines, badge) => {
                 status_badge_lbl.label = badge;
                 status_words_lbl.label = @"Words: $words | Lines: $lines";
@@ -225,6 +231,81 @@ namespace Imladris {
             page.icon = new GLib.ThemedIcon ("x-office-document-symbolic");
             tab_view.selected_page = page;
             doc_page.emit_buffer_stats ();
+        }
+
+        public async void open_document_async () {
+            var dialog = new Gtk.FileDialog () {
+                title = "Open Document",
+                modal = true
+            };
+            try {
+                var file = yield dialog.open (this, null);
+                if (file != null) {
+                    uint8[] contents;
+                    string etag;
+                    yield file.load_contents_async (null, out contents, out etag);
+                    string text = (string) contents;
+                    string name = file.get_basename ();
+                    string lang = "markdown";
+                    if (name.has_suffix (".ipynb")) lang = "json";
+                    else if (name.has_suffix (".ts")) lang = "typescript";
+                    else if (name.has_suffix (".html")) lang = "html";
+                    else if (name.has_suffix (".rmd") || name.has_suffix (".Rmd")) lang = "rmd";
+                    add_document_tab (name, lang, text, file);
+                }
+            } catch (GLib.Error e) {
+                warning ("Failed to open file: %s", e.message);
+            }
+        }
+
+        public async void save_document_async () {
+            var doc = get_active_document ();
+            if (doc == null) return;
+
+            if (doc.file_location != null) {
+                try {
+                    string content = doc.source_buffer.text;
+                    string etag;
+                    yield doc.file_location.replace_contents_async (
+                        content.data,
+                        null,
+                        false,
+                        GLib.FileCreateFlags.REPLACE_DESTINATION,
+                        null,
+                        out etag
+                    );
+                    doc.append_console_log (@"✔ Saved $(doc.file_location.get_basename ())");
+                } catch (GLib.Error e) {
+                    doc.append_console_log (@"✖ Save failed: $(e.message)");
+                }
+            } else {
+                var dialog = new Gtk.FileDialog () {
+                    title = "Save Document",
+                    modal = true
+                };
+                try {
+                    var file = yield dialog.save (this, null);
+                    if (file != null) {
+                        doc.file_location = file;
+                        string content = doc.source_buffer.text;
+                        string etag;
+                        yield file.replace_contents_async (
+                            content.data,
+                            null,
+                            false,
+                            GLib.FileCreateFlags.REPLACE_DESTINATION,
+                            null,
+                            out etag
+                        );
+                        if (tab_view.selected_page != null) {
+                            tab_view.selected_page.title = file.get_basename ();
+                        }
+                        doc.append_console_log (@"✔ Saved $(file.get_basename ())");
+                    }
+                } catch (GLib.Error e) {
+                    doc.append_console_log (@"✖ Save failed: $(e.message)");
+                }
+            }
         }
 
         public void trigger_render (string target_format) {

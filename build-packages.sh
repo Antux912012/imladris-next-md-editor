@@ -6,16 +6,18 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${PROJECT_DIR}"
 
 APP_ID="org.gnome.Imladris"
-VERSION="0.4.0"
+VERSION=$(grep -m1 "version:" "${PROJECT_DIR}/meson.build" | sed -E "s/.*'([^']+)'.*/\1/")
 ARCH="amd64"
 
-echo "=== Building Imladris v${VERSION} Packaging (.deb & Flatpak ONLY) ==="
+echo "=== Building Imladris v${VERSION} Packaging ==="
 
-# 1. Build Flatpak Bundle (.flatpak)
-echo "--> 1. Building Flatpak via flatpak-builder & GNOME 50 SDK..."
-flatpak-builder --force-clean --repo=repo build-flatpak org.gnome.Imladris.json
-flatpak build-bundle repo Imladris.flatpak "${APP_ID}" master
-echo "✔ Flatpak bundle generated: Imladris.flatpak ($(du -h Imladris.flatpak | cut -f1))"
+if [[ "${1:-}" != "--deb-only" ]]; then
+  # 1. Build Flatpak Bundle (.flatpak)
+  echo "--> 1. Building Flatpak via flatpak-builder & GNOME 50 SDK..."
+  flatpak-builder --force-clean --repo=repo build-flatpak org.gnome.Imladris.json
+  flatpak build-bundle repo Imladris.flatpak "${APP_ID}" master
+  echo "✔ Flatpak bundle generated: Imladris.flatpak ($(du -h Imladris.flatpak | cut -f1))"
+fi
 
 # 2. Build Debian Package (.deb)
 echo "--> 2. Building Debian package via Flatpak SDK staging & dpkg-deb..."
