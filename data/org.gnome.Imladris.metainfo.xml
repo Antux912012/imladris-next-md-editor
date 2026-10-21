@@ -4,20 +4,27 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Imladris</name>
-  <summary>Native GTK4 and Libadwaita Markdown Editor</summary>
+  <summary>WPS-style scientific polyglot studio and Markdown editor with live WebKitGTK preview</summary>
   <description>
     <p>
-      Imladris is a native Linux Markdown editor built with Vala, GTK4, Libadwaita, GtkSourceView 5, and WebKitGTK.
+      Imladris is a native Linux polyglot document studio and scientific Markdown editor built with Vala, GTK4, Libadwaita, GtkSourceView 5, and WebKitGTK 6.0. Featuring an adaptive ribbon interface inspired by modern office suites, Imladris provides a distraction-free writing environment for technical authors, data scientists, and researchers.
     </p>
-    <p>Features:</p>
+    <p>
+      Whether editing Quarto research reports, R Markdown statistical documents, or Jupyter notebooks, Imladris renders mathematical formulas, tables, and charts in real time.
+    </p>
     <ul>
-      <li>Dual-engine architecture with GtkSourceView 5 editor and live WebKitGTK 6.0 rendering</li>
-      <li>Asynchronous background Markdown parsing via libcmark</li>
-      <li>Synchronized cursor and rendered preview scroll alignment</li>
-      <li>Floating contextual formatting popover on text selection</li>
-      <li>Multi-tab document management with unsaved changes safety prompts</li>
+      <li>Three-Tier Ribbon Interface: Contextual tabs for File, Insert, Format, Review, and AI Tools</li>
+      <li>Polyglot Format Support: Full support for standard Markdown (.md), Quarto (.qmd), R Markdown (.Rmd), and Jupyter (.ipynb)</li>
+      <li>Real-Time Live Preview: WebKitGTK 6.0 preview with KaTeX mathematics, Mermaid diagrams, and syntax highlighting</li>
+      <li>Dual AI Co-Author: In-editor writing assistant with support for local offline models and cloud LLMs</li>
+      <li>Model Context Protocol (MCP): Built-in MCP server integration for agentic document analysis and data retrieval</li>
+      <li>Git Versioning: In-app diffing, commit history, and branch management</li>
     </ul>
   </description>
+  <branding>
+    <color type="primary" scheme_preference="light">#9141ac</color>
+    <color type="primary" scheme_preference="dark">#772953</color>
+  </branding>
   <launchable type="desktop-id">org.gnome.Imladris.desktop</launchable>
   <url type="homepage">https://github.com/Antux912012/imladris-next-md-editor</url>
   <url type="bugtracker">https://github.com/Antux912012/imladris-next-md-editor/issues</url>
@@ -29,6 +36,16 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.0" date="2026-10-17">
+      <description>
+        <p>Release v0.4.0 with AI co-authoring assistance, polyglot auto-completion, and Model Context Protocol (MCP) server integration.</p>
+      </description>
+    </release>
+    <release version="0.3.0" date="2026-10-17">
+      <description>
+        <p>Release v0.3.0 featuring WebKitGTK 6.0 live preview, KaTeX math rendering, and multi-format export.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-14"/>
   </releases>
 </component>
