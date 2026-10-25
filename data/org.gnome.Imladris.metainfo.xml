@@ -36,6 +36,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.5.0" date="2026-10-25">
+      <description>
+        <p>Release v0.5.0 introduces dynamic UI morphing (GNOME Apostrophe distraction-free mode and RStudio 4-quadrant workbench), full multi-format adapters (.md, .qmd, .rmd, .ipynb), atomic crash recovery with shadow buffer caching, and 5 interactive Smart Ribbon popovers.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-10-17">
       <description>
         <p>Release v0.4.0 with AI co-authoring assistance, polyglot auto-completion, and Model Context Protocol (MCP) server integration.</p>
