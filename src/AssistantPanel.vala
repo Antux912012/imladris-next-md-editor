@@ -264,28 +264,34 @@ namespace Imladris {
             var btn_download_1_5b = new Gtk.Button.with_label ("Download Qwen 2.5 Coder 1.5B (GGUF ~1.0 GB)");
             btn_download_1_5b.clicked.connect (() => {
                 dialog.close ();
-                try {
-                    server_manager.download_model_async.begin (
-                        LlamaServerManager.DEFAULT_QWEN_1_5B_URL,
-                        LlamaServerManager.DEFAULT_QWEN_1_5B_NAME
-                    );
-                } catch (GLib.Error e) {
-                    status_lbl.label = @"Download Error: $(e.message)";
-                }
+                server_manager.download_model_async.begin (
+                    LlamaServerManager.DEFAULT_QWEN_1_5B_URL,
+                    LlamaServerManager.DEFAULT_QWEN_1_5B_NAME,
+                    (obj, res) => {
+                        try {
+                            server_manager.download_model_async.end (res);
+                        } catch (GLib.Error e) {
+                            status_lbl.label = @"Download Error: $(e.message)";
+                        }
+                    }
+                );
             });
             vbox.append (btn_download_1_5b);
 
             var btn_download_7b = new Gtk.Button.with_label ("Download Qwen 2.5 Coder 7B (GGUF ~4.7 GB)");
             btn_download_7b.clicked.connect (() => {
                 dialog.close ();
-                try {
-                    server_manager.download_model_async.begin (
-                        LlamaServerManager.DEFAULT_QWEN_7B_URL,
-                        LlamaServerManager.DEFAULT_QWEN_7B_NAME
-                    );
-                } catch (GLib.Error e) {
-                    status_lbl.label = @"Download Error: $(e.message)";
-                }
+                server_manager.download_model_async.begin (
+                    LlamaServerManager.DEFAULT_QWEN_7B_URL,
+                    LlamaServerManager.DEFAULT_QWEN_7B_NAME,
+                    (obj, res) => {
+                        try {
+                            server_manager.download_model_async.end (res);
+                        } catch (GLib.Error e) {
+                            status_lbl.label = @"Download Error: $(e.message)";
+                        }
+                    }
+                );
             });
             vbox.append (btn_download_7b);
 
