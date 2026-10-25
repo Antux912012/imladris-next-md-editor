@@ -13,8 +13,43 @@ echo "=== Building Imladris v${VERSION} Packaging ==="
 
 if [[ "${1:-}" != "--deb-only" ]]; then
   # 1. Build Flatpak Bundle (.flatpak)
-  echo "--> 1. Building Flatpak via flatpak-builder & GNOME 50 SDK..."
-  flatpak-builder --force-clean --repo=repo build-flatpak org.gnome.Imladris.json
+  echo "--> 1. Building Flatpak via Flatpak SDK staging & build-bundle..."
+  rm -rf build-flatpak-app repo
+  mkdir -p build-flatpak-app/files build-flatpak-app/var
+
+  cat << 'EOF_META' > build-flatpak-app/metadata
+[Application]
+name=org.gnome.Imladris
+runtime=org.gnome.Platform/x86_64/50
+sdk=org.gnome.Sdk/x86_64/50
+command=imladris
+
+[Context]
+shared=ipc;
+sockets=fallback-x11;wayland;
+devices=dri;
+filesystems=home;
+EOF_META
+
+  flatpak run --system --command=bash --devel --filesystem="${PROJECT_DIR}" org.gnome.Sdk//50 -c \
+    "cd '${PROJECT_DIR}' && rm -rf build-flatpak && meson setup build-flatpak --prefix=/app && meson compile -C build-flatpak && DESTDIR='${PROJECT_DIR}/build-flatpak-app/files' meson install -C build-flatpak"
+
+  # Move /app prefix files to Flatpak root
+  if [ -d "build-flatpak-app/files/app" ]; then
+    cp -r build-flatpak-app/files/app/* build-flatpak-app/files/
+    rm -rf build-flatpak-app/files/app
+  fi
+
+  flatpak build-finish build-flatpak-app \
+    --command=imladris \
+    --share=ipc \
+    --socket=fallback-x11 \
+    --socket=wayland \
+    --device=dri \
+    --filesystem=home \
+    --talk-name=org.freedesktop.Flatpak
+
+  flatpak build-export repo build-flatpak-app master
   flatpak build-bundle repo Imladris.flatpak "${APP_ID}" master
   echo "✔ Flatpak bundle generated: Imladris.flatpak ($(du -h Imladris.flatpak | cut -f1))"
 fi
