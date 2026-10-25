@@ -12,6 +12,7 @@ deps = [
   dependency('webkitgtk-6.0'),
   dependency('libsoup-3.0'),
   dependency('json-glib-1.0'),
+  dependency('gee-0.8'),
   dependency('gio-2.0'),
   dependency('glib-2.0'),
 ]
@@ -28,6 +29,7 @@ sources = files(
   'src/Application.vala',
   'src/RibbonFactory.vala',
   'src/PopoverFactory.vala',
+  'src/SmartRibbonHelpers.vala',
   'src/DocumentPage.vala',
   'src/ExecutionEngine.vala',
   'src/AiClient.vala',
@@ -35,6 +37,12 @@ sources = files(
   'src/McpServer.vala',
   'src/AssistantPanel.vala',
   'src/Window.vala',
+  'src/core/document_model.vala',
+  'src/core/frontmatter_parser.vala',
+  'src/core/notebook_serializer.vala',
+  'src/adapters/DocumentAdapter.vala',
+  'src/services/RecoveryService.vala',
+  'src/services/WorkspaceStateManager.vala',
 )
 
 executable('imladris',

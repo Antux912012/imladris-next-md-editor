@@ -40,25 +40,25 @@
 **Objective:** Expand file compatibility beyond standard Markdown to support scientific/computational notebooks, flexible split views, and crash recovery.
 
 ### 1.1 Multi-Format Compatibility (`.md`, `.Rmd`, `.Qmd`, `.ipynb`)
-- [ ] **Unified Document Abstraction Layer:** Create a file adapter service that ingests different formats and normalizes them into an internal Editor AST/State:
+- [x] **Unified Document Abstraction Layer:** Create a file adapter service that ingests different formats and normalizes them into an internal Editor AST/State:
   - **`.md` (Standard Markdown):** Direct text buffer with CommonMark/GFM parsing.
   - **`.Rmd` (R Markdown) & `.Qmd` (Quarto):** Support YAML frontmatter parsing and executable/attributed code chunk delimiters (e.g., ```` ```{r} ```` or ```` ```{python} ```` with `#|` chunk options).
   - **`.ipynb` (Jupyter Notebook):** Build a bidirectional serializer/deserializer that parses the `.ipynb` JSON schema (`cells`, `metadata`, `nbformat`) into editable markdown blocks and code cells, and serializes back to valid JSON upon saving.
-- [ ] **Syntax Highlighting & AST Extensions:** Register language grammars for R, Python, Julia, YAML frontmatter, and Quarto callout blocks.
+- [x] **Syntax Highlighting & AST Extensions:** Register language grammars for R, Python, Julia, YAML frontmatter, and Quarto callout blocks.
 
 ### 1.2 Crash Recovery & Auto-Cache System
-- [ ] **Shadow Buffer / Local Storage Engine:** Implement a background persistence worker that snapshots the active document state (including unsaved buffers, cursor position, and dirty flags) every `N` seconds (e.g., 3000ms) or on idle.
-- [ ] **Dirty State & Lockfile:** Maintain a session lock or dirty-state manifest in the local application data/cache directory.
-- [ ] **Recovery Routine:** On application boot, check if the previous session terminated unexpectedly (dirty state = `true`). If detected, prompt the user with a non-destructive recovery banner or automatically restore the cached workspace buffers.
-- [ ] **Cache Cleanup:** Flush temporary recovery caches cleanly upon explicit file save or normal application exit.
+- [x] **Shadow Buffer / Local Storage Engine:** Implement a background persistence worker that snapshots the active document state (including unsaved buffers, cursor position, and dirty flags) every `N` seconds (e.g., 3000ms) or on idle.
+- [x] **Dirty State & Lockfile:** Maintain a session lock or dirty-state manifest in the local application data/cache directory.
+- [x] **Recovery Routine:** On application boot, check if the previous session terminated unexpectedly (dirty state = `true`). If detected, prompt the user with a non-destructive recovery banner or automatically restore the cached workspace buffers.
+- [x] **Cache Cleanup:** Flush temporary recovery caches cleanly upon explicit file save or normal application exit.
 
 ### 1.3 Multi-Mode Preview & Split View Engine
-- [ ] **View Mode State Machine:** Implement a layout controller supporting four distinct viewing states, switchable via top ribbon controls and keyboard shortcuts:
+- [x] **View Mode State Machine:** Implement a layout controller supporting four distinct viewing states, switchable via top ribbon controls and keyboard shortcuts:
   1. **Editor Only:** Distraction-free source editing.
   2. **Preview Only:** Read-only rendered output mode.
   3. **Vertical Split (Side-by-Side):** Editor on the left, live rendered preview on the right (resizable divider).
   4. **Horizontal Split (Top-and-Bottom):** Editor on top, live rendered preview on the bottom (resizable divider).
-- [ ] **Synchronized Scrolling:** Implement proportional scroll-sync between the active editor buffer and the preview pane across both Horizontal and Vertical split modes.
+- [x] **Synchronized Scrolling:** Implement proportional scroll-sync between the active editor buffer and the preview pane across both Horizontal and Vertical split modes.
 
 ---
 
@@ -67,16 +67,16 @@
 **Objective:** Dynamically morph the application's UI paradigm based on the active file extension—transitioning seamlessly between a distraction-free writer (Apostrophe style) and a full scientific IDE layout (RStudio style).
 
 ### 1.1.1 Context-Aware Layout Engine
-- [ ] **File-Type Watcher:** Bind a layout-switching listener to the file loader and tab switcher.
-- [ ] **Dynamic Mode Resolution:**
+- [x] **File-Type Watcher:** Bind a layout-switching listener to the file loader and tab switcher.
+- [x] **Dynamic Mode Resolution:**
   - When opening/focusing `.md` $\rightarrow$ Trigger **Apostrophe Mode (Simplified Writer UI)**.
   - When opening/focusing `.Rmd` or `.Qmd` $\rightarrow$ Trigger **RStudio Mode (Multi-Pane IDE UI)** automatically.
   - When opening/focusing `.ipynb` $\rightarrow$ Default to Notebook View, with an explicit toggle in the ribbon to switch into **RStudio Mode**.
-- [ ] **Manual Override:** Allow the user to manually lock or switch layouts regardless of file extension via a workspace layout selector.
+- [x] **Manual Override:** Allow the user to manually lock or switch layouts regardless of file extension via a workspace layout selector.
 
 ### 1.1.2 Apostrophe Mode (For `.md` Files)
-- [ ] **Minimalist Chrome:** Hide secondary IDE docks (Environment, Console, Plots) to maximize writing focus, adopting clean typography and generous margins inspired by GNOME Apostrophe.
-- [ ] **Smart Top Ribbon Menu:** Retain a streamlined, high-utility top toolbar featuring quick-insert dropdown menus and helpers:
+- [x] **Minimalist Chrome:** Hide secondary IDE docks (Environment, Console, Plots) to maximize writing focus, adopting clean typography and generous margins inspired by GNOME Apostrophe.
+- [x] **Smart Top Ribbon Menu:** Retain a streamlined, high-utility top toolbar featuring quick-insert dropdown menus and helpers:
   - **Table Builder:** Interactive grid picker (e.g., hover $M \times N$ grid) + modal helper to insert formatted Markdown tables instantly.
   - **Code Chunk Inserter:** One-click insertion of fenced code blocks with a searchable language selector dropdown.
   - **Citations & Bibliography Manager:** Dropdown UI to link a `.bib` / CSL JSON file, search citation keys (`@author2026`), insert inline citations, and auto-append the bibliography block.
@@ -84,15 +84,15 @@
   - **Emoji Picker:** Searchable popover menu with categorized emojis and shortcode autocomplete (`:rocket:`).
 
 ### 1.1.3 RStudio Mode & Drag-and-Drop Docking (For `.Rmd`, `.Qmd`, `.ipynb`)
-- [ ] **4-Quadrant Workbench Architecture:** Implement a multi-pane docking grid modeled after RStudio:
+- [x] **4-Quadrant Workbench Architecture:** Implement a multi-pane docking grid modeled after RStudio:
   - **Quadrant 1 (Top-Left):** Source Editor (`.Rmd` / `.Qmd` / `.ipynb` document).
   - **Quadrant 2 (Bottom-Left):** Interactive Console / Terminal / Execution Log.
   - **Quadrant 3 (Top-Right):** Environment / Variables Inspector, Document Outline (TOC), & Citations list.
   - **Quadrant 4 (Bottom-Right):** Live Preview / Rendered Output, Plots, Files Browser, & Help.
-- [ ] **Drag-and-Drop Panel Management:**
+- [x] **Drag-and-Drop Panel Management:**
   - Integrate a flexible docking/grid system allowing users to drag panel tabs between quadrants, reorder tabs within a pane, or resize quadrant splitters smoothly.
   - Support maximizing/minimizing individual quadrants and persisting the user's custom panel arrangement in local settings.
-- [ ] **`.ipynb` RStudio Layout Adaptation:** When `.ipynb` is switched to RStudio Mode, map the notebook cells to the Source quadrant while routing cell outputs, plots, and variable states to the corresponding RStudio quadrants.
+- [x] **`.ipynb` RStudio Layout Adaptation:** When `.ipynb` is switched to RStudio Mode, map the notebook cells to the Source quadrant while routing cell outputs, plots, and variable states to the corresponding RStudio quadrants.
 
 ---
 

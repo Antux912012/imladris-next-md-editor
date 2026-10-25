@@ -195,10 +195,79 @@ namespace Imladris {
             toolbar_view.add_bottom_bar (status_bar);
 
             // =================================================================
-            // MAIN WORKSPACE
+            // MAIN WORKSPACE & STATE MACHINE LISTENERS
             // =================================================================
             toolbar_view.set_content (tab_view);
+
+            Services.WorkspaceStateManager.get_default ().layout_changed.connect ((mode) => {
+                apply_workspace_layout (mode);
+            });
+
+            Services.WorkspaceStateManager.get_default ().split_changed.connect ((split) => {
+                var d = get_active_document ();
+                if (d != null) {
+                    d.set_split_orientation (split);
+                }
+            });
+
+            tab_view.notify["selected-page"].connect (() => {
+                var d = get_active_document ();
+                if (d != null) {
+                    string fname = d.file_location != null ? d.file_location.get_basename () : @"untitled.$(d.doc_type)";
+                    Services.WorkspaceStateManager.get_default ().resolve_mode_for_file (fname);
+                    d.set_split_orientation (Services.WorkspaceStateManager.get_default ().active_split);
+                }
+            });
+
             add_document_tab ("Document1.qmd", "markdown");
+
+            // Check for crash recovery snapshots on launch
+            GLib.Idle.add (() => {
+                check_and_prompt_recovery ();
+                return GLib.Source.REMOVE;
+            });
+        }
+
+        private void apply_workspace_layout (Services.LayoutMode mode) {
+            var doc = get_active_document ();
+            if (mode == Services.LayoutMode.APOSTROPHE) {
+                // Apostrophe Mode: Maximize writing space, clean typography, hide distracting side panels
+                ribbon_stack.visible = true;
+                if (doc != null) {
+                    doc.source_view.left_margin = 72;
+                    doc.source_view.right_margin = 72;
+                }
+            } else {
+                // RStudio Workbench Mode: 4-Quadrant workbench feel, show output console & computation docks
+                ribbon_stack.visible = true;
+                if (doc != null) {
+                    doc.source_view.left_margin = 32;
+                    doc.source_view.right_margin = 32;
+                    doc.console_revealer.reveal_child = true;
+                }
+            }
+        }
+
+        private void check_and_prompt_recovery () {
+            var recs = Services.RecoveryService.get_default ().check_recoverable_sessions ();
+            if (recs.size > 0) {
+                var toast = new Adw.Toast (@"Imladris detected $(recs.size) unsaved document(s) from a previous session.") {
+                    button_label = "Restore",
+                    timeout = 0
+                };
+                toast.button_clicked.connect (() => {
+                    foreach (var rec in recs) {
+                        string title = rec.file_path != null ? GLib.Path.get_basename (rec.file_path) : "Recovered-Document.md";
+                        GLib.File? f = rec.file_path != null ? GLib.File.new_for_path (rec.file_path) : null;
+                        add_document_tab (title, rec.doc_type, rec.content, f);
+                    }
+                });
+                // Find toast overlay if present or notify via document log
+                var d = get_active_document ();
+                if (d != null) {
+                    d.append_console_log (@"⚠ Crash Recovery: $(recs.size) unsaved snapshot(s) found in cache.");
+                }
+            }
         }
 
         public DocumentPage? get_active_document () {
@@ -244,14 +313,20 @@ namespace Imladris {
                     uint8[] contents;
                     string etag;
                     yield file.load_contents_async (null, out contents, out etag);
-                    string text = (string) contents;
+                    string raw_text = (string) contents;
                     string name = file.get_basename ();
+                    var fmt = Adapters.DocumentFormat.from_filename (name);
+                    string text = Adapters.DocumentAdapter.load_to_editor_buffer (raw_text, fmt);
+
                     string lang = "markdown";
                     if (name.has_suffix (".ipynb")) lang = "json";
                     else if (name.has_suffix (".ts")) lang = "typescript";
                     else if (name.has_suffix (".html")) lang = "html";
                     else if (name.has_suffix (".rmd") || name.has_suffix (".Rmd")) lang = "rmd";
                     add_document_tab (name, lang, text, file);
+
+                    // Dynamic mode resolution for the active file
+                    Services.WorkspaceStateManager.get_default ().resolve_mode_for_file (name);
                 }
             } catch (GLib.Error e) {
                 warning ("Failed to open file: %s", e.message);
@@ -264,16 +339,19 @@ namespace Imladris {
 
             if (doc.file_location != null) {
                 try {
-                    string content = doc.source_buffer.text;
+                    string editor_content = doc.source_buffer.text;
+                    var fmt = Adapters.DocumentFormat.from_filename (doc.file_location.get_basename ());
+                    string to_save = Adapters.DocumentAdapter.save_from_editor_buffer (editor_content, fmt);
                     string etag;
                     yield doc.file_location.replace_contents_async (
-                        content.data,
+                        to_save.data,
                         null,
                         false,
                         GLib.FileCreateFlags.REPLACE_DESTINATION,
                         null,
                         out etag
                     );
+                    Services.RecoveryService.get_default ().purge_document_cache (doc.doc_id);
                     doc.append_console_log (@"✔ Saved $(doc.file_location.get_basename ())");
                 } catch (GLib.Error e) {
                     doc.append_console_log (@"✖ Save failed: $(e.message)");
@@ -287,16 +365,19 @@ namespace Imladris {
                     var file = yield dialog.save (this, null);
                     if (file != null) {
                         doc.file_location = file;
-                        string content = doc.source_buffer.text;
+                        string editor_content = doc.source_buffer.text;
+                        var fmt = Adapters.DocumentFormat.from_filename (file.get_basename ());
+                        string to_save = Adapters.DocumentAdapter.save_from_editor_buffer (editor_content, fmt);
                         string etag;
                         yield file.replace_contents_async (
-                            content.data,
+                            to_save.data,
                             null,
                             false,
                             GLib.FileCreateFlags.REPLACE_DESTINATION,
                             null,
                             out etag
                         );
+                        Services.RecoveryService.get_default ().purge_document_cache (doc.doc_id);
                         if (tab_view.selected_page != null) {
                             tab_view.selected_page.title = file.get_basename ();
                         }
@@ -432,11 +513,36 @@ namespace Imladris {
             box.append (RibbonFactory.create_tall_button ("document-new-symbolic", "Blank\nPage", true));
             box.append (RibbonFactory.create_vseparator ());
 
-            var table_popover = PopoverFactory.create_table_picker_popover ((rows, cols) => {
+            var table_popover = SmartRibbonHelpers.create_table_builder_popover ((rows, cols) => {
                 var d = get_active_document ();
                 if (d != null) d.insert_markdown_table (rows, cols);
             });
             box.append (RibbonFactory.create_tall_button ("view-grid-symbolic", "Table", false, false, false, true, null, null, table_popover));
+
+            var code_popover = SmartRibbonHelpers.create_code_chunk_popover ((snippet) => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor (snippet, -1);
+            });
+            box.append (RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Code\nChunk", false, false, false, true, null, null, code_popover));
+
+            var cite_popover = SmartRibbonHelpers.create_citation_popover ((cite) => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor (cite, -1);
+            });
+            box.append (RibbonFactory.create_tall_button ("book-open-symbolic", "Citation\n(@cite)", false, false, false, true, null, null, cite_popover));
+
+            var sym_popover = SmartRibbonHelpers.create_symbols_popover ((sym) => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor (sym, -1);
+            });
+            box.append (RibbonFactory.create_tall_button ("character-map-symbolic", "Symbols", false, false, false, true, null, null, sym_popover));
+
+            var emoji_popover = SmartRibbonHelpers.create_emoji_popover ((em) => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor (em, -1);
+            });
+            box.append (RibbonFactory.create_tall_button ("face-smile-symbolic", "Emoji", false, false, false, true, null, null, emoji_popover));
+
             box.append (RibbonFactory.create_tall_button ("insert-image-symbolic", "Picture", true));
             box.append (RibbonFactory.create_tall_button ("applications-graphics-symbolic", "Shapes", true));
             box.append (RibbonFactory.create_vertical_stack ({
@@ -626,16 +732,58 @@ namespace Imladris {
         }
 
         // =====================================================================
-        // 8. VIEW RIBBON
+        // 8. VIEW RIBBON (Split Mode, Apostrophe Mode, RStudio Workbench Toggle)
         // =====================================================================
         private Gtk.Widget build_view_ribbon () {
             var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
-            box.append (RibbonFactory.create_tall_button ("view-fullscreen-symbolic", "Full\nScreen"));
-            var print_btn = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("x-office-document-symbolic", "Source\nEditor", false, true, true);
-            var web_btn = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("applications-internet-symbolic", "Visual\nMode", false, true, false);
-            web_btn.set_group (print_btn);
-            box.append (print_btn);
-            box.append (web_btn);
+
+            // Group 1: Workspace Layout Mode Toggle
+            var btn_mode_apostrophe = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("edit-find-symbolic", "Apostrophe\nMode", false, true, true);
+            var btn_mode_rstudio = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("view-grid-symbolic", "RStudio\nWorkbench", false, true, false);
+            btn_mode_rstudio.set_group (btn_mode_apostrophe);
+
+            btn_mode_apostrophe.toggled.connect (() => {
+                if (btn_mode_apostrophe.active) {
+                    Services.WorkspaceStateManager.get_default ().set_layout_mode (Services.LayoutMode.APOSTROPHE, true);
+                }
+            });
+            btn_mode_rstudio.toggled.connect (() => {
+                if (btn_mode_rstudio.active) {
+                    Services.WorkspaceStateManager.get_default ().set_layout_mode (Services.LayoutMode.RSTUDIO, true);
+                }
+            });
+
+            box.append (btn_mode_apostrophe);
+            box.append (btn_mode_rstudio);
+            box.append (RibbonFactory.create_vseparator ());
+
+            // Group 2: Split Mode Switcher (Editor Only, Preview Only, Vertical, Horizontal)
+            var btn_split_v = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("view-column-symbolic", "Vertical\nSplit", false, true, true);
+            var btn_split_h = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("view-paged-symbolic", "Horizontal\nSplit", false, true, false);
+            var btn_edit_only = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("x-office-document-symbolic", "Editor\nOnly", false, true, false);
+            var btn_prev_only = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("applications-internet-symbolic", "Preview\nOnly", false, true, false);
+
+            btn_split_h.set_group (btn_split_v);
+            btn_edit_only.set_group (btn_split_v);
+            btn_prev_only.set_group (btn_split_v);
+
+            btn_split_v.toggled.connect (() => {
+                if (btn_split_v.active) Services.WorkspaceStateManager.get_default ().set_split_mode (Services.SplitMode.VERTICAL_SPLIT);
+            });
+            btn_split_h.toggled.connect (() => {
+                if (btn_split_h.active) Services.WorkspaceStateManager.get_default ().set_split_mode (Services.SplitMode.HORIZONTAL_SPLIT);
+            });
+            btn_edit_only.toggled.connect (() => {
+                if (btn_edit_only.active) Services.WorkspaceStateManager.get_default ().set_split_mode (Services.SplitMode.EDITOR_ONLY);
+            });
+            btn_prev_only.toggled.connect (() => {
+                if (btn_prev_only.active) Services.WorkspaceStateManager.get_default ().set_split_mode (Services.SplitMode.PREVIEW_ONLY);
+            });
+
+            box.append (btn_split_v);
+            box.append (btn_split_h);
+            box.append (btn_edit_only);
+            box.append (btn_prev_only);
             box.append (RibbonFactory.create_vseparator ());
 
             var chk_grid = new Gtk.Grid () { row_spacing = 4, column_spacing = 12, valign = Gtk.Align.CENTER };

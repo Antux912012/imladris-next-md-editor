@@ -15,14 +15,20 @@ namespace Imladris {
         private Window? parent_window;
         private uint update_debounce_id = 0;
 
+        public Gtk.Paned paned { get; private set; }
+        public Gtk.ScrolledWindow editor_scroller { get; private set; }
+        public Gtk.Box right_box { get; private set; }
+        public string doc_id { get; private set; }
+
         public signal void stats_changed (int words, int lines, string lang_badge);
 
         public DocumentPage (string title, string lang_id, Window? win = null) {
             Object (orientation: Gtk.Orientation.VERTICAL, spacing: 0);
             this.doc_type = lang_id;
             this.parent_window = win;
+            this.doc_id = GLib.Uuid.string_random ();
 
-            var paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
+            paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
                 hexpand = true,
                 vexpand = true,
                 position = 780
@@ -59,7 +65,7 @@ namespace Imladris {
             // Setup Auto-Completion (Words & Snippets for Polyglot Languages)
             setup_completion ();
 
-            var editor_scroller = new Gtk.ScrolledWindow () {
+            editor_scroller = new Gtk.ScrolledWindow () {
                 child = source_view,
                 hexpand = true,
                 vexpand = true
@@ -72,7 +78,7 @@ namespace Imladris {
                 reveal_child = true
             };
 
-            var right_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
+            right_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
                 width_request = 480
             };
 
@@ -156,6 +162,26 @@ namespace Imladris {
                     update_debounce_id = 0;
                     emit_buffer_stats ();
                     refresh_live_preview ();
+
+                    // Non-blocking shadow buffer write for crash resilience
+                    int line = 0;
+                    int col = 0;
+                    Gtk.TextIter insert_iter;
+                    source_buffer.get_iter_at_mark (out insert_iter, source_buffer.get_insert ());
+                    line = insert_iter.get_line ();
+                    col = insert_iter.get_line_offset ();
+                    string? path = file_location != null ? file_location.get_path () : null;
+
+                    Services.RecoveryService.get_default ().snapshot_async.begin (
+                        doc_id,
+                        path,
+                        doc_type,
+                        source_buffer.text,
+                        line,
+                        col,
+                        true
+                    );
+
                     return GLib.Source.REMOVE;
                 });
             });
@@ -241,7 +267,9 @@ export function summarize(points: DataPoint[]): number {
                 return;
             }
 
-            string escaped = GLib.Markup.escape_text (raw);
+            var fmt = Adapters.DocumentFormat.from_filename (file_location != null ? file_location.get_basename () : @"untitled.$doc_type");
+            string body_html = Adapters.DocumentAdapter.render_html (raw, fmt);
+
             string html = """<!DOCTYPE html>
 <html>
 <head>
@@ -266,6 +294,57 @@ export function summarize(points: DataPoint[]): number {
     margin-bottom: 12px;
     text-transform: uppercase;
   }
+  .code-chunk-card {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    margin: 16px 0;
+    overflow: hidden;
+  }
+  .code-chunk-header {
+    background: #e2e8f0;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chunk-opts {
+    font-family: monospace;
+    font-size: 11px;
+    color: #64748b;
+  }
+  .document-frontmatter-card {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+  .frontmatter-title {
+    margin-top: 0;
+    color: #0f172a;
+  }
+  .frontmatter-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    font-size: 13px;
+    color: #475569;
+  }
+  .frontmatter-label {
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .frontmatter-badge {
+    background: #38bdf8;
+    color: #0369a1;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
   pre {
     background: #f6f8fa;
     border: 1px solid #d0d7de;
@@ -275,30 +354,51 @@ export function summarize(points: DataPoint[]): number {
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     white-space: pre-wrap;
+    margin: 8px 12px;
   }
 </style>
 </head>
 <body>
   <div class="badge">WebKitGTK 6.0 Live Preview • %s</div>
-  <div id="content"><pre>%s</pre></div>
-  <script>
-    (function() {
-      const raw = document.querySelector('#content pre').textContent;
-      let html = raw
-        .replace(/^---\n([\s\S]*?)\n---/m, '<pre style="background:#eef6ff;border-color:#b6d4fe;">$1</pre>')
-        .replace(/```\{(\w+)\}\n([\s\S]*?)```/g, '<pre><strong>[$1 chunk]</strong>\n$2</pre>')
-        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');
-      document.getElementById('content').innerHTML = html;
-    })();
-  </script>
+  <div id="content">%s</div>
 </body>
-</html>""".printf (doc_type.up (), escaped);
+</html>""".printf (fmt.to_badge_label (), body_html);
 
             web_view.load_html (html, null);
+        }
+
+        public void set_split_orientation (Services.SplitMode split) {
+            switch (split) {
+                case Services.SplitMode.EDITOR_ONLY:
+                    editor_scroller.visible = true;
+                    console_revealer.visible = false;
+                    break;
+                case Services.SplitMode.PREVIEW_ONLY:
+                    editor_scroller.visible = false;
+                    console_revealer.visible = true;
+                    console_revealer.reveal_child = true;
+                    right_stack.visible_child_name = "preview";
+                    break;
+                case Services.SplitMode.HORIZONTAL_SPLIT:
+                    editor_scroller.visible = true;
+                    console_revealer.visible = true;
+                    console_revealer.reveal_child = true;
+                    paned.orientation = Gtk.Orientation.VERTICAL;
+                    right_stack.visible_child_name = "preview";
+                    int h = paned.get_height ();
+                    if (h > 100) paned.set_position (h / 2);
+                    break;
+                case Services.SplitMode.VERTICAL_SPLIT:
+                default:
+                    editor_scroller.visible = true;
+                    console_revealer.visible = true;
+                    console_revealer.reveal_child = true;
+                    paned.orientation = Gtk.Orientation.HORIZONTAL;
+                    right_stack.visible_child_name = "preview";
+                    int w = paned.get_width ();
+                    if (w > 100) paned.set_position (w / 2);
+                    break;
+            }
         }
 
         public void show_live_preview (string? uri = null) {
