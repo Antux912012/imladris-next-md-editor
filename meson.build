@@ -43,6 +43,9 @@ sources = files(
   'src/adapters/DocumentAdapter.vala',
   'src/services/RecoveryService.vala',
   'src/services/WorkspaceStateManager.vala',
+  'src/core/layout/DockTypes.vala',
+  'src/ui/PersistentPanelRegistry.vala',
+  'src/ui/RStudioDockGrid.vala',
 )
 
 executable('imladris',

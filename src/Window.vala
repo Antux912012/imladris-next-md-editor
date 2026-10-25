@@ -139,6 +139,16 @@ namespace Imladris {
                 trigger_ai_assistant ();
             });
             tier3_box.append (ai_quick_btn);
+
+            var rstudio_toggle_btn = RibbonFactory.create_compact_button ("view-grid-symbolic", "RStudio 4-Quad / Apostrophe");
+            ((Gtk.Button) rstudio_toggle_btn).clicked.connect (() => {
+                var mgr = Services.WorkspaceStateManager.get_default ();
+                var next_mode = mgr.active_layout == Services.LayoutMode.RSTUDIO
+                    ? Services.LayoutMode.APOSTROPHE
+                    : Services.LayoutMode.RSTUDIO;
+                mgr.set_layout_mode (next_mode, true);
+            });
+            tier3_box.append (rstudio_toggle_btn);
             tier3_box.append (RibbonFactory.create_vseparator ());
 
             tab_view = new Adw.TabView ();
@@ -230,21 +240,9 @@ namespace Imladris {
 
         private void apply_workspace_layout (Services.LayoutMode mode) {
             var doc = get_active_document ();
-            if (mode == Services.LayoutMode.APOSTROPHE) {
-                // Apostrophe Mode: Maximize writing space, clean typography, hide distracting side panels
-                ribbon_stack.visible = true;
-                if (doc != null) {
-                    doc.source_view.left_margin = 72;
-                    doc.source_view.right_margin = 72;
-                }
-            } else {
-                // RStudio Workbench Mode: 4-Quadrant workbench feel, show output console & computation docks
-                ribbon_stack.visible = true;
-                if (doc != null) {
-                    doc.source_view.left_margin = 32;
-                    doc.source_view.right_margin = 32;
-                    doc.console_revealer.reveal_child = true;
-                }
+            ribbon_stack.visible = true;
+            if (doc != null) {
+                doc.set_workbench_mode (mode);
             }
         }
 
@@ -300,6 +298,29 @@ namespace Imladris {
             page.icon = new GLib.ThemedIcon ("x-office-document-symbolic");
             tab_view.selected_page = page;
             doc_page.emit_buffer_stats ();
+        }
+
+        public async void open_file_from_path (string fpath) {
+            try {
+                var file = GLib.File.new_for_path (fpath);
+                uint8[] contents;
+                string etag;
+                yield file.load_contents_async (null, out contents, out etag);
+                string raw_text = (string) contents;
+                string name = file.get_basename ();
+                var fmt = Adapters.DocumentFormat.from_filename (name);
+                string text = Adapters.DocumentAdapter.load_to_editor_buffer (raw_text, fmt);
+
+                string lang = "markdown";
+                if (name.has_suffix (".ipynb")) lang = "json";
+                else if (name.has_suffix (".ts")) lang = "typescript";
+                else if (name.has_suffix (".html")) lang = "html";
+                else if (name.has_suffix (".rmd") || name.has_suffix (".Rmd")) lang = "rmd";
+                add_document_tab (name, lang, text, file);
+                Services.WorkspaceStateManager.get_default ().resolve_mode_for_file (name);
+            } catch (GLib.Error e) {
+                warning ("Failed to open file from path %s: %s", fpath, e.message);
+            }
         }
 
         public async void open_document_async () {

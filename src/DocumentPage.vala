@@ -1,3 +1,6 @@
+using Imladris.Core.Layout;
+using Imladris.UI;
+
 namespace Imladris {
 
     public class DocumentPage : Gtk.Box {
@@ -15,10 +18,19 @@ namespace Imladris {
         private Window? parent_window;
         private uint update_debounce_id = 0;
 
+        // Apostrophe Shell Containers
         public Gtk.Paned paned { get; private set; }
+        public Gtk.Box apostrophe_editor_host { get; private set; }
+        public Gtk.Box apostrophe_preview_host { get; private set; }
         public Gtk.ScrolledWindow editor_scroller { get; private set; }
         public Gtk.Box right_box { get; private set; }
         public string doc_id { get; private set; }
+
+        // Phase 1.1.3 Portal Registry & 4-Quadrant RStudio Docking Grid
+        public RStudioDockLayoutState dock_layout_state { get; private set; }
+        public PersistentPanelRegistry panel_registry { get; private set; }
+        public RStudioDockGrid rstudio_dock_grid { get; private set; }
+        private Services.LayoutMode current_layout_mode = Services.LayoutMode.APOSTROPHE;
 
         public signal void stats_changed (int words, int lines, string lang_badge);
 
@@ -27,12 +39,6 @@ namespace Imladris {
             this.doc_type = lang_id;
             this.parent_window = win;
             this.doc_id = GLib.Uuid.string_random ();
-
-            paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
-                hexpand = true,
-                vexpand = true,
-                position = 780
-            };
 
             // 1. Setup GtkSource.Buffer with Syntax Highlighting + Rich TextTags
             var lang_manager = GtkSource.LanguageManager.get_default ();
@@ -62,17 +68,54 @@ namespace Imladris {
                 monospace = true
             };
 
-            // Setup Auto-Completion (Words & Snippets for Polyglot Languages)
             setup_completion ();
+            setup_cell_execution_shortcut ();
 
             editor_scroller = new Gtk.ScrolledWindow () {
                 child = source_view,
                 hexpand = true,
                 vexpand = true
             };
-            paned.set_start_child (editor_scroller);
 
-            // 2. Setup Collapsible Right Split Pane (WebKit.WebView + Assistant + Console Stack)
+            // 2. Shared WebKitGTK 6.0 & Console Instances (Kept alive in PersistentPanelRegistry)
+            web_view = new WebKit.WebView () {
+                hexpand = true,
+                vexpand = true
+            };
+            var settings = web_view.get_settings ();
+            settings.enable_developer_extras = true;
+            settings.enable_javascript = true;
+
+            console_view = new Gtk.TextView () {
+                editable = false,
+                monospace = true,
+                wrap_mode = Gtk.WrapMode.WORD_CHAR,
+                top_margin = 12,
+                bottom_margin = 12,
+                left_margin = 12,
+                right_margin = 12
+            };
+
+            // 3. Initialize PersistentPanelRegistry & RStudioDockGrid
+            dock_layout_state = new RStudioDockLayoutState ();
+            dock_layout_state.load_from_disk ();
+
+            panel_registry = new PersistentPanelRegistry (this, parent_window);
+            rstudio_dock_grid = new RStudioDockGrid (dock_layout_state, panel_registry);
+
+            // 4. Build Apostrophe Shell (Single-Pane / Clean Split Writer View)
+            paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
+                hexpand = true,
+                vexpand = true,
+                position = 780
+            };
+
+            apostrophe_editor_host = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
+                hexpand = true,
+                vexpand = true
+            };
+            paned.set_start_child (apostrophe_editor_host);
+
             console_revealer = new Gtk.Revealer () {
                 transition_type = Gtk.RevealerTransitionType.SLIDE_LEFT,
                 reveal_child = true
@@ -100,56 +143,29 @@ namespace Imladris {
             };
             right_header.append (stack_switcher);
             right_header.append (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) { hexpand = true });
-
-            var refresh_btn = new Gtk.Button.from_icon_name ("view-refresh-symbolic") {
-                tooltip_text = "Refresh WebKit Live Preview"
-            };
-            refresh_btn.add_css_class ("flat");
-            refresh_btn.clicked.connect (() => {
-                refresh_live_preview ();
-            });
-            right_header.append (refresh_btn);
-
             right_box.append (right_header);
 
-            // Page 1: Embedded WebKitGTK 6.0 Live View
-            web_view = new WebKit.WebView () {
+            apostrophe_preview_host = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
                 hexpand = true,
                 vexpand = true
             };
-            var settings = web_view.get_settings ();
-            settings.enable_developer_extras = true;
-            settings.enable_javascript = true;
-            right_stack.add_titled (web_view, "preview", "Live Preview");
+            right_stack.add_titled (apostrophe_preview_host, "preview", "Live Preview");
 
-            // Page 2: Dual Online & Offline AI Assistant
             if (parent_window != null) {
                 assistant_panel = new AssistantPanel (parent_window);
                 right_stack.add_titled (assistant_panel, "assistant", "AI Assistant");
             }
-
-            // Page 3: Execution & Render Output Console
-            console_view = new Gtk.TextView () {
-                editable = false,
-                monospace = true,
-                wrap_mode = Gtk.WrapMode.WORD_CHAR,
-                top_margin = 12,
-                bottom_margin = 12,
-                left_margin = 12,
-                right_margin = 12
-            };
-            var console_scroller = new Gtk.ScrolledWindow () {
-                child = console_view,
-                hexpand = true,
-                vexpand = true
-            };
-            right_stack.add_titled (console_scroller, "console", "Console Log");
 
             right_box.append (right_stack);
             console_revealer.set_child (right_box);
             paned.set_end_child (console_revealer);
 
             this.append (paned);
+            this.append (rstudio_dock_grid);
+
+            // Mount initial layout based on file extension
+            var initial_mode = Services.LayoutMode.from_extension (title);
+            set_workbench_mode (initial_mode);
 
             refresh_live_preview ();
 
@@ -162,6 +178,7 @@ namespace Imladris {
                     update_debounce_id = 0;
                     emit_buffer_stats ();
                     refresh_live_preview ();
+                    panel_registry.refresh_environment_and_outline ();
 
                     // Non-blocking shadow buffer write for crash resilience
                     int line = 0;
@@ -191,6 +208,49 @@ namespace Imladris {
             if (update_debounce_id != 0) {
                 GLib.Source.remove (update_debounce_id);
                 update_debounce_id = 0;
+            }
+        }
+
+        private void setup_cell_execution_shortcut () {
+            var key_ctrl = new Gtk.EventControllerKey ();
+            key_ctrl.key_pressed.connect ((keyval, keycode, state) => {
+                if ((state & Gdk.ModifierType.CONTROL_MASK) != 0 &&
+                    (keyval == Gdk.Key.Return || keyval == Gdk.Key.KP_Enter)) {
+                    panel_registry.execute_active_cell ();
+                    return true;
+                }
+                return false;
+            });
+            source_view.add_controller (key_ctrl);
+        }
+
+        /**
+         * Transitions seamlessly between Apostrophe Mode (single-pane writer)
+         * and RStudio Mode (4-quadrant dock grid) by re-parenting the persistent
+         * panel widgets without losing undo/redo stack or cursor focus.
+         */
+        public void set_workbench_mode (Services.LayoutMode mode) {
+            current_layout_mode = mode;
+
+            if (mode == Services.LayoutMode.APOSTROPHE) {
+                rstudio_dock_grid.visible = false;
+                paned.visible = true;
+
+                panel_registry.notebook_cell_toolbar.visible = false;
+                source_view.left_margin = 72;
+                source_view.right_margin = 72;
+
+                panel_registry.mount_panel (PanelId.SOURCE_EDITOR, apostrophe_editor_host);
+                panel_registry.mount_panel (PanelId.LIVE_PREVIEW, apostrophe_preview_host);
+            } else {
+                paned.visible = false;
+                rstudio_dock_grid.visible = true;
+
+                panel_registry.notebook_cell_toolbar.visible = true;
+                source_view.left_margin = 28;
+                source_view.right_margin = 28;
+
+                rstudio_dock_grid.refresh_dock_layout ();
             }
         }
 
@@ -368,19 +428,25 @@ export function summarize(points: DataPoint[]): number {
         }
 
         public void set_split_orientation (Services.SplitMode split) {
+            if (current_layout_mode == Services.LayoutMode.RSTUDIO) {
+                // In RStudio mode, activate the corresponding panel in Q4
+                dock_layout_state.activate_tab (QuadrantId.Q4_BOTTOM_RIGHT, PanelId.LIVE_PREVIEW);
+                return;
+            }
+
             switch (split) {
                 case Services.SplitMode.EDITOR_ONLY:
-                    editor_scroller.visible = true;
+                    apostrophe_editor_host.visible = true;
                     console_revealer.visible = false;
                     break;
                 case Services.SplitMode.PREVIEW_ONLY:
-                    editor_scroller.visible = false;
+                    apostrophe_editor_host.visible = false;
                     console_revealer.visible = true;
                     console_revealer.reveal_child = true;
                     right_stack.visible_child_name = "preview";
                     break;
                 case Services.SplitMode.HORIZONTAL_SPLIT:
-                    editor_scroller.visible = true;
+                    apostrophe_editor_host.visible = true;
                     console_revealer.visible = true;
                     console_revealer.reveal_child = true;
                     paned.orientation = Gtk.Orientation.VERTICAL;
@@ -390,7 +456,7 @@ export function summarize(points: DataPoint[]): number {
                     break;
                 case Services.SplitMode.VERTICAL_SPLIT:
                 default:
-                    editor_scroller.visible = true;
+                    apostrophe_editor_host.visible = true;
                     console_revealer.visible = true;
                     console_revealer.reveal_child = true;
                     paned.orientation = Gtk.Orientation.HORIZONTAL;
@@ -402,8 +468,12 @@ export function summarize(points: DataPoint[]): number {
         }
 
         public void show_live_preview (string? uri = null) {
-            console_revealer.reveal_child = true;
-            right_stack.visible_child_name = "preview";
+            if (current_layout_mode == Services.LayoutMode.RSTUDIO) {
+                dock_layout_state.activate_tab (QuadrantId.Q4_BOTTOM_RIGHT, PanelId.LIVE_PREVIEW);
+            } else {
+                console_revealer.reveal_child = true;
+                right_stack.visible_child_name = "preview";
+            }
             if (uri != null) {
                 web_view.load_uri (uri);
             } else {
@@ -412,6 +482,10 @@ export function summarize(points: DataPoint[]): number {
         }
 
         public void show_ai_assistant () {
+            if (current_layout_mode == Services.LayoutMode.RSTUDIO) {
+                set_workbench_mode (Services.LayoutMode.APOSTROPHE);
+            }
+            console_revealer.visible = true;
             console_revealer.reveal_child = true;
             right_stack.visible_child_name = "assistant";
         }
@@ -459,8 +533,9 @@ export function summarize(points: DataPoint[]): number {
         }
 
         public void append_console_log (string text) {
-            console_revealer.reveal_child = true;
-            right_stack.visible_child_name = "console";
+            if (current_layout_mode == Services.LayoutMode.RSTUDIO) {
+                dock_layout_state.activate_tab (QuadrantId.Q2_BOTTOM_LEFT, PanelId.CONSOLE);
+            }
             Gtk.TextIter end;
             console_view.buffer.get_end_iter (out end);
             console_view.buffer.insert (ref end, text + "\n", -1);

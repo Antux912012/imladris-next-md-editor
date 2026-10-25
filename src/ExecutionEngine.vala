@@ -24,5 +24,22 @@ namespace Imladris {
                 page.append_console_log (@"✖ Execution Notice: $(e.message)");
             }
         }
+
+        public static async string capture_command_async (string[] argv) {
+            try {
+                var proc = new GLib.Subprocess.newv (
+                    argv,
+                    GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE
+                );
+                string? output = null;
+                yield proc.communicate_utf8_async (null, null, out output, null);
+                if (output != null && output.strip ().length > 0) {
+                    return output.strip ();
+                }
+                return "✔ Completed (no output).";
+            } catch (GLib.Error e) {
+                return @"✖ Execution Notice: $(e.message)";
+            }
+        }
     }
 }
