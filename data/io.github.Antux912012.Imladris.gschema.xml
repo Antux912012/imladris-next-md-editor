@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="imladris">
-  <schema id="org.gnome.Imladris" path="/org/gnome/Imladris/">
+  <schema id="io.github.Antux912012.Imladris" path="/org/gnome/Imladris/">
     <key name="window-width" type="i">
       <default>1024</default>
       <summary>Window width</summary>

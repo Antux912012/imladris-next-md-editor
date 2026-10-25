@@ -47,4 +47,4 @@ jobs:
             --force-clean \
             --default-branch=stable \
             --repo=repo \
-            org.gnome.Imladris.json
+            io.github.Antux912012.Imladris.json

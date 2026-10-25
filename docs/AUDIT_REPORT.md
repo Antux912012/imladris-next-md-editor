@@ -20,7 +20,7 @@ The application is a native Linux Markdown and Polyglot Studio built in **Vala**
 ### 2.1 Build System & Toolchain
 - **Build System:** Meson 1.9.2 + Ninja 1.13.2
 - **Compiler:** Vala (`valac 0.56.19`) generating C, compiled by GCC 15.2.0 via `ccache`.
-- **Packaging:** Flatpak bundle (`org.gnome.Imladris`, GNOME 50 runtime/SDK) + Debian package generator (`build-packages.sh`).
+- **Packaging:** Flatpak bundle (`io.github.Antux912012.Imladris`, GNOME 50 runtime/SDK) + Debian package generator (`build-packages.sh`).
 
 ### 2.2 Active Component Tree (Referenced by `meson.build`)
 ```

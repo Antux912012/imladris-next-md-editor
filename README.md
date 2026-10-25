@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="data/icons/hicolor/256x256/apps/org.gnome.Imladris.png" alt="Imladris Logo" width="128" height="128">
+  <img src="data/icons/hicolor/256x256/apps/io.github.Antux912012.Imladris.png" alt="Imladris Logo" width="128" height="128">
 </p>
 
 <h1 align="center">Imladris</h1>
@@ -8,8 +8,8 @@
 <p align="center">
   <a href="https://github.com/Antux912012/imladris-next-md-editor/releases"><img src="https://img.shields.io/github/v/release/Antux912012/imladris-next-md-editor?include_prereleases&style=flat-square&color=blue" alt="Release"></a>
   <a href="https://gitlab.gnome.org/GNOME/libadwaita"><img src="https://img.shields.io/badge/platform-Linux%20(GTK4%20%2F%20Libadwaita)-blue?style=flat-square" alt="Platform"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.0"><img src="https://img.shields.io/badge/Flatpak-supported-blue?style=flat-square&logo=flatpak" alt="Flatpak"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.0"><img src="https://img.shields.io/badge/Debian%20.deb-supported-red?style=flat-square&logo=debian" alt="Debian"></a>
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.1"><img src="https://img.shields.io/badge/Flatpak-io.github.Antux912012.Imladris-blue?style=flat-square&logo=flatpak" alt="Flatpak"></a>
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.1"><img src="https://img.shields.io/badge/Debian%20.deb-supported-red?style=flat-square&logo=debian" alt="Debian"></a>
 </p>
 
 <p align="center">
@@ -68,24 +68,24 @@
 Official releases are distributed exclusively as **Debian packages (`.deb`)** and **Flatpak bundles (`.flatpak`)**. AppImage builds are intentionally excluded.
 
 ### Option 1: Debian / Ubuntu / Pop!_OS (`.deb`)
-Download the latest `.deb` package from the [v0.5.0 Release](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.0):
+Download the latest `.deb` package from the [v0.5.1 Release](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.1):
 
 ```bash
 # Download and install
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.5.0/imladris_0.5.0_amd64.deb
-sudo dpkg -i imladris_0.5.0_amd64.deb
+wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.5.1/imladris_0.5.1_amd64.deb
+sudo dpkg -i imladris_0.5.1_amd64.deb
 
 # Fix missing dependencies if needed
 sudo apt-get install -f
 ```
 
 ### Option 2: Flatpak (Any Linux distribution)
-Download the standalone single-file bundle:
+Download the standalone single-file bundle (`io.github.Antux912012.Imladris`):
 
 ```bash
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.5.0/Imladris.flatpak
-flatpak install --user Imladris.flatpak
-flatpak run org.gnome.Imladris
+wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.5.1/io.github.Antux912012.Imladris.flatpak
+flatpak install --user io.github.Antux912012.Imladris.flatpak
+flatpak run io.github.Antux912012.Imladris
 ```
 
 ---

@@ -1,5 +1,5 @@
 {
-    "app-id": "org.gnome.Imladris",
+    "app-id": "io.github.Antux912012.Imladris",
     "runtime": "org.gnome.Platform",
     "runtime-version": "50",
     "sdk": "org.gnome.Sdk",

@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.5.0',
+  version: '0.5.1',
   default_options: ['warning_level=1']
 )
 
@@ -57,12 +57,12 @@ executable('imladris',
 )
 
 install_data(
-  'data/org.gnome.Imladris.desktop',
+  'data/io.github.Antux912012.Imladris.desktop',
   install_dir: get_option('datadir') / 'applications'
 )
 
 install_data(
-  'data/org.gnome.Imladris.metainfo.xml',
+  'data/io.github.Antux912012.Imladris.metainfo.xml',
   install_dir: get_option('datadir') / 'metainfo'
 )
 

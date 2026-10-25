@@ -2,7 +2,7 @@
 Name=Imladris
 Comment=Native GTK4 and Libadwaita Markdown Editor
 Exec=imladris %F
-Icon=org.gnome.Imladris
+Icon=io.github.Antux912012.Imladris
 Terminal=false
 Type=Application
 Categories=GNOME;GTK;Utility;TextEditor;
