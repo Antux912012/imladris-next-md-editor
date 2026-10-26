@@ -3,4 +3,34 @@
   <gresource prefix="/org/imladris/app">
     <file compressed="true">style.css</file>
   </gresource>
+  <gresource prefix="/org/imladris/icons/papirus">
+    <file alias="index.theme">icons/papirus/index.theme</file>
+    <file alias="scalable/actions/ribbon-toggle-symbolic.svg">icons/papirus/scalable/actions/ribbon-toggle-symbolic.svg</file>
+    <file alias="scalable/actions/view-top-pane-symbolic.svg">icons/papirus/scalable/actions/view-top-pane-symbolic.svg</file>
+    <file alias="scalable/actions/document-edit-symbolic.svg">icons/papirus/scalable/actions/document-edit-symbolic.svg</file>
+    <file alias="scalable/actions/view-list-symbolic.svg">icons/papirus/scalable/actions/view-list-symbolic.svg</file>
+    <file alias="scalable/actions/view-list-bullet-symbolic.svg">icons/papirus/scalable/actions/view-list-bullet-symbolic.svg</file>
+    <file alias="scalable/actions/edit-undo-symbolic.svg">icons/papirus/scalable/actions/edit-undo-symbolic.svg</file>
+    <file alias="scalable/actions/edit-redo-symbolic.svg">icons/papirus/scalable/actions/edit-redo-symbolic.svg</file>
+    <file alias="scalable/actions/edit-cut-symbolic.svg">icons/papirus/scalable/actions/edit-cut-symbolic.svg</file>
+    <file alias="scalable/actions/edit-copy-symbolic.svg">icons/papirus/scalable/actions/edit-copy-symbolic.svg</file>
+    <file alias="scalable/actions/edit-paste-symbolic.svg">icons/papirus/scalable/actions/edit-paste-symbolic.svg</file>
+    <file alias="scalable/actions/media-playback-start-symbolic.svg">icons/papirus/scalable/actions/media-playback-start-symbolic.svg</file>
+    <file alias="scalable/actions/media-seek-forward-symbolic.svg">icons/papirus/scalable/actions/media-seek-forward-symbolic.svg</file>
+    <file alias="scalable/actions/process-stop-symbolic.svg">icons/papirus/scalable/actions/process-stop-symbolic.svg</file>
+    <file alias="scalable/actions/system-run-symbolic.svg">icons/papirus/scalable/actions/system-run-symbolic.svg</file>
+    <file alias="scalable/actions/mail-send-symbolic.svg">icons/papirus/scalable/actions/mail-send-symbolic.svg</file>
+    <file alias="scalable/actions/zoom-in-symbolic.svg">icons/papirus/scalable/actions/zoom-in-symbolic.svg</file>
+    <file alias="scalable/actions/zoom-out-symbolic.svg">icons/papirus/scalable/actions/zoom-out-symbolic.svg</file>
+    <file alias="scalable/actions/zoom-original-symbolic.svg">icons/papirus/scalable/actions/zoom-original-symbolic.svg</file>
+    <file alias="scalable/apps/accessories-text-editor-symbolic.svg">icons/papirus/scalable/apps/accessories-text-editor-symbolic.svg</file>
+    <file alias="scalable/apps/utilities-terminal-symbolic.svg">icons/papirus/scalable/apps/utilities-terminal-symbolic.svg</file>
+    <file alias="scalable/apps/accessories-dictionary-symbolic.svg">icons/papirus/scalable/apps/accessories-dictionary-symbolic.svg</file>
+    <file alias="scalable/apps/help-browser-symbolic.svg">icons/papirus/scalable/apps/help-browser-symbolic.svg</file>
+    <file alias="scalable/categories/applications-internet-symbolic.svg">icons/papirus/scalable/categories/applications-internet-symbolic.svg</file>
+    <file alias="scalable/places/folder-symbolic.svg">icons/papirus/scalable/places/folder-symbolic.svg</file>
+    <file alias="scalable/places/user-trash-symbolic.svg">icons/papirus/scalable/places/user-trash-symbolic.svg</file>
+    <file alias="scalable/mimetypes/x-office-presentation-symbolic.svg">icons/papirus/scalable/mimetypes/x-office-presentation-symbolic.svg</file>
+    <file alias="scalable/emblems/emblem-system-symbolic.svg">icons/papirus/scalable/emblems/emblem-system-symbolic.svg</file>
+  </gresource>
 </gresources>

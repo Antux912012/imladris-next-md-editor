@@ -7,21 +7,37 @@
     padding: 2px 8px;
 }
 
-.imladris-brand-btn,
-.imladris-brand-btn > button {
-    background-color: alpha(@accent_color, 0.12);
-    color: @accent_color;
-    font-weight: 700;
+menubutton.imladris-brand-btn {
     border-radius: 9999px;
-    padding: 4px 12px;
+    padding: 0;
     margin-right: 8px;
-    border: 1px solid alpha(@accent_color, 0.25);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+menubutton.imladris-brand-btn > button {
+    border-radius: 9999px;
+    background-color: alpha(@accent_color, 0.15);
+    color: @accent_color;
+    border: 1px solid alpha(@accent_color, 0.35);
+    padding: 4px 14px;
+    font-weight: 700;
+    box-shadow: none;
+    outline: none;
     transition: all 150ms ease;
 }
-.imladris-brand-btn:hover,
-.imladris-brand-btn > button:hover {
+
+menubutton.imladris-brand-btn > button:hover {
     background-color: @accent_bg_color;
-    color: #ffffff;
+    color: @accent_fg_color;
+}
+
+menubutton.imladris-brand-btn > button:checked,
+menubutton.imladris-brand-btn > button:active {
+    background-color: alpha(@accent_color, 0.25);
+    color: @accent_color;
 }
 
 /* Category Switcher Tabs - Modern Libadwaita Segmented Style */
@@ -200,15 +216,19 @@
 }
 
 .dock-center-crosshair {
-    background-color: alpha(@accent_bg_color, 0.35);
-    border: 2px solid @accent_color;
+    background: transparent;
+    border: none;
     border-radius: 999px;
     min-width: 14px;
     min-height: 14px;
+    opacity: 0;
+    transition: opacity 150ms ease, background-color 150ms ease;
 }
 
 .dock-center-crosshair:hover {
     background-color: @accent_bg_color;
+    border: 1px solid @accent_fg_color;
+    opacity: 0.85;
 }
 
 .dock-drag-pill {

@@ -96,7 +96,7 @@ namespace Imladris.Core.Layout {
                 case SOURCE_EDITOR: return "document-edit-symbolic";
                 case LIVE_PREVIEW: return "applications-internet-symbolic";
                 case CONSOLE: return "utilities-terminal-symbolic";
-                case TERMINAL: return "terminal-symbolic";
+                case TERMINAL: return "utilities-terminal-symbolic";
                 case ENVIRONMENT: return "view-list-symbolic";
                 case OUTLINE: return "view-list-bullet-symbolic";
                 case CITATIONS: return "accessories-dictionary-symbolic";

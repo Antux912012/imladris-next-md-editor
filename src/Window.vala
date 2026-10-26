@@ -4,7 +4,7 @@ namespace Imladris {
 
         private Gtk.Stack ribbon_stack;
         private Gtk.ScrolledWindow ribbon_scroller;
-        private Gtk.Button? btn_collapse_ribbon = null;
+        private Gtk.ToggleButton? btn_collapse_ribbon = null;
         private Adw.TabView tab_view;
         private Adw.TabBar tab_bar;
         private Gtk.Label status_badge_lbl;
@@ -116,10 +116,11 @@ namespace Imladris {
                 valign = Gtk.Align.CENTER
             };
             brand_btn.add_css_class ("imladris-brand-btn");
-            var brand_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6);
-            brand_box.append (new Gtk.Image.from_icon_name ("document-edit-symbolic"));
-            brand_box.append (new Gtk.Label ("Imladris ▾"));
-            brand_btn.set_child (brand_box);
+            var brand_content = new Adw.ButtonContent () {
+                icon_name = "document-edit-symbolic",
+                label = "Imladris ▾"
+            };
+            brand_btn.set_child (brand_content);
             tier1_box.append (brand_btn);
 
             ribbon_stack = new Gtk.Stack () {
@@ -157,13 +158,15 @@ namespace Imladris {
 
             tier1_box.append (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) { hexpand = true });
 
-            btn_collapse_ribbon = new Gtk.Button.from_icon_name ("pan-up-symbolic") {
-                tooltip_text = "Toggle Ribbon (Ctrl+F1)",
-                valign = Gtk.Align.CENTER
+            btn_collapse_ribbon = new Gtk.ToggleButton () {
+                icon_name = "ribbon-toggle-symbolic",
+                tooltip_text = "Show / Hide Ribbon Toolbar (Ctrl+F1)",
+                valign = Gtk.Align.CENTER,
+                active = true
             };
             btn_collapse_ribbon.add_css_class ("flat");
-            btn_collapse_ribbon.clicked.connect (() => {
-                toggle_ribbon_visibility ();
+            btn_collapse_ribbon.toggled.connect (() => {
+                ribbon_scroller.visible = btn_collapse_ribbon.active;
             });
             tier1_box.append (btn_collapse_ribbon);
 
@@ -816,10 +819,10 @@ namespace Imladris {
         }
 
         public void toggle_ribbon_visibility () {
-            ribbon_scroller.visible = !ribbon_scroller.visible;
             if (btn_collapse_ribbon != null) {
-                btn_collapse_ribbon.icon_name = ribbon_scroller.visible ? "pan-up-symbolic" : "pan-down-symbolic";
-                btn_collapse_ribbon.tooltip_text = ribbon_scroller.visible ? "Collapse Ribbon (Ctrl+F1)" : "Expand Ribbon (Ctrl+F1)";
+                btn_collapse_ribbon.active = !btn_collapse_ribbon.active;
+            } else {
+                ribbon_scroller.visible = !ribbon_scroller.visible;
             }
         }
 
