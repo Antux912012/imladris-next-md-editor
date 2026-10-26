@@ -1,43 +1,16 @@
 namespace Imladris.Adapters {
 
-    public enum DocumentFormat {
-        MARKDOWN,
-        R_MARKDOWN,
-        QUARTO,
-        JUPYTER_NOTEBOOK;
-
-        public static DocumentFormat from_filename (string filename) {
-            string lower = filename.down ();
-            if (lower.has_suffix (".ipynb")) return JUPYTER_NOTEBOOK;
-            if (lower.has_suffix (".qmd")) return QUARTO;
-            if (lower.has_suffix (".rmd")) return R_MARKDOWN;
-            return MARKDOWN;
-        }
-
-        public string to_badge_label () {
-            switch (this) {
-                case JUPYTER_NOTEBOOK:
-                    return "Jupyter Notebook (.ipynb)";
-                case QUARTO:
-                    return "Quarto Document (.qmd)";
-                case R_MARKDOWN:
-                    return "R Markdown (.Rmd)";
-                case MARKDOWN:
-                default:
-                    return "Markdown (.md)";
-            }
-        }
-    }
-
     public class DocumentAdapter : GLib.Object {
 
-        public static DocumentFormat detect_format (string? filename) {
-            if (filename == null || filename == "") return DocumentFormat.MARKDOWN;
-            return DocumentFormat.from_filename (filename);
+        private static GLib.Regex? chunk_regex = null;
+
+        public static Imladris.DocumentFormat detect_format (string? filename) {
+            if (filename == null || filename == "") return Imladris.DocumentFormat.MD;
+            return Imladris.DocumentFormat.from_filename (filename);
         }
 
-        public static string load_to_editor_buffer (string raw_content, DocumentFormat format) {
-            if (format == DocumentFormat.JUPYTER_NOTEBOOK) {
+        public static string load_to_editor_buffer (string raw_content, Imladris.DocumentFormat format) {
+            if (format == Imladris.DocumentFormat.IPYNB) {
                 try {
                     return Core.NotebookSerializer.ipynb_to_markdown (raw_content);
                 } catch (GLib.Error e) {
@@ -48,10 +21,10 @@ namespace Imladris.Adapters {
             return raw_content;
         }
 
-        public static string save_from_editor_buffer (string editor_text, DocumentFormat format, string? existing_raw_file = null) {
-            if (format == DocumentFormat.JUPYTER_NOTEBOOK) {
+        public static string save_from_editor_buffer (string editor_text, Imladris.DocumentFormat format, string? existing_raw_file = null) {
+            if (format == Imladris.DocumentFormat.IPYNB) {
                 try {
-                    return Core.NotebookSerializer.markdown_to_ipynb (editor_text, existing_raw_file);
+                    return Core.NotebookSerializer.markdown_to_ipynb (editor_text, existing_raw_file ?? "python");
                 } catch (GLib.Error e) {
                     GLib.warning ("Failed to serialize editor buffer to .ipynb JSON: %s", e.message);
                     return editor_text;
@@ -60,7 +33,7 @@ namespace Imladris.Adapters {
             return editor_text;
         }
 
-        public static string render_html (string editor_text, DocumentFormat format) {
+        public static string render_html (string editor_text, Imladris.DocumentFormat format) {
             Core.FrontmatterData? meta;
             string body;
             Core.FrontmatterParser.split_frontmatter (editor_text, out meta, out body);
@@ -79,12 +52,14 @@ namespace Imladris.Adapters {
 
         private static string transform_code_chunks (string text) {
             try {
-                var regex = new GLib.Regex ("```\\{([a-zA-Z0-9_-]+)([^\\}]*)\\}([\\s\\S]*?)```");
-                return regex.replace_eval (text, -1, 0, 0, (match_info, result) => {
+                if (chunk_regex == null) {
+                    chunk_regex = new GLib.Regex ("```\\{([a-zA-Z0-9_-]+)([^\\}]*)\\}([\\s\\S]*?)```");
+                }
+                return chunk_regex.replace_eval (text, -1, 0, 0, (match_info, result) => {
                     string lang = match_info.fetch (1);
                     string opts = match_info.fetch (2).strip ();
                     string code = match_info.fetch (3);
-                    
+
                     result.append ("<div class=\"code-chunk-card\">\n");
                     result.append_printf ("  <div class=\"code-chunk-header\"><span class=\"badge\">%s</span>", GLib.Markup.escape_text (lang.up ()));
                     if (opts != "") {

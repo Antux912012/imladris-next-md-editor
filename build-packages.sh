@@ -98,7 +98,7 @@ fi
 
 # 2. Build Debian Package (.deb)
 echo "--> 2. Building Debian package via staging & dpkg-deb..."
-rm -rf build-deb deb-root imladris_0.5.0_amd64.deb
+rm -rf build-deb deb-root imladris_*.deb
 run_meson_build "build-deb" "/usr" "${PROJECT_DIR}/deb-root"
 
 mkdir -p deb-root/DEBIAN

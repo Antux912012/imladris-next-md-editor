@@ -4,38 +4,55 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Imladris</name>
-  <summary>WPS-style scientific polyglot studio and Markdown editor with live WebKitGTK preview</summary>
+  <summary>Scientific notebook studio and Markdown editor</summary>
   <description>
     <p>
-      Imladris is a native Linux polyglot document studio and scientific Markdown editor built with Vala, GTK4, Libadwaita, GtkSourceView 5, and WebKitGTK 6.0. Featuring an adaptive ribbon interface inspired by modern office suites, Imladris provides a distraction-free writing environment for technical authors, data scientists, and researchers.
+      Imladris is a native Linux polyglot document studio and scientific Markdown editor built with Vala, GTK4, Libadwaita, GtkSourceView 5, and WebKitGTK 6.0. Featuring an adaptive ribbon interface, Imladris provides a distraction-free writing environment for technical authors, data scientists, and researchers.
     </p>
     <p>
       Whether editing Quarto research reports, R Markdown statistical documents, or Jupyter notebooks, Imladris renders mathematical formulas, tables, and charts in real time.
     </p>
     <ul>
+      <li>Categorized Launch Modal: 9 creation targets across multi-file projects (Standard and Sandboxed) and standalone simple files</li>
+      <li>Sandbox Dependency Engine: Isolated environments with renv for R and venv for Python</li>
+      <li>The .mallorn Exchange Format: 1:1 bidirectional compatibility with RStudio projects and portable single-file bundles</li>
+      <li>OpenDocument Export Pipeline: Headless export to ODT and ODP presentations</li>
       <li>Three-Tier Ribbon Interface: Contextual tabs for File, Insert, Format, Review, and AI Tools</li>
-      <li>Polyglot Format Support: Full support for standard Markdown (.md), Quarto (.qmd), R Markdown (.Rmd), and Jupyter (.ipynb)</li>
       <li>Real-Time Live Preview: WebKitGTK 6.0 preview with KaTeX mathematics, Mermaid diagrams, and syntax highlighting</li>
       <li>Dual AI Co-Author: In-editor writing assistant with support for local offline models and cloud LLMs</li>
       <li>Model Context Protocol (MCP): Built-in MCP server integration for agentic document analysis and data retrieval</li>
-      <li>Git Versioning: In-app diffing, commit history, and branch management</li>
     </ul>
+    <p>
+      Note: This application is independently developed and is not affiliated with or endorsed by Posit, RStudio, or Project Jupyter.
+    </p>
   </description>
   <branding>
     <color type="primary" scheme_preference="light">#9141ac</color>
     <color type="primary" scheme_preference="dark">#772953</color>
   </branding>
+  <screenshots>
+    <screenshot type="default">
+      <image width="1550" height="929">https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/data/screenshots/imladris-screenshot.png</image>
+      <caption>Imladris polyglot scientific authoring workspace and notebook studio</caption>
+    </screenshot>
+  </screenshots>
   <launchable type="desktop-id">io.github.Antux912012.Imladris.desktop</launchable>
   <url type="homepage">https://github.com/Antux912012/imladris-next-md-editor</url>
   <url type="bugtracker">https://github.com/Antux912012/imladris-next-md-editor/issues</url>
+  <url type="vcs-browser">https://github.com/Antux912012/imladris-next-md-editor</url>
   <provides>
     <binary>imladris</binary>
   </provides>
-  <developer id="com.github.antux912012">
+  <developer id="io.github.Antux912012">
     <name>Antonio De Gaetano</name>
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.0" date="2026-10-26">
+      <description>
+        <p>Release v0.6.0 introduces the 6 core pillars: Categorized creation pop-up dialog with 9 creation targets, sandboxed vs standard project engines (renv and venv isolation), the 1:1 RStudio-compatible .mallorn exchange format, and comprehensive ODT and ODP OpenDocument export pipelines.</p>
+      </description>
+    </release>
     <release version="0.5.1" date="2026-10-25">
       <description>
         <p>Release v0.5.1 standardizes the canonical Flatpak and Freedesktop Application ID to io.github.Antux912012.Imladris and includes the Phase 1.1.3 RStudio 4-Quadrant Drag-and-Drop Docking System.</p>

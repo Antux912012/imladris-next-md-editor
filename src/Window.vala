@@ -6,9 +6,9 @@ namespace Imladris {
         private Adw.TabView tab_view;
         private Adw.TabBar tab_bar;
         private Gtk.Label status_badge_lbl;
+        private Gtk.Label status_env_badge_lbl;
         private Gtk.Label status_words_lbl;
         private Gtk.Label status_kernel_lbl;
-        private int doc_counter = 1;
 
         public Window (Adw.Application app) {
             Object (
@@ -37,18 +37,24 @@ namespace Imladris {
             // Branded "Imladris" Primary Menu
             var brand_menu = new GLib.Menu ();
             var new_sec = new GLib.Menu ();
+            new_sec.append ("New Project or Document...", "app.new_project_modal");
             new_sec.append ("New Quarto Document (.qmd)", "app.new_qmd");
             new_sec.append ("New R Markdown (.Rmd)", "app.new_rmd");
             new_sec.append ("New Jupyter Notebook (.ipynb)", "app.new_ipynb");
-            new_sec.append ("New TypeScript File (.ts)", "app.new_ts");
+            new_sec.append ("New Simple Markdown (.md)", "app.new_md");
+            new_sec.append ("New R Script (.R)", "app.new_r");
+            new_sec.append ("New Python Script (.py)", "app.new_py");
             new_sec.append ("New HTML5 Document (.html)", "app.new_html");
             brand_menu.append_section ("Create New", new_sec);
 
             var io_sec = new GLib.Menu ();
-            io_sec.append ("Open File...", "app.open");
+            io_sec.append ("Open Document or Project...", "app.open");
             io_sec.append ("Save", "app.save");
             io_sec.append ("Render to HTML", "app.export_html");
             io_sec.append ("Render to PDF", "app.export_pdf");
+            io_sec.append ("Export OpenDocument Text (.odt)", "app.export_odt");
+            io_sec.append ("Export OpenDocument Presentation (.odp)", "app.export_odp");
+            io_sec.append ("Export Portable .mallorn Archive", "app.export_mallorn");
             io_sec.append ("Quit Imladris", "app.quit");
             brand_menu.append_section ("File & Export", io_sec);
 
@@ -159,11 +165,12 @@ namespace Imladris {
                 hexpand = true
             };
 
-            var add_tab_btn = new Gtk.Button.from_icon_name ("list-add-symbolic");
+            var add_tab_btn = new Gtk.Button.from_icon_name ("list-add-symbolic") {
+                tooltip_text = "New Project or Document (Ctrl+N)"
+            };
             add_tab_btn.add_css_class ("flat");
             add_tab_btn.clicked.connect (() => {
-                doc_counter++;
-                add_document_tab (@"Untitled-$doc_counter.qmd", "markdown");
+                show_new_project_modal ();
             });
             tab_bar.set_end_action_widget (add_tab_btn);
 
@@ -179,6 +186,11 @@ namespace Imladris {
             status_badge_lbl = new Gtk.Label ("QUARTO / MD");
             status_badge_lbl.add_css_class ("status-badge");
             status_bar.append (status_badge_lbl);
+
+            status_env_badge_lbl = new Gtk.Label ("[Sandboxed - Reproducible]");
+            status_env_badge_lbl.add_css_class ("status-badge");
+            status_env_badge_lbl.add_css_class ("env-badge");
+            status_bar.append (status_env_badge_lbl);
 
             status_kernel_lbl = new Gtk.Label ("Kernels: R • Python 3 • Deno/TS");
             status_bar.append (status_kernel_lbl);
@@ -300,23 +312,100 @@ namespace Imladris {
             doc_page.emit_buffer_stats ();
         }
 
+        public void show_new_project_modal () {
+            var dlg = new UI.NewProjectDialog ();
+            dlg.item_created.connect ((file, config, is_standalone) => {
+                update_environment_badge (config.project_type);
+                open_file_from_path.begin (file.get_path ());
+            });
+            dlg.present (this);
+        }
+
+        public void update_environment_badge (ProjectType ptype) {
+            if (ptype == ProjectType.SANDBOXED) {
+                status_env_badge_lbl.label = "[Sandboxed - Reproducible]";
+                status_env_badge_lbl.remove_css_class ("env-standard");
+                status_env_badge_lbl.add_css_class ("env-sandboxed");
+            } else {
+                status_env_badge_lbl.label = "[System Libraries - Non-Portable]";
+                status_env_badge_lbl.remove_css_class ("env-sandboxed");
+                status_env_badge_lbl.add_css_class ("env-standard");
+            }
+        }
+
         public async void open_file_from_path (string fpath) {
             try {
                 var file = GLib.File.new_for_path (fpath);
+                string name = file.get_basename ();
+
+                // Check if opening an RStudio .Rproj or .mallorn project marker / archive
+                if (name.has_suffix (".mallorn") || name.has_suffix (".Rproj")) {
+                    if (name.has_suffix (".mallorn") && MallornManager.is_mallorn_archive (fpath)) {
+                        string dest_dir = GLib.Path.build_filename (
+                            file.get_parent ().get_path (),
+                            name.substring (0, name.length - 8)
+                        );
+                        try {
+                            var unpacked_cfg = MallornManager.unpack_mallorn_archive (fpath, dest_dir);
+                            update_environment_badge (unpacked_cfg.project_type);
+                            var d = get_active_document ();
+                            if (d != null) {
+                                d.append_console_log (@"✔ Extracted .mallorn archive to $dest_dir");
+                            }
+                            // Search for primary notebook in the extracted directory
+                            string[] candidates = { "analysis.qmd", "report.Rmd", "notebook.ipynb", "index.qmd" };
+                            foreach (var cand in candidates) {
+                                string cand_path = GLib.Path.build_filename (dest_dir, cand);
+                                if (GLib.FileUtils.test (cand_path, GLib.FileTest.EXISTS)) {
+                                    yield open_file_from_path (cand_path);
+                                    return;
+                                }
+                            }
+                        } catch (GLib.Error e) {
+                            warning ("Failed to unpack mallorn archive: %s", e.message);
+                        }
+                    } else {
+                        // Opened an .Rproj or .mallorn project file in a project folder
+                        var proj_dir = file.get_parent ();
+                        var ptype = Services.SandboxController.detect_project_type (proj_dir.get_path ());
+                        update_environment_badge (ptype);
+                        string[] candidates = { "analysis.qmd", "report.Rmd", "notebook.ipynb", "index.qmd", "main.R", "main.py" };
+                        foreach (var cand in candidates) {
+                            string cand_path = GLib.Path.build_filename (proj_dir.get_path (), cand);
+                            if (GLib.FileUtils.test (cand_path, GLib.FileTest.EXISTS)) {
+                                yield open_file_from_path (cand_path);
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                // Normal document opening
                 uint8[] contents;
                 string etag;
                 yield file.load_contents_async (null, out contents, out etag);
                 string raw_text = (string) contents;
-                string name = file.get_basename ();
-                var fmt = Adapters.DocumentFormat.from_filename (name);
+
+                var fmt = DocumentFormat.from_filename (name);
                 string text = Adapters.DocumentAdapter.load_to_editor_buffer (raw_text, fmt);
 
                 string lang = "markdown";
                 if (name.has_suffix (".ipynb")) lang = "json";
                 else if (name.has_suffix (".ts")) lang = "typescript";
-                else if (name.has_suffix (".html")) lang = "html";
+                else if (name.has_suffix (".html") || name.has_suffix (".htm")) lang = "html";
                 else if (name.has_suffix (".rmd") || name.has_suffix (".Rmd")) lang = "rmd";
+                else if (name.has_suffix (".r") || name.has_suffix (".R")) lang = "r";
+                else if (name.has_suffix (".py")) lang = "python3";
+
                 add_document_tab (name, lang, text, file);
+
+                // Detect surrounding project sandbox/standard status
+                var parent_dir = file.get_parent ();
+                if (parent_dir != null) {
+                    var ptype = Services.SandboxController.detect_project_type (parent_dir.get_path ());
+                    update_environment_badge (ptype);
+                }
+
                 Services.WorkspaceStateManager.get_default ().resolve_mode_for_file (name);
             } catch (GLib.Error e) {
                 warning ("Failed to open file from path %s: %s", fpath, e.message);
@@ -325,29 +414,13 @@ namespace Imladris {
 
         public async void open_document_async () {
             var dialog = new Gtk.FileDialog () {
-                title = "Open Document",
+                title = "Open Document or Project",
                 modal = true
             };
             try {
                 var file = yield dialog.open (this, null);
                 if (file != null) {
-                    uint8[] contents;
-                    string etag;
-                    yield file.load_contents_async (null, out contents, out etag);
-                    string raw_text = (string) contents;
-                    string name = file.get_basename ();
-                    var fmt = Adapters.DocumentFormat.from_filename (name);
-                    string text = Adapters.DocumentAdapter.load_to_editor_buffer (raw_text, fmt);
-
-                    string lang = "markdown";
-                    if (name.has_suffix (".ipynb")) lang = "json";
-                    else if (name.has_suffix (".ts")) lang = "typescript";
-                    else if (name.has_suffix (".html")) lang = "html";
-                    else if (name.has_suffix (".rmd") || name.has_suffix (".Rmd")) lang = "rmd";
-                    add_document_tab (name, lang, text, file);
-
-                    // Dynamic mode resolution for the active file
-                    Services.WorkspaceStateManager.get_default ().resolve_mode_for_file (name);
+                    yield open_file_from_path (file.get_path ());
                 }
             } catch (GLib.Error e) {
                 warning ("Failed to open file: %s", e.message);
@@ -361,7 +434,7 @@ namespace Imladris {
             if (doc.file_location != null) {
                 try {
                     string editor_content = doc.source_buffer.text;
-                    var fmt = Adapters.DocumentFormat.from_filename (doc.file_location.get_basename ());
+                    var fmt = DocumentFormat.from_filename (doc.file_location.get_basename ());
                     string to_save = Adapters.DocumentAdapter.save_from_editor_buffer (editor_content, fmt);
                     string etag;
                     yield doc.file_location.replace_contents_async (
@@ -387,7 +460,7 @@ namespace Imladris {
                     if (file != null) {
                         doc.file_location = file;
                         string editor_content = doc.source_buffer.text;
-                        var fmt = Adapters.DocumentFormat.from_filename (file.get_basename ());
+                        var fmt = DocumentFormat.from_filename (file.get_basename ());
                         string to_save = Adapters.DocumentAdapter.save_from_editor_buffer (editor_content, fmt);
                         string etag;
                         yield file.replace_contents_async (
@@ -406,6 +479,85 @@ namespace Imladris {
                     }
                 } catch (GLib.Error e) {
                     doc.append_console_log (@"✖ Save failed: $(e.message)");
+                }
+            }
+        }
+
+        public async void export_document_dialog_async (string format) {
+            var doc = get_active_document ();
+            if (doc == null || doc.file_location == null) {
+                if (doc != null) {
+                    doc.append_console_log (@"⚠ Please save the document before exporting to $(format.up ()).");
+                }
+                return;
+            }
+
+            var dialog = new Gtk.FileDialog () {
+                title = @"Export to $(format.up ())",
+                modal = true
+            };
+            string base_name = doc.file_location.get_basename ();
+            int dot_idx = base_name.last_index_of (".");
+            string base_prefix = dot_idx >= 0 ? base_name.substring (0, dot_idx) : base_name;
+            dialog.initial_name = @"$base_prefix.$format";
+
+            try {
+                var file = yield dialog.save (this, null);
+                if (file != null) {
+                    yield save_document_async ();
+                    doc.append_console_log (@"▶ Exporting $(doc.file_location.get_basename ()) to $(file.get_basename ())...");
+                    bool ok = yield Services.ExportService.get_default ().export_document_async (
+                        doc.file_location.get_path (),
+                        file.get_path (),
+                        format,
+                        doc.source_buffer.text
+                    );
+                    if (ok) {
+                        doc.append_console_log (@"✔ Successfully exported to $(file.get_path ())");
+                    } else {
+                        doc.append_console_log (@"✖ Export to $(format.up ()) failed. Check console output.");
+                    }
+                }
+            } catch (GLib.Error e) {
+                if (doc != null) {
+                    doc.append_console_log (@"✖ Export dialog failed: $(e.message)");
+                }
+            }
+        }
+
+        public async void export_mallorn_archive_async () {
+            var doc = get_active_document ();
+            if (doc == null || doc.file_location == null) {
+                if (doc != null) {
+                    doc.append_console_log ("⚠ Please save the document or project before exporting as .mallorn archive.");
+                }
+                return;
+            }
+
+            var project_dir = doc.file_location.get_parent ();
+            string proj_name = project_dir.get_basename ();
+
+            var dialog = new Gtk.FileDialog () {
+                title = "Export Portable .mallorn Archive (1:1 RStudio)",
+                modal = true
+            };
+            dialog.initial_name = @"$proj_name.mallorn";
+
+            try {
+                var file = yield dialog.save (this, null);
+                if (file != null) {
+                    yield save_document_async ();
+                    doc.append_console_log (@"▶ Packaging workspace '$proj_name' into $(file.get_basename ())...");
+                    try {
+                        MallornManager.pack_mallorn_archive (project_dir.get_path (), file.get_path ());
+                        doc.append_console_log (@"✔ Successfully packed .mallorn archive to $(file.get_path ())");
+                    } catch (GLib.Error e) {
+                        doc.append_console_log (@"✖ Failed to create .mallorn archive: $(e.message)");
+                    }
+                }
+            } catch (GLib.Error e) {
+                if (doc != null) {
+                    doc.append_console_log (@"✖ Export .mallorn dialog failed: $(e.message)");
                 }
             }
         }
@@ -669,10 +821,12 @@ namespace Imladris {
             var btn_pdf = (Gtk.Button) RibbonFactory.create_tall_button ("document-send-symbolic", "Render\nPDF", false, false, false, true, null, "app.export_pdf");
             box.append (btn_html);
             box.append (btn_pdf);
-            box.append (RibbonFactory.create_vertical_stack ({
-                RibbonFactory.create_compact_button ("x-office-presentation-symbolic", "Render Reveal.js Slides"),
-                RibbonFactory.create_compact_button ("x-office-document-symbolic", "Export MS Word (.docx)")
-            }));
+            var btn_odt = (Gtk.Button) RibbonFactory.create_tall_button ("x-office-document-symbolic", "Export\nODT", false, false, false, true, null, "app.export_odt");
+            var btn_odp = (Gtk.Button) RibbonFactory.create_tall_button ("x-office-presentation-symbolic", "Export\nODP", false, false, false, true, null, "app.export_odp");
+            var btn_mallorn = (Gtk.Button) RibbonFactory.create_tall_button ("package-x-generic-symbolic", "Export\n.mallorn", false, false, false, true, null, "app.export_mallorn");
+            box.append (btn_odt);
+            box.append (btn_odp);
+            box.append (btn_mallorn);
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 2: TypeScript & Web Tooling

@@ -300,6 +300,17 @@ export function summarize(points: DataPoint[]): number {
   return points.reduce((acc, item) => acc + item.value, 0);
 }
 """;
+            } else if (lang_id == "r") {
+                source_buffer.text = """# Imladris R Script Session
+# Author: %s
+summary(mtcars[, 1:4])
+""".printf (GLib.Environment.get_real_name ());
+            } else if (lang_id == "python3") {
+                source_buffer.text = """#!/usr/bin/env python3
+# Imladris Python Script Session
+import sys
+print("Python Interpreter:", sys.version.split()[0])
+""";
             } else if (lang_id == "html") {
                 source_buffer.text = """<!DOCTYPE html>
 <html lang="en">
@@ -327,7 +338,7 @@ export function summarize(points: DataPoint[]): number {
                 return;
             }
 
-            var fmt = Adapters.DocumentFormat.from_filename (file_location != null ? file_location.get_basename () : @"untitled.$doc_type");
+            var fmt = DocumentFormat.from_filename (file_location != null ? file_location.get_basename () : @"untitled.$doc_type");
             string body_html = Adapters.DocumentAdapter.render_html (raw, fmt);
 
             string html = """<!DOCTYPE html>

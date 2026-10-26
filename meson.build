@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.5.1',
+  version: '0.6.0',
   default_options: ['warning_level=1']
 )
 
@@ -37,15 +37,19 @@ sources = files(
   'src/McpServer.vala',
   'src/AssistantPanel.vala',
   'src/Window.vala',
-  'src/core/document_model.vala',
   'src/core/frontmatter_parser.vala',
   'src/core/notebook_serializer.vala',
+  'src/core/project_scaffolder.vala',
+  'src/core/MallornManager.vala',
   'src/adapters/DocumentAdapter.vala',
   'src/services/RecoveryService.vala',
   'src/services/WorkspaceStateManager.vala',
+  'src/services/SandboxController.vala',
+  'src/services/ExportService.vala',
   'src/core/layout/DockTypes.vala',
   'src/ui/PersistentPanelRegistry.vala',
   'src/ui/RStudioDockGrid.vala',
+  'src/ui/new_project_dialog.vala',
 )
 
 executable('imladris',
@@ -70,4 +74,24 @@ install_subdir(
   'data/icons/hicolor',
   install_dir: get_option('datadir') / 'icons'
 )
+
+test_sources = files(
+  'tests/test_mallorn_sandbox.vala',
+  'src/core/frontmatter_parser.vala',
+  'src/core/notebook_serializer.vala',
+  'src/core/project_scaffolder.vala',
+  'src/core/MallornManager.vala',
+  'src/adapters/DocumentAdapter.vala',
+  'src/services/SandboxController.vala',
+  'src/services/ExportService.vala',
+)
+
+test_exe = executable('test_mallorn_sandbox',
+  test_sources,
+  dependencies: deps,
+  vala_args: ['--target-glib=2.76'],
+)
+
+test('mallorn_sandbox_tests', test_exe)
+
 

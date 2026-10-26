@@ -4,10 +4,14 @@ build-dir/
 builddir/
 build-deb/
 deb-root/
+rpmbuild/
+build-flatpak/
+build-flatpak-app/
 .flatpak-builder/
 repo/
 *.flatpak
 *.deb
+*.rpm
 *.AppImage
 SHA256SUMS.txt
 subprojects/cmark/

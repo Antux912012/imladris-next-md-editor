@@ -1,0 +1,25 @@
+id: io.github.Antux912012.Imladris
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: imladris
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Flatpak
+  - --metadata=X-DConf=default-settings
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/man
+  - '*.la'
+  - '*.a'
+modules:
+  - name: imladris
+    buildsystem: meson
+    sources:
+      - type: dir
+        path: .

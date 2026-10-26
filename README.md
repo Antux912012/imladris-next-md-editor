@@ -8,53 +8,55 @@
 <p align="center">
   <a href="https://github.com/Antux912012/imladris-next-md-editor/releases"><img src="https://img.shields.io/github/v/release/Antux912012/imladris-next-md-editor?include_prereleases&style=flat-square&color=blue" alt="Release"></a>
   <a href="https://gitlab.gnome.org/GNOME/libadwaita"><img src="https://img.shields.io/badge/platform-Linux%20(GTK4%20%2F%20Libadwaita)-blue?style=flat-square" alt="Platform"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.1"><img src="https://img.shields.io/badge/Flatpak-io.github.Antux912012.Imladris-blue?style=flat-square&logo=flatpak" alt="Flatpak"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.1"><img src="https://img.shields.io/badge/Debian%20.deb-supported-red?style=flat-square&logo=debian" alt="Debian"></a>
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.6.0"><img src="https://img.shields.io/badge/Flatpak-io.github.Antux912012.Imladris-blue?style=flat-square&logo=flatpak" alt="Flatpak"></a>
+  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.6.0"><img src="https://img.shields.io/badge/Debian%20.deb-supported-red?style=flat-square&logo=debian" alt="Debian"></a>
 </p>
 
 <p align="center">
   <img src="data/screenshots/imladris-screenshot.png" alt="Imladris Polyglot Studio Screenshot" width="850">
 </p>
 
-**Imladris** is a native Linux polyglot document studio and Markdown editor built with **Vala**, **GTK4**, **Libadwaita**, **GtkSourceView 5**, and **WebKitGTK 6.0**. It features **Dual-Mode AI Assistance** (Online OpenAI-compatible + Offline `llama.cpp` with Qwen 2.5 Coder), an embedded **Model Context Protocol (MCP)** server, and smart language auto-completion.
+**Imladris** is a native Linux scientific authoring studio, data science notebook IDE, and Markdown editor built with **Vala**, **GTK4**, **Libadwaita**, **GtkSourceView 5**, and **WebKitGTK 6.0**. It features reproducible **Standard vs. Sandboxed Project Engines**, the 1:1 RStudio-compatible **`.mallorn`** project format, comprehensive **ODT & ODP OpenDocument Export Pipelines**, **Dual-Mode AI Assistance** (Online OpenAI-compatible + Offline `llama.cpp` with Qwen 2.5 Coder), an embedded **Model Context Protocol (MCP)** server, and smart language auto-completion.
 
 ---
 
-## 🚀 Supported Formats
+## 🚀 Supported Formats & Creation Targets
 
+Imladris features a dedicated launch modal with 9 creation targets:
+
+### 1. Workspace Projects (Multi-file, Stateful — `.Rmd`, `.Qmd`, `.ipynb`)
+- **Standard Projects**: Direct binding to system R (`R_LIBS_USER`) and Python (`sys.path`) libraries with portability warnings.
+- **Sandboxed Projects**: Isolated environments utilizing `renv` for R and `venv`/`uv` for Python, tracking pinned dependencies for zero-drift reproducibility.
+- **1:1 RStudio Parity**: Automatic `.Rproj` and `.mallorn` dual-manifest synchronization.
+- **Single-File Portable Archives**: Pack and unpack `.mallorn` bundles containing project state and dependencies.
+
+### 2. Standalone Simple Files (Single-file mode, lightweight editor)
 | Format | Extension | Capabilities |
 | :--- | :--- | :--- |
-| **Quarto** | `.qmd` | YAML frontmatter, executable `{r}`, `{python}`, `{ts}` code chunks, PDF/HTML render pipeline |
-| **R Markdown** | `.Rmd` | Knitr syntax, inline code execution via `Rscript`, live HTML preview |
-| **Jupyter Notebooks** | `.ipynb` | JSON structure awareness, chunk controls, kernel execution |
-| **TypeScript / OJS** | `.ts` | Syntax highlighting, TypeScript compiler (`tsc`) integration, esbuild bundling |
-| **HTML5** | `.html` | Full HTML5 boilerplate generation, live interactive WebKit preview |
-| **Markdown** | `.md` | Rich text formatting, LaTeX math (`$$`), Mermaid diagrams, footnotes, citations |
+| **Simple Markdown** | `.md` | Lightweight prose editing with live WebKit preview |
+| **Simple HTML5** | `.html` | HTML5 boilerplate with interactive DOM preview |
+| **R Script** | `.R` | Bound to host R interpreter with execution controls |
+| **R Markdown** | `.Rmd` | YAML frontmatter, Knitr chunks, live preview |
+| **Quarto Document** | `.Qmd` | Polyglot execution (`{r}`, `{python}`, `{ts}`), math & diagrams |
+| **Jupyter Notebook** | `.ipynb` | Valid v4 JSON notebook schema, interactive code execution |
+| **Python Script** | `.py` | Bound to Python interpreter |
+| **TypeScript / OJS** | `.ts` | TypeScript compiler (`tsc`) integration and esbuild bundling |
 
 ---
 
-## ✨ Features
+## ✨ Core Feature Pillars
 
+- **📁 Categorized Launch & Creation Dialog:** 9 distinct creation targets with live status badging (`[Sandboxed - Reproducible]` vs `[System Libraries - Non-Portable]`).
+- **🛡️ Sandbox & Dependency Controller:** Automated `renv::init(bare = TRUE)` and `venv` creation, snapshotting (`renv.lock`, `requirements.txt`, `environment.yml`), and clean 1-click export for RStudio and Jupyter.
+- **📦 The `.mallorn` Exchange Format:** Dual-nature Debian Control File (DCF) project marker matching RStudio's `.Rproj` parser 1:1 with namespaced `Imladris*` metadata, plus single-file `.tar.zst` and `.zip` exchange bundles.
+- **📄 ODT and ODP Export Pipelines:** Full OpenDocument pipeline for `.md`, `.Rmd`, `.Qmd`, and `.ipynb` documents and slide presentations via `quarto`, `Rscript`, `pandoc`, and headless LibreOffice (`soffice`), backed by a built-in OASIS XML container generator.
 - **🤖 Dual-Engine AI Assistance:**
-  - **Online:** Connects to any OpenAI-compatible endpoint (OpenAI, DeepSeek, OpenRouter, Groq, vLLM) with customizable Base URL, API key, and model choice.
-  - **Offline (`llama.cpp` / Ollama):** Runs locally via `llama-server` sidecar or Ollama. Includes built-in one-click downloader for optimized **Qwen 2.5 Coder** models (`1.5B` and `7B` GGUF).
-  - **Interactive Assistant Panel:** Integrated side panel with conversation history, quick action pills (*Explain*, *Fix Syntax*, *Add R Plot*), and one-click *Insert at Cursor*.
-- **⚡ Smart Language Auto-Completion:**
-  - GtkSourceView 5 completion subsystem with `GtkSource.CompletionWords` and `GtkSource.CompletionSnippets`.
-  - Automatic suggestions and code completions across `.md`, `.html`, `.Rmd`, `.ipynb`, `.ts`, and Python.
-- **🔌 Embedded Model Context Protocol (MCP) Server:**
-  - Standard JSON-RPC MCP server (`imladris --mcp-server`) exposing editor tools:
-    - `get_active_document`: Inspect buffer, line count, and language.
-    - `insert_text`: Programmatically insert text at cursor.
-    - `insert_code_chunk`: Insert `{r}`, `{python}`, or `{ts}` chunks with options.
-    - `execute_code`: Asynchronously execute CLI scripts.
-    - `render_document`: Trigger Quarto HTML/PDF render pipeline.
-    - `get_open_tabs`: Inspect all open tabs in the workspace.
-- **🎭 Dynamic Context-Aware UI Morphing:**
-  - **Apostrophe Mode (Markdown `.md`):** Distraction-free writing canvas with generous reading margins, hiding secondary docks.
-  - **RStudio Workbench Mode (`.qmd`, `.rmd`, `.ipynb`):** Full 4-quadrant docking layout (Source Editor, Interactive Console, Environment & Outline, Live Preview/Plots).
-  - **Smart Top Ribbon Popovers:** Interactive Table Builder ($M \times N$ grid), Multi-Language Code Chunk Inserter, Citations & Bibliography Manager, Special Symbols Picker, and Emoji Palette.
-- **🛡️ Atomic Crash Recovery & Shadow Buffers:** Non-blocking background snapshots persist unsaved edits, cursor positions, and state to `~/.cache/imladris/recovery/`. Restores seamlessly upon unexpected termination.
+  - **Online:** Connects to any OpenAI-compatible endpoint (OpenAI, DeepSeek, OpenRouter, Groq, vLLM).
+  - **Offline (`llama.cpp` / Ollama):** Runs locally via `llama-server` sidecar or Ollama with one-click downloader for **Qwen 2.5 Coder** models.
+- **⚡ Smart Language Auto-Completion:** GtkSourceView 5 completion subsystem across all supported scientific and prose languages.
+- **🔌 Embedded Model Context Protocol (MCP) Server:** Standard JSON-RPC MCP server (`imladris --mcp-server`) exposing editor tools.
+- **🎭 Dynamic UI Morphing:** Distraction-free Apostrophe mode and 4-quadrant RStudio workbench mode.
+- **🛡️ Atomic Crash Recovery:** Non-blocking background shadow buffers persisting unsaved edits to `~/.cache/imladris/recovery/`.
 - **🪟 Multi-Mode Split View Engine:** Flexible instant toggling between Editor Only, Preview Only, Vertical Split (Side-by-Side), and Horizontal Split (Top-and-Bottom).
 - **🌐 Embedded WebKitGTK 6.0 Live Preview:** Real-time HTML5, CSS, and Reveal.js rendering directly inside an expandable right-hand split pane.
 - **⚡ Asynchronous Execution Engine:** Non-blocking background execution of `quarto`, `Rscript`, `python3`, `tsc`, and `deno` via `GLib.Subprocess`.
@@ -68,12 +70,12 @@
 Official releases are distributed exclusively as **Debian packages (`.deb`)** and **Flatpak bundles (`.flatpak`)**. AppImage builds are intentionally excluded.
 
 ### Option 1: Debian / Ubuntu / Pop!_OS (`.deb`)
-Download the latest `.deb` package from the [v0.5.1 Release](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.5.1):
+Download the latest `.deb` package from the [v0.6.0 Release](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.6.0):
 
 ```bash
 # Download and install
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.5.1/imladris_0.5.1_amd64.deb
-sudo dpkg -i imladris_0.5.1_amd64.deb
+wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.6.0/imladris_0.6.0_amd64.deb
+sudo dpkg -i imladris_0.6.0_amd64.deb
 
 # Fix missing dependencies if needed
 sudo apt-get install -f
@@ -83,7 +85,7 @@ sudo apt-get install -f
 Download the standalone single-file bundle (`io.github.Antux912012.Imladris`):
 
 ```bash
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.5.1/io.github.Antux912012.Imladris.flatpak
+wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.6.0/io.github.Antux912012.Imladris.flatpak
 flatpak install --user io.github.Antux912012.Imladris.flatpak
 flatpak run io.github.Antux912012.Imladris
 ```

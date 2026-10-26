@@ -1,10 +1,11 @@
 [Desktop Entry]
 Name=Imladris
-Comment=Native GTK4 and Libadwaita Markdown Editor
+Comment=Scientific notebook studio and Markdown editor
 Exec=imladris %F
 Icon=io.github.Antux912012.Imladris
 Terminal=false
 Type=Application
-Categories=GNOME;GTK;Utility;TextEditor;
+Categories=GNOME;GTK;Office;TextEditor;Publishing;Science;
+Keywords=markdown;editor;quarto;notebook;rstudio;jupyter;science;odt;odp;mallorn;
 MimeType=text/markdown;text/x-markdown;text/plain;application/x-ipynb+json;application/json;text/x-r-markdown;
 StartupNotify=true
