@@ -37,6 +37,8 @@ sources = files(
   'src/McpServer.vala',
   'src/AssistantPanel.vala',
   'src/Window.vala',
+  'src/console/ReplBridge.vala',
+  'src/editor/ChunkExecutionEngine.vala',
   'src/core/frontmatter_parser.vala',
   'src/core/notebook_serializer.vala',
   'src/core/project_scaffolder.vala',
@@ -90,6 +92,8 @@ test_sources = files(
   'src/services/PersistentSessionManager.vala',
   'src/services/ExportService.vala',
   'src/core/ChunkParser.vala',
+  'src/console/ReplBridge.vala',
+  'src/editor/ChunkExecutionEngine.vala',
 )
 
 test_exe = executable('test_mallorn_sandbox',

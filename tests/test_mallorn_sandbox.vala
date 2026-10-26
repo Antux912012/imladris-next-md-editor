@@ -13,6 +13,7 @@ namespace Imladris.Tests {
         GLib.Test.add_func ("/sessions/persistent_session_and_pwd_sync", test_persistent_session_and_pwd_sync);
         GLib.Test.add_func ("/export/odt_and_odp_pipeline", test_export_pipeline_odt_odp);
         GLib.Test.add_func ("/chunks/chunk_parser", test_chunk_parser);
+        GLib.Test.add_func ("/execution/repl_bridge_and_chunk_engine", test_repl_bridge_and_chunk_engine);
 
         return GLib.Test.run ();
     }
@@ -289,5 +290,59 @@ print(np.mean([1, 2, 3]))
 
         var ch_outside = Core.ChunkParser.find_chunk_at_line (doc, 2);
         assert (ch_outside == null);
+    }
+
+    private static void test_repl_bridge_and_chunk_engine () {
+        string tmp_dir = Path.build_filename (Environment.get_tmp_dir (), "imladris_repl_test_" + Random.next_int ().to_string ());
+        DirUtils.create_with_parents (tmp_dir, 0755);
+
+        var py_bridge = new Execution.ReplBridge (Execution.LanguageRuntime.PYTHON, tmp_dir);
+        var r_bridge = new Execution.ReplBridge (Execution.LanguageRuntime.R, tmp_dir);
+
+        var loop = new MainLoop ();
+        bool test_passed = false;
+
+        py_bridge.start.begin ((obj, res) => {
+            try {
+                py_bridge.start.end (res);
+
+                var engine = new Execution.ChunkExecutionEngine (tmp_dir, r_bridge, py_bridge);
+                string test_code = "a = 21\nb = 2\nprint('Computed Result:', a * b)";
+
+                engine.execute_chunk.begin (Execution.LanguageRuntime.PYTHON, test_code, "test1", (obj2, res2) => {
+                    try {
+                        var chunk_res = engine.execute_chunk.end (res2);
+                        assert (chunk_res.stdout.contains ("Computed Result: 42"));
+
+                        if (Gtk.init_check ()) {
+                            var widget = new Execution.InlineChunkOutputWidget (10);
+                            widget.update_output (chunk_res);
+                        }
+
+                        py_bridge.stop ();
+                        test_passed = true;
+                    } catch (GLib.Error e) {
+                        GLib.warning ("Chunk execution test failed: %s", e.message);
+                    }
+                    loop.quit ();
+                });
+
+            } catch (GLib.Error e) {
+                GLib.warning ("ReplBridge start failed: %s", e.message);
+                loop.quit ();
+            }
+        });
+
+        // Safety timeout
+        Timeout.add_seconds (15, () => {
+            if (!test_passed) {
+                py_bridge.stop ();
+                loop.quit ();
+            }
+            return Source.REMOVE;
+        });
+
+        loop.run ();
+        assert (test_passed);
     }
 }
