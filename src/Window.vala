@@ -50,6 +50,18 @@ namespace Imladris {
         }
 
         construct {
+            var settings = Core.SettingsManager.get_default ();
+            if (settings.app_theme == Core.AppTheme.EYE_FRIENDLY) {
+                this.add_css_class ("eye-friendly");
+            }
+            settings.theme_changed.connect ((theme) => {
+                if (theme == Core.AppTheme.EYE_FRIENDLY) {
+                    this.add_css_class ("eye-friendly");
+                } else {
+                    this.remove_css_class ("eye-friendly");
+                }
+            });
+
             var toolbar_view = new Adw.ToolbarView ();
             this.set_content (toolbar_view);
 

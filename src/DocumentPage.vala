@@ -77,11 +77,19 @@ namespace Imladris {
             source_buffer = new GtkSource.Buffer.with_language (language);
             source_buffer.highlight_syntax = true;
 
-            var scheme_manager = GtkSource.StyleSchemeManager.get_default ();
-            var scheme = scheme_manager.get_scheme ("Adwaita");
-            if (scheme != null) {
-                source_buffer.style_scheme = scheme;
-            }
+            update_style_scheme ();
+
+            Core.SettingsManager.get_default ().theme_changed.connect ((t) => {
+                update_style_scheme ();
+                refresh_live_preview ();
+            });
+
+            Adw.StyleManager.get_default ().notify["dark"].connect (() => {
+                if (Core.SettingsManager.get_default ().app_theme == Core.AppTheme.SYSTEM) {
+                    update_style_scheme ();
+                    refresh_live_preview ();
+                }
+            });
 
             setup_text_tags ();
             populate_starter_template (title, lang_id);
@@ -363,6 +371,25 @@ print("Python Interpreter:", sys.version.split()[0])
             }
         }
 
+        private void update_style_scheme () {
+            var sm = GtkSource.StyleSchemeManager.get_default ();
+            var theme = Core.SettingsManager.get_default ().app_theme;
+            bool is_dark = Adw.StyleManager.get_default ().dark;
+
+            GtkSource.StyleScheme? scheme = null;
+            if (theme == Core.AppTheme.DARK || (theme == Core.AppTheme.SYSTEM && is_dark)) {
+                scheme = sm.get_scheme ("Adwaita-dark") ?? sm.get_scheme ("classic-dark");
+            } else if (theme == Core.AppTheme.EYE_FRIENDLY) {
+                scheme = sm.get_scheme ("solarized-light") ?? sm.get_scheme ("tango") ?? sm.get_scheme ("Adwaita");
+            } else {
+                scheme = sm.get_scheme ("Adwaita") ?? sm.get_scheme ("classic");
+            }
+
+            if (scheme != null) {
+                source_buffer.style_scheme = scheme;
+            }
+        }
+
         public void refresh_live_preview () {
             string raw = source_buffer.text;
             if (doc_type == "html") {
@@ -373,6 +400,18 @@ print("Python Interpreter:", sys.version.split()[0])
             var fmt = DocumentFormat.from_filename (file_location != null ? file_location.get_basename () : @"untitled.$doc_type");
             string body_html = Adapters.DocumentAdapter.render_html (raw, fmt);
 
+            var app_theme = Core.SettingsManager.get_default ().app_theme;
+            bool is_dark = Adw.StyleManager.get_default ().dark;
+            bool use_dark = (app_theme == Core.AppTheme.DARK) || (app_theme == Core.AppTheme.SYSTEM && is_dark);
+            bool use_sepia = (app_theme == Core.AppTheme.EYE_FRIENDLY);
+
+            string bg_color = use_dark ? "#1e1e1e" : (use_sepia ? "#faf5ee" : "#ffffff");
+            string text_color = use_dark ? "#e2e8f0" : (use_sepia ? "#383431" : "#1e242b");
+            string card_bg = use_dark ? "#262626" : (use_sepia ? "#f0e7dc" : "#f8fafc");
+            string card_border = use_dark ? "#404040" : (use_sepia ? "#dcd0c2" : "#cbd5e1");
+            string header_bg = use_dark ? "#333333" : (use_sepia ? "#e6dcce" : "#e2e8f0");
+            string header_color = use_dark ? "#94a3b8" : (use_sepia ? "#5c534b" : "#475569");
+
             string html = """<!DOCTYPE html>
 <html>
 <head>
@@ -381,8 +420,8 @@ print("Python Interpreter:", sys.version.split()[0])
   body {
     font-family: 'Inter', 'Cantarell', system-ui, -apple-system, sans-serif;
     line-height: 1.6;
-    color: #1e242b;
-    background: #ffffff;
+    color: %s;
+    background: %s;
     padding: 24px 32px;
     margin: 0;
   }
@@ -398,18 +437,18 @@ print("Python Interpreter:", sys.version.split()[0])
     text-transform: uppercase;
   }
   .code-chunk-card {
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
+    background: %s;
+    border: 1px solid %s;
     border-radius: 8px;
     margin: 16px 0;
     overflow: hidden;
   }
   .code-chunk-header {
-    background: #e2e8f0;
+    background: %s;
     padding: 6px 12px;
     font-size: 12px;
     font-weight: 600;
-    color: #475569;
+    color: %s;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -420,22 +459,22 @@ print("Python Interpreter:", sys.version.split()[0])
     color: #64748b;
   }
   .document-frontmatter-card {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
+    background: %s;
+    border: 1px solid %s;
     border-radius: 8px;
     padding: 16px 20px;
     margin-bottom: 24px;
   }
   .frontmatter-title {
     margin-top: 0;
-    color: #0f172a;
+    color: %s;
   }
   .frontmatter-meta-grid {
     display: flex;
     flex-wrap: wrap;
     gap: 12px 24px;
     font-size: 13px;
-    color: #475569;
+    color: %s;
   }
   .frontmatter-label {
     font-weight: 600;
@@ -449,8 +488,8 @@ print("Python Interpreter:", sys.version.split()[0])
     border-radius: 4px;
   }
   pre {
-    background: #f6f8fa;
-    border: 1px solid #d0d7de;
+    background: %s;
+    border: 1px solid %s;
     border-radius: 6px;
     padding: 14px;
     overflow-x: auto;
@@ -465,7 +504,15 @@ print("Python Interpreter:", sys.version.split()[0])
   <div class="badge">WebKitGTK 6.0 Live Preview • %s</div>
   <div id="content">%s</div>
 </body>
-</html>""".printf (fmt.to_badge_label (), body_html);
+</html>""".printf (
+                text_color, bg_color,
+                card_bg, card_border,
+                header_bg, header_color,
+                card_bg, card_border,
+                text_color, header_color,
+                card_bg, card_border,
+                fmt.to_badge_label (), body_html
+            );
 
             web_view.load_html (html, null);
         }

@@ -16,6 +16,22 @@ namespace Imladris.UI {
                 icon_name = "preferences-system-symbolic"
             };
 
+            // Appearance & Theming Group
+            var appearance_group = new Adw.PreferencesGroup () {
+                title = "Appearance",
+                description = "Choose your color scheme and editor styling"
+            };
+
+            var theme_row = new Adw.ActionRow () {
+                title = "Theme",
+                subtitle = "System Theme / Light / Dark / Eye Friendly"
+            };
+
+            var theme_selector = new ThemeSelectorWidget ();
+            theme_row.add_suffix (theme_selector);
+            appearance_group.add (theme_row);
+            gen_page.add (appearance_group);
+
             var hw_group = new Adw.PreferencesGroup () {
                 title = "Hardware & Rendering",
                 description = "Configure GPU acceleration for previews and plots"

@@ -224,3 +224,96 @@
     padding: 2px 6px;
 }
 
+/* =====================================================================
+ * Theme Selector Swatches (System / Light / Eye Friendly / Dark)
+ * ===================================================================== */
+.theme-swatch-button {
+    padding: 3px;
+    border-radius: 9999px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    min-width: 42px;
+    min-height: 42px;
+}
+
+.theme-swatch-button:hover {
+    background: alpha(@window_fg_color, 0.06);
+}
+
+.theme-circle {
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 9999px;
+    border: 1.5px solid alpha(#000000, 0.25);
+}
+
+.theme-circle-system {
+    background: linear-gradient(135deg, #ffffff 49.5%, #2e2e2e 50.5%);
+}
+
+.theme-circle-light {
+    background-color: #ffffff;
+}
+
+.theme-circle-sepia {
+    background-color: #f5eee6;
+    border-color: alpha(#a68a68, 0.45);
+}
+
+.theme-circle-dark {
+    background-color: #2e2e2e;
+    border-color: alpha(#ffffff, 0.28);
+}
+
+.theme-swatch-button.is-selected .theme-circle {
+    outline: 2.5px solid @accent_color;
+    outline-offset: 2.5px;
+}
+
+.theme-badge-check {
+    min-width: 15px;
+    min-height: 15px;
+    border-radius: 9999px;
+    background-color: @accent_bg_color;
+    color: #ffffff;
+    padding: 2px;
+    margin-bottom: -2px;
+    margin-right: -2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Eye Friendly (Sepia) Theme Overrides */
+window.eye-friendly,
+.eye-friendly {
+    --window_bg_color: #f5eee6;
+    --window_fg_color: #383431;
+    --view_bg_color: #faf5ee;
+    --view_fg_color: #2b2826;
+    --headerbar_bg_color: #ebe2d8;
+    --headerbar_fg_color: #383431;
+    --card_bg_color: #ede5da;
+    --popover_bg_color: #faf5ee;
+    --borders: #dcd0c2;
+    background-color: #f5eee6;
+    color: #383431;
+}
+
+.eye-friendly .imladris-topbar {
+    background-color: #3c3630;
+}
+
+.eye-friendly GtkSourceView {
+    background-color: #faf5ee;
+    color: #2b2826;
+}
+
+.eye-friendly .ribbon-deck {
+    background-color: #ebe2d8;
+}
+
+.eye-friendly .imladris-statusbar {
+    background-color: #ebe2d8;
+}
+
+

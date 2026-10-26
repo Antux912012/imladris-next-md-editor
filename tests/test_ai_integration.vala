@@ -14,6 +14,7 @@ namespace Imladris.Tests {
         GLib.Test.add_func ("/ai/config_manager_defaults_and_persistence", test_config_manager);
         GLib.Test.add_func ("/ai/deepseek_reasoning_parsing", test_deepseek_reasoning_parsing);
         GLib.Test.add_func ("/ai/env_var_fallback", test_env_var_fallback);
+        GLib.Test.add_func ("/theming/app_theme_metadata", test_app_theme);
 
         return GLib.Test.run ();
     }
@@ -179,5 +180,30 @@ namespace Imladris.Tests {
         // Restore
         ds_settings.api_key = original_key;
         GLib.Environment.unset_variable ("DEEPSEEK_API_KEY");
+    }
+
+    private static void test_app_theme () {
+        assert (AppTheme.SYSTEM.to_string_id () == "system");
+        assert (AppTheme.LIGHT.to_string_id () == "light");
+        assert (AppTheme.DARK.to_string_id () == "dark");
+        assert (AppTheme.EYE_FRIENDLY.to_string_id () == "eye-friendly");
+
+        assert (AppTheme.from_string_id ("system") == AppTheme.SYSTEM);
+        assert (AppTheme.from_string_id ("light") == AppTheme.LIGHT);
+        assert (AppTheme.from_string_id ("dark") == AppTheme.DARK);
+        assert (AppTheme.from_string_id ("eye-friendly") == AppTheme.EYE_FRIENDLY);
+        assert (AppTheme.from_string_id ("sepia") == AppTheme.EYE_FRIENDLY);
+
+        assert (AppTheme.SYSTEM.get_display_name () == "System Theme");
+        assert (AppTheme.LIGHT.get_display_name () == "Light");
+        assert (AppTheme.DARK.get_display_name () == "Dark");
+        assert (AppTheme.EYE_FRIENDLY.get_display_name () == "Eye Friendly");
+
+        var settings = SettingsManager.get_default ();
+        settings.app_theme = AppTheme.EYE_FRIENDLY;
+        assert (settings.app_theme == AppTheme.EYE_FRIENDLY);
+
+        settings.app_theme = AppTheme.SYSTEM;
+        assert (settings.app_theme == AppTheme.SYSTEM);
     }
 }

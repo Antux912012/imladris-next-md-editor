@@ -62,6 +62,8 @@ namespace Imladris {
                     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
                 );
             }
+
+            Core.SettingsManager.get_default ().apply_theme (Core.SettingsManager.get_default ().app_theme);
         }
 
         protected override void activate () {

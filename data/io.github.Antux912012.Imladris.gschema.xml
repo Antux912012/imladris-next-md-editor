@@ -6,5 +6,10 @@
       <summary>Hardware acceleration</summary>
       <description>Use the GPU for WebKit previews and plot rendering. Disable on older hardware, virtual machines or systems with problematic drivers to fall back to software rendering.</description>
     </key>
+    <key name="theme" type="s">
+      <default>'system'</default>
+      <summary>Application theme</summary>
+      <description>Color scheme and appearance theme: 'system', 'light', 'dark', or 'eye-friendly'.</description>
+    </key>
   </schema>
 </schemalist>
