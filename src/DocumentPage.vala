@@ -109,10 +109,7 @@ namespace Imladris {
             };
 
             // 2. Shared WebKitGTK 6.0 & Console Instances (Kept alive in PersistentPanelRegistry)
-            web_view = new WebKit.WebView () {
-                hexpand = true,
-                vexpand = true
-            };
+            web_view = UI.WebViewFactory.create ();
             var settings = web_view.get_settings ();
             settings.enable_developer_extras = true;
             settings.enable_javascript = true;

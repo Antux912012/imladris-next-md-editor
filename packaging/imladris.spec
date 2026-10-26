@@ -49,6 +49,7 @@ writing environment for technical authors, data scientists, and researchers.
 %{_bindir}/imladris
 %{_datadir}/applications/io.github.Antux912012.Imladris.desktop
 %{_datadir}/metainfo/io.github.Antux912012.Imladris.metainfo.xml
+%{_datadir}/glib-2.0/schemas/io.github.Antux912012.Imladris.gschema.xml
 %{_datadir}/icons/hicolor/*/apps/io.github.Antux912012.Imladris.*
 
 %changelog

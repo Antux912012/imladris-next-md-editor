@@ -90,6 +90,10 @@ namespace Imladris {
             io_sec.append ("Quit Imladris", "app.quit");
             brand_menu.append_section ("File & Export", io_sec);
 
+            var prefs_sec = new GLib.Menu ();
+            prefs_sec.append ("Preferences", "app.preferences");
+            brand_menu.append_section (null, prefs_sec);
+
             var brand_btn = new Gtk.MenuButton () {
                 menu_model = brand_menu,
                 valign = Gtk.Align.CENTER

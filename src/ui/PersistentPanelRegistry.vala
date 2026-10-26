@@ -410,10 +410,7 @@ namespace Imladris.UI {
             plots_bar.append (render_plot_btn);
             plots_box.append (plots_bar);
 
-            plots_webview = new WebKit.WebView () {
-                hexpand = true,
-                vexpand = true
-            };
+            plots_webview = WebViewFactory.create ();
             plots_box.append (plots_webview);
             render_default_scientific_plot ();
             panels.set (PanelId.PLOTS, plots_box);
@@ -505,10 +502,7 @@ namespace Imladris.UI {
             });
 
             // 10. HELP PANEL (Documentation & RStudio Workbench Reference)
-            var help_view = new WebKit.WebView () {
-                hexpand = true,
-                vexpand = true
-            };
+            var help_view = WebViewFactory.create ();
             help_view.load_html ("""<!DOCTYPE html>
 <html>
 <head>

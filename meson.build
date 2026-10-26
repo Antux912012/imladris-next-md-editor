@@ -56,6 +56,9 @@ sources = files(
   'src/ui/new_project_dialog.vala',
   'src/ui/PackageInstallerDialog.vala',
   'src/ui/InlineChunkOutputWidget.vala',
+  'src/ui/WebViewFactory.vala',
+  'src/ui/PreferencesDialog.vala',
+  'src/core/SettingsManager.vala',
 )
 
 executable('imladris',
@@ -75,6 +78,13 @@ install_data(
   'data/io.github.Antux912012.Imladris.metainfo.xml',
   install_dir: get_option('datadir') / 'metainfo'
 )
+
+install_data(
+  'data/io.github.Antux912012.Imladris.gschema.xml',
+  install_dir: get_option('datadir') / 'glib-2.0' / 'schemas'
+)
+
+gnome.post_install(glib_compile_schemas: true)
 
 install_subdir(
   'data/icons/hicolor',

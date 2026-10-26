@@ -61,6 +61,8 @@ Documents go to HTML, PDF, **ODT** and **ODP**. Imladris uses Quarto, rmarkdown 
 One dialog, nine plain-labelled choices: *Create a Project*, *Create a Sandboxed project*, *Create a simple .md*, *Create a simple .html*, *Create a R script file*, *Create a .Rmd*, *Create a .Qmd*, *Create a .ipynb*, *Create a Python script*.
 
 ### Extras
+**Hardware acceleration toggle** (menu → Preferences, `Ctrl+,`): switches every WebKit view between GPU compositing and pure software rendering, live, with the choice stored in GSettings. Handy on VMs, older hardware or flaky drivers.
+
 Optional AI writing assistant (any OpenAI-compatible endpoint, or a local `llama.cpp` server), a built-in MCP server (`imladris --mcp-server`), and crash recovery that keeps shadow copies of unsaved work in `~/.cache/imladris/recovery/`. The AI assistant is off the critical path: nothing is sent anywhere unless you configure an endpoint and use it.
 
 ---

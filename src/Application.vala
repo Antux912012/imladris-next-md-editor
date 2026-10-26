@@ -29,6 +29,7 @@ namespace Imladris {
             { "run_all_cells", on_run_all_cells },
             { "run_line_selection", on_run_line_selection },
             { "interrupt_execution", on_interrupt_execution },
+            { "preferences", on_preferences },
             { "print", on_print_document },
             { "quit", on_quit }
         };
@@ -48,6 +49,7 @@ namespace Imladris {
             this.set_accels_for_action ("app.open", { "<Control>o" });
             this.set_accels_for_action ("app.save", { "<Control>s" });
             this.set_accels_for_action ("app.package_installer", { "<Control><Shift>p" });
+            this.set_accels_for_action ("app.preferences", { "<Control>comma" });
             this.set_accels_for_action ("app.quit", { "<Control>q" });
 
             var provider = new Gtk.CssProvider ();
@@ -198,6 +200,11 @@ namespace Imladris {
         private void on_interrupt_execution () {
             var win = this.active_window as Window;
             if (win != null) win.interrupt_active_execution ();
+        }
+
+        private void on_preferences () {
+            var win = this.active_window;
+            if (win != null) new UI.PreferencesDialog ().present (win);
         }
 
         private void on_print_document () {
