@@ -60,10 +60,21 @@ Documents go to HTML, PDF, **ODT** and **ODP**. Imladris uses Quarto, rmarkdown 
 ### The creation dialog
 One dialog, nine plain-labelled choices: *Create a Project*, *Create a Sandboxed project*, *Create a simple .md*, *Create a simple .html*, *Create a R script file*, *Create a .Rmd*, *Create a .Qmd*, *Create a .ipynb*, *Create a Python script*.
 
+### AI Assistant & Writing Co-Author
+Imladris includes a dedicated AI writing and coding panel with out-of-the-box support for the leading scientific and coding models:
+- **Google Gemini**: First-class support via **Google AI Studio** free API keys or **Google Account OAuth** tokens (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash-thinking-exp`).
+- **DeepSeek API**: Access `deepseek-chat` and `deepseek-reasoner` (DeepSeek-R1) with native extraction and display of the reasoning/thought chain.
+- **Kimi API (Moonshot AI)**: `moonshot-v1-8k`, `moonshot-v1-32k`, and `kimi-latest` for ultra-long context documents.
+- **Qwen API (Alibaba Cloud DashScope)**: Direct integration with `qwen2.5-coder-32b-instruct` and `qwen-plus`.
+- **Local Ollama & llama.cpp**: Zero-cloud offline privacy via Ollama (`localhost:11434`) or the built-in offline GGUF downloader (`localhost:8080`).
+- **Custom OpenAI-Compatible**: Connect to any endpoint (OpenAI, Groq, Mistral, Together, vLLM).
+
+Credentials and model choices are persisted locally in `~/.config/imladris/ai_config.json` (restricted to user read-write mode `0600`) and automatically detect standard environment variables (`GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `MOONSHOT_API_KEY`, `DASHSCOPE_API_KEY`, `OPENAI_API_KEY`).
+
 ### Extras
 **Hardware acceleration toggle** (menu → Preferences, `Ctrl+,`): switches every WebKit view between GPU compositing and pure software rendering, live, with the choice stored in GSettings. Handy on VMs, older hardware or flaky drivers.
 
-Optional AI writing assistant (any OpenAI-compatible endpoint, or a local `llama.cpp` server), a built-in MCP server (`imladris --mcp-server`), and crash recovery that keeps shadow copies of unsaved work in `~/.cache/imladris/recovery/`. The AI assistant is off the critical path: nothing is sent anywhere unless you configure an endpoint and use it.
+Built-in MCP server (`imladris --mcp-server`), and crash recovery that keeps shadow copies of unsaved work in `~/.cache/imladris/recovery/`. The AI assistant is off the critical path: nothing is sent anywhere unless you configure an endpoint and use it.
 
 ---
 

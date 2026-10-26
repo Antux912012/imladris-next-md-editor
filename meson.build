@@ -58,7 +58,9 @@ sources = files(
   'src/ui/InlineChunkOutputWidget.vala',
   'src/ui/WebViewFactory.vala',
   'src/ui/PreferencesDialog.vala',
+  'src/ui/AiSettingsDialog.vala',
   'src/core/SettingsManager.vala',
+  'src/core/AiConfigManager.vala',
 )
 
 executable('imladris',
@@ -113,5 +115,18 @@ test_exe = executable('test_mallorn_sandbox',
 )
 
 test('mallorn_sandbox_tests', test_exe, timeout: 120)
+
+ai_test_sources = files(
+  'tests/test_ai_integration.vala',
+  'src/core/AiConfigManager.vala',
+)
+
+ai_test_exe = executable('test_ai_integration',
+  ai_test_sources,
+  dependencies: deps,
+  vala_args: ['--target-glib=2.76'],
+)
+
+test('ai_integration_tests', ai_test_exe, timeout: 30)
 
 
