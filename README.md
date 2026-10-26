@@ -66,15 +66,27 @@ An intuitive, Libadwaita-native dialog (`Ctrl+Shift+P` or from the Packages pane
 - **Quick-Add Curated Chips**: 1-click popular package buttons for data science, statistics, machine learning, and visualization libraries.
 
 ### Automated `micromamba` Toolchain & 4-Tier Runtime Resolution
-Imladris v0.9.0 introduces a built-in automated Data Science Toolchain Manager powered by `micromamba` (a static ~18MB C++ binary with zero host dependencies):
-- **Zero-Configuration Provisioning**: One-click automated setup of R 4.4 (with dev compilers, `make`, `pkg-config`, and IRkernel), pre-compiled `tidyverse`, Python 3.12 (with `uv` and ipykernel), and Quarto CLI into user storage (`$XDG_DATA_HOME/imladris/toolchains/`).
-- **Clean Flatpak Self-Sufficiency**: Works completely self-contained on fresh Linux systems without needing pre-installed host interpreters or compilers.
-- **Automated CRAN Compatibility**: Configures `Rprofile.site` with default cloud CRAN mirror and multi-core parallel compilation so `install.packages()` never fails on missing Linux headers.
-- **4-Tier Resolution Order**:
-  1. *Project Sandbox* (`<project_root>/.imladris-env/bin/`)
-  2. *Managed Global Toolchain* (`$XDG_DATA_HOME/imladris/toolchains/mamba_root/envs/base-ds/bin/`)
-  3. *Host Fallback* (native `$PATH` or `flatpak-spawn --host` portal)
-  4. *One-Click Interactive Setup* (actionable prompt & real-time log modal)
+Imladris v0.9.0 introduces a built-in automated Data Science Toolchain Manager powered by **`micromamba`** (a single, statically-linked ~18MB C++ executable with zero host dependencies):
+
+#### Why It Matters: Zero Root & Zero Host Setup
+On Linux and inside Flatpak containers, running scientific code typically requires host interpreters or compiling packages like `tidyverse` from C/C++/Fortran source, which frequently fails due to missing headers (`libcurl-devel`, `openssl-devel`, `libxml2-devel`). Imladris eliminates this entirely:
+- **One-Click Provisioning**: Installs **R 4.4**, **Python 3.12**, and **Quarto CLI + Typst** into Imladris's user data directory (`$XDG_DATA_HOME/imladris/toolchains/`) with zero root permissions.
+- **Pre-Compiled Binary Packages**: Fast installations of `r-tidyverse`, `r-data.table`, and hundreds of packages with bundled shared libraries.
+- **Built-in Compiler Toolchain**: Bundles `compilers`, `make`, `pkg-config`, and dev headers inside the prefix. Standard `install.packages(...)` calls in R cells compile cleanly out of the box without host GCC headaches.
+- **Automated `Rprofile.site` Optimization**: Injects cloud CRAN mirror (`https://cloud.r-project.org`) and multi-core compilation (`options(Ncpus = detectCores() - 1)`) so source builds execute in parallel automatically.
+- **Instant Project Sandboxes**: Creating a sandboxed project (`.imladris-env`) reuses packages from the shared cache (`mamba_root/pkgs`) via hardlinks, initializing full R/Python environments in under 3 seconds with near-zero extra disk usage.
+
+#### 4-Tier Runtime Resolution Hierarchy
+Whenever a chunk, script, or export pipeline runs, Imladris resolves the executable in strict priority order:
+1. **Tier 1: Project-Local Sandbox**: Checks `<project_root>/.imladris-env/bin/` (or `.venv`). Injects managed environment variables (`PATH`, `CONDA_PREFIX`, `PKG_CONFIG_PATH`, `R_HOME`, `QUARTO_PYTHON`, `QUARTO_R`).
+2. **Tier 2: Managed Global Toolchain**: Checks `$XDG_DATA_HOME/imladris/toolchains/mamba_root/envs/base-ds/bin/` and runs with injected managed environment variables.
+3. **Tier 3: Host Fallback (Flatpak-Aware)**: Checks host system via `flatpak-spawn --host` (if running inside Flatpak) or native `$PATH`. Temporary scripts and graphics plots are automatically routed through the shared cache directory (`~/.cache/imladris/tmp/`).
+4. **Tier 4: Missing Runtime**: Instead of failing with an unrecoverable error, renders an actionable prompt that opens the **One-Click Toolchain Setup Dialog**.
+
+#### How to Access the Toolchain Manager
+- **Actionable Callout**: If code is executed without an available interpreter, Imladris automatically offers to install R, Python, and Quarto.
+- **Computation Ribbon**: Click the **Toolchains** button in the Computation tab.
+- **Brand Menu**: Select **Imladris ▾ → Data Science Toolchains...** from the top bar.
 
 ### Export
 Documents go to HTML, PDF, **ODT** and **ODP**. Imladris uses Quarto, rmarkdown or Pandoc when they're installed, goes through LibreOffice for slides, and falls back to a built-in OpenDocument writer when none of that is available.
@@ -122,16 +134,16 @@ Packages for each release live on the [Releases page](https://github.com/Antux91
 flatpak install --user io.github.Antux912012.Imladris.flatpak
 flatpak run io.github.Antux912012.Imladris
 ```
-The Flatpak requests network access (package indices, optional AI endpoints), home-folder access (your projects) and the usual display/GPU sockets. Note that R, Python, Quarto and Pandoc are looked up on the sandbox's `PATH`; use the native packages if you want Imladris to see your host toolchain.
+The Flatpak requests network access (package downloads and optional AI endpoints), home-folder access (your projects), and the `org.freedesktop.Flatpak` portal. The Flatpak supports both transparent host toolchain discovery (`flatpak-spawn --host`) AND fully self-contained zero-root execution via the built-in automated `micromamba` toolchain manager.
 
 **Fedora**
 ```bash
-sudo dnf install ./imladris-0.8.0-1.fc44.x86_64.rpm
+sudo dnf install ./imladris-0.9.0-1.fc44.x86_64.rpm
 ```
 
 **Debian / Ubuntu**
 ```bash
-sudo dpkg -i imladris_0.8.0_amd64.deb && sudo apt-get install -f
+sudo dpkg -i imladris_0.9.0_amd64.deb && sudo apt-get install -f
 ```
 
 ## Build from source
