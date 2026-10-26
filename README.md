@@ -3,236 +3,139 @@
 </p>
 
 <h1 align="center">Imladris</h1>
-<h3 align="center">Scientific Authoring Studio, Data Science Notebook IDE & Polyglot Markdown Workbench</h3>
+<h3 align="center">A GNOME-native home for scientific writing, notebooks and data work</h3>
 
 <p align="center">
   <a href="https://github.com/Antux912012/imladris-next-md-editor/releases"><img src="https://img.shields.io/github/v/release/Antux912012/imladris-next-md-editor?include_prereleases&style=flat-square&color=blue" alt="Release"></a>
-  <a href="https://gitlab.gnome.org/GNOME/libadwaita"><img src="https://img.shields.io/badge/platform-Linux%20(GTK4%20%2F%20Libadwaita)-blue?style=flat-square" alt="Platform"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.7.0"><img src="https://img.shields.io/badge/Fedora%20.rpm-v0.7.0-blue?style=flat-square&logo=fedora" alt="Fedora RPM"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.7.0"><img src="https://img.shields.io/badge/Flatpak-io.github.Antux912012.Imladris-blue?style=flat-square&logo=flatpak" alt="Flatpak"></a>
-  <a href="https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.7.0"><img src="https://img.shields.io/badge/Debian%20.deb-v0.7.0-red?style=flat-square&logo=debian" alt="Debian"></a>
+  <img src="https://img.shields.io/badge/GTK4%20%2F%20Libadwaita-1.5%2B-blue?style=flat-square" alt="Toolkit">
+  <img src="https://img.shields.io/badge/Vala-GPL--3.0--or--later-green?style=flat-square" alt="Vala, GPL-3.0-or-later">
+  <img src="https://img.shields.io/badge/Flatpak-io.github.Antux912012.Imladris-blue?style=flat-square&logo=flatpak" alt="Flatpak">
 </p>
 
 <p align="center">
-  <img src="data/screenshots/imladris-screenshot.png" alt="Imladris Polyglot Studio Screenshot" width="850">
+  <img src="data/screenshots/imladris-screenshot.png" alt="Imladris screenshot" width="850">
 </p>
 
-**Imladris** is an advanced native Linux scientific authoring studio, data science notebook IDE, and polyglot document workbench engineered in **Vala**, **GTK4**, **Libadwaita (>= 1.5)**, **GtkSourceView 5**, **WebKitGTK 6.0**, **libsoup-3.0**, and **json-glib-1.0**.
+Imladris is a desktop editor for people who write with code in it: Quarto and R Markdown reports, Jupyter notebooks, R and Python scripts, and plain Markdown or HTML when that's all you need. It's written in **Vala** on **GTK4 + Libadwaita**, and it tries hard to feel like it belongs on a GNOME desktop.
 
-Designed for researchers, data scientists, statisticians, and technical authors, Imladris unifies the distraction-free flow of GNOME Apostrophe with the interactive analytical power of RStudio and Jupyter Notebooks into a seamless, high-performance desktop experience.
+The itch it scratches is simple. RStudio is great for analysis but heavy for prose; Apostrophe is lovely for prose but can't run a chunk. Imladris switches between the two depending on what you opened: a `.md` file gets a calm, quick writing view, while a `.qmd` or `.ipynb` gets a full four-quadrant workbench with editor, console, environment and files.
 
----
-
-## 🏛 The 11 Core Architectural Pillars
-
-Imladris is architected around 11 core functional pillars:
-
-### Pillar 1: Clean Creation Pop-up Modal
-When opening the **New / Launch** modal dialog (`Adw.Dialog`), options are presented with clean, unencumbered labels:
-- **Create a Project** (Supports `.Rmd`, `.Qmd`, or `.ipynb`)
-- **Create a Sandboxed project** (Supports `.Rmd`, `.Qmd`, or `.ipynb` with isolated dependencies)
-- **Create a simple .md**
-- **Create a simple .html**
-- **Create a R script file**
-- **Create a .Rmd**
-- **Create a .Qmd**
-- **Create a .ipynb**
-- **Create a Python script**
-
-### Pillar 2: Context-Aware Ribbon State Machine
-The top ribbon dynamically adapts its `visible` and `sensitive/enabled` states depending on the active document format and project mode:
-- **Simple `.md`**: Formatting tools, Live Preview toggle, Export (`.html`, `.pdf`, `.odt`, `.odp`). Computational buttons (Run Chunk, Run All, Kernel controls, Package Installer) are cleanly hidden.
-- **Simple `.html`**: HTML tag helpers, Live DOM WebKit preview, browser preview. Kernel and Pandoc exports hidden.
-- **Standalone `.R` / `.py` scripts**: Script execution controls (Run Line / Selection, Source File, Interrupt, Restart Kernel). Chunk insertion hidden.
-- **Notebooks (`.Rmd`, `.Qmd`, `.ipynb`)**: Full computational suite (Insert Chunks, Run Active Chunk, Run All Chunks, Run Above, Run Below, Package Installer, Environment Snapshot/Restore, Export to RStudio/Jupyter, ODT/ODP pipelines).
-
-### Pillar 3: RStudio-Style Package Installer (CRAN & PyPI)
-A dedicated `Adw.Dialog` modal (`PackageInstallerModal`) mirroring RStudio's package management workflow:
-- **Live Index Caching**: Asynchronously fetches and caches CRAN (`src/contrib/PACKAGES`) and PyPI (`/simple/` JSON API) indices using `Soup.Session` and `Json.Parser`.
-- **Multi-Package Autocomplete**: Debounced autocompletion matching comma- or space-separated lists (e.g. `tidyverse, ggplot2, DESeq2`).
-- **Smart Target Routing**: Automatically routes package installations to the appropriate destination:
-  - *Standard Projects*: System global library (`install.packages()` for R, `python3 -m pip install` for Python).
-  - *Sandboxed Projects*: Project-isolated library (`renv::install()` with automatic lockfile snapshot for R, `.venv/bin/python -m pip install` with automatic `requirements.txt` freeze for Python).
-
-### Pillar 4: Persistent Interactive R & Python REPL Subprocess Bridges
-Imladris maintains long-lived, bidirectional background subprocesses (`Imladris.Execution.ReplBridge`) for both R (`R --no-save --no-restore --interactive`) and Python (`python3 -u -i`):
-- Persistent variables, imported modules, dataframes, and custom functions stay in memory across individual chunk runs.
-- Non-blocking asynchronous I/O loops capture stdout and stderr in real time.
-- Integrated interrupt support sends `SIGINT` directly to the active process without crashing the session.
-
-### Pillar 5: Files Quadrant & Automatic Root Working Directory (`pwd`)
-Enforces strict working directory synchronicity across the workbench:
-- When a project is loaded, `PersistentSessionManager` updates process `pwd`, executes `setwd("<project_root>")` in the persistent R session, and executes `os.chdir("<project_root>")` in the persistent Python session.
-- Subprocesses spawned via `GLib.SubprocessLauncher` strictly enforce `launcher.set_cwd(project_root)`.
-- Quadrant 4 (Files tab) roots directly to `project_root`, providing breadcrumb navigation and click-to-open file management.
-- Integrated terminal synchronizes working directory automatically.
-
-### Pillar 6: Project Engine (Standard vs. Sandboxed)
-- **Standard Projects (`ProjectType.STANDARD`)**:
-  - Bound to host system global R and Python libraries.
-  - Displays persistent status badge: `[System Libraries - Non-Portable]`.
-  - Prompts with an `Adw.AlertDialog` warning when exporting or sharing: *"This project relies on system libraries and may fail to run on other machines if required packages are missing."*
-- **Sandboxed Projects (`ProjectType.SANDBOXED`)**:
-  - Isolated dependencies: Initializes `renv` (`.Rprofile`, `renv/activate.R`, `renv.lock`) for R and `.venv` (`requirements.txt`, local Jupyter kernelspec) for Python.
-  - Displays persistent status badge: `[Sandboxed - Reproducible]`.
-  - One-click snapshot and restore via `renv::snapshot()`, `renv::restore()`, and `pip freeze`.
-
-### Pillar 7: Sandboxed Export to RStudio & Jupyter Notebook
-- **Export to RStudio (`SandboxController.export_to_rstudio`)**:
-  - Automatically snapshots `renv.lock`.
-  - Generates valid `<project_name>.Rproj`, `.Rprofile`, and `renv/activate.R`.
-  - Opening the exported folder in RStudio automatically triggers `renv::restore()`.
-- **Export to Jupyter (`SandboxController.export_to_jupyter`)**:
-  - Exports `.ipynb` with pinned `requirements.txt` and Conda-compatible `environment.yml`.
-  - Generates executable `setup_environment.sh` bootstrapping virtual environment and local kernel registration.
-
-### Pillar 8: The `.mallorn` Exchange Format
-A dual-nature exchange specification for scientific computing workspaces:
-- **1:1 RStudio DCF Syntax**: Human-readable Debian Control File format mirroring RStudio's `.Rproj` file with namespaced `Imladris*` metadata headers.
-- **Dual-Manifest Sync**: Synchronizes `<project_name>.mallorn` and `<project_name>.Rproj` simultaneously so projects open natively in both Imladris and RStudio.
-- **Portable Single-File Bundles**: Pack and unpack `.mallorn` archives (`.tar.zst` or `.zip`), automatically excluding heavy binaries while preserving lockfiles.
-
-### Pillar 9: OpenDocument Text (ODT) & Presentation (ODP) Export Pipelines
-Headless export service for `.md`, `.Rmd`, `.Qmd`, and `.ipynb` documents:
-- **ODT Pipeline**: Dispatches through Quarto (`quarto render --to odt`), RMarkdown (`rmarkdown::render(output_format='odt_document')`), or Pandoc (`pandoc -t odt`), with automatic fallback to built-in OASIS OpenDocument XML container generator.
-- **ODP Pipeline**: Converts via Quarto/Pandoc to intermediate PPTX decks, then executes headless LibreOffice (`soffice --headless --convert-to odp`), with fallback to native OASIS presentation packager.
-
-### Pillar 10: Lightweight Standalone Mode vs Full Notebook Mode
-Dynamic layout engine adapting to user workflow:
-- **Fast-Path Apostrophe Mode**: Simple `.md` and `.html` files launch instantly in a clean, distraction-free writing view bypassing heavyweight scientific runtimes.
-- **4-Quadrant RStudio Workbench**: Computational projects launch into a 4-quadrant layout:
-  - *Quadrant 1 (Top-Left)*: Source editor with syntax highlighting and inline output anchors.
-  - *Quadrant 2 (Top-Right)*: Environment variables inspector, document outline, citations viewer, and history.
-  - *Quadrant 3 (Bottom-Left)*: Interactive R & Python console and embedded shell terminal.
-  - *Quadrant 4 (Bottom-Right)*: Files browser, high-DPI plot viewer, package manager, and help docs.
-
-### Pillar 11: Inline Document Code Chunk Execution & Output Cards
-Rich inline computational feedback directly inside the document editor:
-- **Chunk Parser**: Scans document buffers for `{r}`, `python`, and `bash` chunk blocks with YAML options (`#| echo: true`).
-- **Capture Harnesses**:
-  - *R Chunks*: Automatically redirects graphics to high-DPI PNG devices (`png(res=150)`) and intercepts plot generation.
-  - *Python Chunks*: Safely executes base64-encoded multiline code blocks, captures `matplotlib.pyplot` figures, and extracts stdout/stderr cleanly.
-- **Inline Output Cards (`InlineChunkOutputWidget`)**: Rendered directly below executed code chunks inside `GtkSource.View` child anchors, displaying expandable stdout/stderr logs and zoomable plot previews.
+> Imladris is an independent project. It is not affiliated with or endorsed by Posit, RStudio or Project Jupyter.
 
 ---
 
-## 🚀 Supported Formats & Creation Targets
+## What it does
 
-| Target | Primary Format | Default Mode | Dependency Model |
-| :--- | :--- | :--- | :--- |
-| **Workspace Project** | `.qmd`, `.Rmd`, `.ipynb` | 4-Quadrant Workbench | System Libraries (Non-Portable) |
-| **Sandboxed Project** | `.qmd`, `.Rmd`, `.ipynb` | 4-Quadrant Workbench | Isolated `renv` & `.venv` (Reproducible) |
-| **Simple Markdown** | `.md` | Apostrophe Writer | Lightweight / No Kernels |
-| **Simple HTML5** | `.html` | Apostrophe Writer + DOM | Lightweight / WebKit Preview |
-| **R Script** | `.R` | 4-Quadrant Workbench | Host R Interpreter |
-| **R Markdown** | `.Rmd` | 4-Quadrant Workbench | R / Knitr / renv |
-| **Quarto Document** | `.Qmd` | 4-Quadrant Workbench | Polyglot (R + Python + JS) |
-| **Jupyter Notebook** | `.ipynb` | 4-Quadrant Workbench | Python / IPython Kernel |
-| **Python Script** | `.py` | 4-Quadrant Workbench | Host Python 3 |
+### Two modes, picked automatically
+- **Writer mode** for `.md` and `.html`: no kernels are started, nothing computational is shown, and the ribbon shows only formatting, live preview and export.
+- **Workbench mode** for `.Rmd`, `.qmd`, `.ipynb`, `.R` and `.py`: source editor, environment/outline pane, console + terminal, and a files/plots/packages pane.
+
+The ribbon follows suit. It's a small state machine (`Window.update_ribbon_state_machine`) that shows or greys out actions based on the document format and project type, so you don't see "Restart Kernel" on a Markdown note.
+
+### Running code
+- Persistent **R** and **Python** sessions (`ReplBridge`) run as long-lived subprocesses, so variables survive between chunks like they do in a real REPL.
+- Chunks run inline (`Ctrl+Shift+Enter`). Output and plots land in a card under the chunk, anchored in the `GtkSourceView` buffer.
+- R plots are captured through a PNG device; Python figures through matplotlib's Agg backend. Multi-line Python is shipped base64-encoded to dodge quoting and indentation problems.
+- The working directory is the project root everywhere: processes are spawned with `set_cwd`, and R (`setwd`), Python (`os.chdir`), the terminal and the Files pane all follow along.
+
+### Projects: Standard vs Sandboxed
+| | Standard | Sandboxed |
+| :--- | :--- | :--- |
+| R packages | your user library | project-local `renv` |
+| Python packages | system / user site-packages | project-local `.venv` |
+| Portable? | No, and the UI tells you so | Yes, via `renv.lock` + `requirements.txt` |
+| Status badge | `[System Libraries - Non-Portable]` | `[Sandboxed - Reproducible]` |
+
+Exporting a Standard project asks for confirmation first, because it may not run elsewhere. Sandboxed projects can be exported for **RStudio** (`.Rproj`, `.Rprofile`, `renv/activate.R`) or **Jupyter** (`requirements.txt`, `environment.yml`, a bootstrap script).
+
+### The `.mallorn` format
+A `.mallorn` file is RStudio's `.Rproj` DCF syntax with a few namespaced `Imladris*` keys added. Imladris keeps `<name>.mallorn` and `<name>.Rproj` in sync, so a project opens in both tools. A whole project can also be packed into a single portable archive (`.tar.zst`, with a `.zip` fallback) that leaves out heavy library folders and keeps the lockfiles.
+
+### Package installer
+An RStudio-style dialog for CRAN and PyPI. It fetches both indices with libsoup, parses them with json-glib, and autocompletes comma- or space-separated package lists. Installs go to the right place automatically (system library, or the project's `renv` / `.venv`, followed by a lockfile snapshot).
+
+### Export
+Documents go to HTML, PDF, **ODT** and **ODP**. Imladris uses Quarto, rmarkdown or Pandoc when they're installed, goes through LibreOffice for slides, and falls back to a built-in OpenDocument writer when none of that is available.
+
+### The creation dialog
+One dialog, nine plain-labelled choices: *Create a Project*, *Create a Sandboxed project*, *Create a simple .md*, *Create a simple .html*, *Create a R script file*, *Create a .Rmd*, *Create a .Qmd*, *Create a .ipynb*, *Create a Python script*.
+
+### Extras
+Optional AI writing assistant (any OpenAI-compatible endpoint, or a local `llama.cpp` server), a built-in MCP server (`imladris --mcp-server`), and crash recovery that keeps shadow copies of unsaved work in `~/.cache/imladris/recovery/`. The AI assistant is off the critical path: nothing is sent anywhere unless you configure an endpoint and use it.
 
 ---
 
-## 📦 Installation & Downloads
+## Install
 
-Official releases are provided for **Fedora / Red Hat (`.rpm`)**, **Debian / Ubuntu (`.deb`)**, and universal **Flatpak (`.flatpak`)**.
+Packages for each release live on the [Releases page](https://github.com/Antux912012/imladris-next-md-editor/releases).
 
-### Option 1: Fedora / RHEL / CentOS Stream (`.rpm`)
-Download the latest RPM packages from the [v0.7.0 Release](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.7.0):
-
+**Flatpak**
 ```bash
-# Download and install binary RPM
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.7.0/imladris-0.7.0-1.fc44.x86_64.rpm
-sudo dnf install ./imladris-0.7.0-1.fc44.x86_64.rpm
-```
-
-### Option 2: Flatpak (Universal Linux)
-Download the standalone single-file bundle (`io.github.Antux912012.Imladris`):
-
-```bash
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.7.0/io.github.Antux912012.Imladris.flatpak
 flatpak install --user io.github.Antux912012.Imladris.flatpak
 flatpak run io.github.Antux912012.Imladris
 ```
+The Flatpak requests network access (package indices, optional AI endpoints), home-folder access (your projects) and the usual display/GPU sockets. Note that R, Python, Quarto and Pandoc are looked up on the sandbox's `PATH`; use the native packages if you want Imladris to see your host toolchain.
 
-### Option 3: Debian / Ubuntu / Pop!_OS (`.deb`)
-Download the `.deb` package from the [v0.7.0 Release](https://github.com/Antux912012/imladris-next-md-editor/releases/tag/v0.7.0):
-
+**Fedora**
 ```bash
-wget https://github.com/Antux912012/imladris-next-md-editor/releases/download/v0.7.0/imladris_0.7.0_amd64.deb
-sudo dpkg -i imladris_0.7.0_amd64.deb
-sudo apt-get install -f
+sudo dnf install ./imladris-0.7.0-1.fc44.x86_64.rpm
 ```
 
----
-
-## 🔌 Running as an MCP Server
-
-Imladris includes a built-in Model Context Protocol (MCP) server over stdio for external AI coding agents (Claude Desktop, Antigravity, Cursor):
-
+**Debian / Ubuntu**
 ```bash
-imladris --mcp-server
+sudo dpkg -i imladris_0.7.0_amd64.deb && sudo apt-get install -f
 ```
 
-Configuration example for Claude Desktop (`claude_desktop_config.json`):
-```json
-{
-  "mcpServers": {
-    "imladris": {
-      "command": "imladris",
-      "args": ["--mcp-server"]
-    }
-  }
-}
-```
+## Build from source
 
----
+Needs `valac` ≥ 0.56, `meson`, `ninja`, GTK4 ≥ 4.12, libadwaita ≥ 1.5, GtkSourceView 5, WebKitGTK 6.0, libsoup 3, json-glib, libgee and GLib ≥ 2.76.
 
-## 🛠 Building From Source
-
-### Dependencies
-- `valac` (>= 0.56)
-- `meson` (>= 0.60)
-- `ninja`
-- `gtk4` (>= 4.12)
-- `libadwaita-1` (>= 1.5)
-- `gtksourceview-5` (>= 5.10)
-- `webkitgtk-6.0` (>= 2.40)
-- `libsoup-3.0` (>= 3.0)
-- `json-glib-1.0` (>= 1.0)
-- `gee-0.8` (>= 0.20)
-- `glib-2.0` (>= 2.76)
-
-### Build & Run Tests
 ```bash
 meson setup build
 meson compile -C build
 meson test -C build --print-errorlogs
+./build/imladris
 ```
 
-### Packaging
+Packaging helpers: `./build-rpm.sh` (Fedora) and `./build-packages.sh` (`.deb` + Flatpak bundle).
+
+## MCP server
+
 ```bash
-# Build Fedora RPMs
-./build-rpm.sh
-
-# Build Debian .deb & Flatpak bundle
-./build-packages.sh
+imladris --mcp-server
+```
+```json
+{ "mcpServers": { "imladris": { "command": "imladris", "args": ["--mcp-server"] } } }
 ```
 
----
-
-## ⌨ Keyboard Shortcuts
+## Shortcuts
 
 | Shortcut | Action |
 | :--- | :--- |
-| `Ctrl+N` / `Ctrl+Shift+N` | Open New Project / Document Dialog |
-| `Ctrl+O` | Open File |
-| `Ctrl+S` | Save Document |
-| `Ctrl+Shift+P` | Open CRAN / PyPI Package Installer |
-| `Ctrl+Enter` | Run Current Line / Selection in Active REPL |
-| `Ctrl+Shift+Enter` | Execute Active Code Chunk (Inline Output Card) |
-| `Ctrl+Q` | Quit Imladris |
+| `Ctrl+N` | New project / document dialog |
+| `Ctrl+O` / `Ctrl+S` | Open / Save |
+| `Ctrl+Shift+P` | Package installer |
+| `Ctrl+Enter` | Run line or selection |
+| `Ctrl+Shift+Enter` | Run current chunk |
+| `Ctrl+Q` | Quit |
 
 ---
 
-## 📄 License
-This project is licensed under the **GNU General Public License v3.0 or later** (GPL-3.0-or-later).
+## AI disclosure (code provenance)
+
+In the spirit of transparency, and to meet Flathub's expectations around AI-generated contributions:
+
+- **A large share of this codebase was written with AI coding assistants** (large language models used as pair-programming agents), including much of the Vala source, build scripts, packaging files, tests and this documentation.
+- **The maintainer directs the work and is accountable for it.** Design decisions, feature scope and releases are the maintainer's; AI output is treated as a draft, not as authority.
+- **Verification is mechanical, and you should know its limits.** Changes are built and run through the Meson test suite (11 test cases covering data models, `.mallorn` round-trips, sandboxes, exports, sessions, the chunk parser and the REPL bridge), plus `appstreamcli` and `desktop-file-validate`. Passing tests is not the same as a line-by-line human audit, and some areas, especially UI behaviour, have had less scrutiny than others.
+- **Licensing.** All code is distributed under GPL-3.0-or-later. If you spot code that looks copied from another project, please open an issue so it can be checked and fixed or attributed.
+- **Runtime AI is opt-in.** The optional assistant and MCP server only talk to endpoints *you* configure. No telemetry is collected.
+- **Bug reports and human review are very welcome**, particularly for security-relevant paths: subprocess spawning, archive extraction and file export.
+
+## Contributing
+
+Issues and pull requests are welcome. If you used an AI tool for a contribution, just say so in the PR description; nobody's judging, it just helps reviewers know where to look harder.
+
+## License
+
+GPL-3.0-or-later.
