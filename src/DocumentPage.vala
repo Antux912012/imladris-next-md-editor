@@ -637,5 +637,37 @@ print("Python Interpreter:", sys.version.split()[0])
             int lines = source_buffer.get_line_count ();
             stats_changed (words, lines, doc_type.up ());
         }
+
+        public void undo () {
+            if (source_buffer.can_undo) {
+                source_buffer.undo ();
+            }
+        }
+
+        public void redo () {
+            if (source_buffer.can_redo) {
+                source_buffer.redo ();
+            }
+        }
+
+        public void set_zoom (int percent) {
+            web_view.zoom_level = (double) percent / 100.0;
+        }
+
+        public void apply_heading (int level) {
+            if (level <= 0) return;
+            string prefix = string.nfill (level, '#') + " ";
+            Gtk.TextIter insert_iter;
+            source_buffer.get_iter_at_mark (out insert_iter, source_buffer.get_insert ());
+            insert_iter.set_line_offset (0);
+            source_buffer.insert (ref insert_iter, prefix, -1);
+        }
+
+        public void insert_list_item (string prefix) {
+            Gtk.TextIter insert_iter;
+            source_buffer.get_iter_at_mark (out insert_iter, source_buffer.get_insert ());
+            insert_iter.set_line_offset (0);
+            source_buffer.insert (ref insert_iter, prefix, -1);
+        }
     }
 }

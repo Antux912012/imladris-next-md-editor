@@ -51,6 +51,14 @@ namespace Imladris {
             this.set_accels_for_action ("app.package_installer", { "<Control><Shift>p" });
             this.set_accels_for_action ("app.preferences", { "<Control>comma" });
             this.set_accels_for_action ("app.quit", { "<Control>q" });
+            this.set_accels_for_action ("win.undo", { "<Control>z" });
+            this.set_accels_for_action ("win.redo", { "<Control><Shift>z", "<Control>y" });
+            this.set_accels_for_action ("win.collapse_ribbon", { "<Control>F1" });
+            this.set_accels_for_action ("win.zoom_in", { "<Control>plus", "<Control>equal" });
+            this.set_accels_for_action ("win.zoom_out", { "<Control>minus" });
+            this.set_accels_for_action ("win.zoom_reset", { "<Control>0" });
+            this.set_accels_for_action ("win.run_chunk", { "<Control><Shift>Return" });
+            this.set_accels_for_action ("win.run_line", { "<Control>Return" });
 
             var provider = new Gtk.CssProvider ();
             provider.load_from_resource ("/org/imladris/app/style.css");

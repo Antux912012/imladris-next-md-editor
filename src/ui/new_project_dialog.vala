@@ -95,13 +95,13 @@ namespace Imladris.UI {
             // Target: Standard Project
             var row_standard = new Adw.ActionRow () {
                 title = "Create a Project",
-                subtitle = "Binds to host global R (R_LIBS_USER) and Python (sys.path) libraries. Warning: exporting to other systems may break if host libraries are missing."
+                subtitle = "Uses your computer's global R and Python packages. Fast setup, best for local analysis."
             };
             row_standard.add_prefix (new Gtk.Image.from_icon_name ("folder-symbolic"));
             var btn_create_standard = new Gtk.Button.with_label ("Create Project") {
                 valign = Gtk.Align.CENTER
             };
-            btn_create_standard.add_css_class ("warning");
+            btn_create_standard.add_css_class ("flat");
             btn_create_standard.clicked.connect (() => {
                 selected_project_type = ProjectType.STANDARD;
                 create_workspace_project (ProjectType.STANDARD);
@@ -112,7 +112,7 @@ namespace Imladris.UI {
             // Target: Sandboxed Project
             var row_sandboxed = new Adw.ActionRow () {
                 title = "Create a Sandboxed project",
-                subtitle = "Isolated, reproducible environment. Initializes local renv (R) and .venv/requirements.txt (Python) so exact package versions are portable."
+                subtitle = "Isolated, reproducible environment using local renv (R) and .venv (Python). Best for sharing and publishing."
             };
             row_sandboxed.add_prefix (new Gtk.Image.from_icon_name ("security-high-symbolic"));
             var btn_create_sandboxed = new Gtk.Button.with_label ("Create Sandboxed") {
@@ -127,7 +127,7 @@ namespace Imladris.UI {
             proj_group.add (row_sandboxed);
 
             portability_warning_lbl = new Gtk.Label (
-                "ℹ Note: Standard projects use [System Libraries - Non-Portable]. Sandboxed projects use [Sandboxed - Reproducible] with 1:1 RStudio & Jupyter export."
+                "ℹ Note: Standard projects use system libraries. Sandboxed projects include lockfiles for 1:1 RStudio & Jupyter export."
             ) {
                 wrap = true,
                 xalign = 0.0f,

@@ -3,12 +3,17 @@ namespace Imladris {
     public class Window : Adw.ApplicationWindow {
 
         private Gtk.Stack ribbon_stack;
+        private Gtk.ScrolledWindow ribbon_scroller;
+        private Gtk.Button? btn_collapse_ribbon = null;
         private Adw.TabView tab_view;
         private Adw.TabBar tab_bar;
         private Gtk.Label status_badge_lbl;
         private Gtk.Label status_env_badge_lbl;
         private Gtk.Label status_words_lbl;
         private Gtk.Label status_kernel_lbl;
+        private Gtk.Scale zoom_scale;
+        private Gtk.Label zoom_lbl;
+        private int current_zoom = 100;
 
         public string current_project_dir { get; private set; default = ""; }
         public ProjectType current_project_type { get; private set; default = ProjectType.STANDARD; }
@@ -16,7 +21,6 @@ namespace Imladris {
         // Ribbon buttons tracked for Context-Aware State Machine (Pillar 2)
         private Gtk.Widget? btn_insert_r = null;
         private Gtk.Widget? btn_insert_py = null;
-        private Gtk.Widget? btn_insert_ts = null;
         private Gtk.Widget? btn_run_chunk = null;
         private Gtk.Widget? btn_run_all = null;
         private Gtk.Widget? btn_run_above = null;
@@ -35,7 +39,6 @@ namespace Imladris {
         private Gtk.Widget? btn_export_mallorn = null;
         private Gtk.Widget? btn_export_rstudio = null;
         private Gtk.Widget? btn_export_jupyter = null;
-        private Gtk.Widget? btn_html_helpers = null;
         private Gtk.Widget? btn_live_preview = null;
 
         private UI.PackageIndexCache pkg_index_cache = new UI.PackageIndexCache ();
@@ -50,6 +53,8 @@ namespace Imladris {
         }
 
         construct {
+            setup_actions ();
+
             var settings = Core.SettingsManager.get_default ();
             if (settings.app_theme == Core.AppTheme.EYE_FRIENDLY) {
                 this.add_css_class ("eye-friendly");
@@ -69,7 +74,7 @@ namespace Imladris {
             toolbar_view.add_top_bar (top_master_box);
 
             // =================================================================
-            // TIER 1: DARK HEADER BAR & CATEGORY SWITCHER (9 Tabs)
+            // TIER 1: DARK HEADER BAR & CATEGORY SWITCHER (5 Modernized Tabs)
             // =================================================================
             var win_handle = new Gtk.WindowHandle ();
             var tier1_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 2);
@@ -123,8 +128,7 @@ namespace Imladris {
             };
 
             string[] categories = {
-                "Home", "Insert", "Computation", "Web & Publish",
-                "Page Layout", "References", "Review", "View", "Section"
+                "Home", "Insert", "Computation", "Publish", "View"
             };
 
             Gtk.ToggleButton? first_tab = null;
@@ -132,7 +136,7 @@ namespace Imladris {
                 var tab_btn = new Gtk.ToggleButton.with_label (cat);
                 tab_btn.add_css_class ("ribbon-tab-btn");
                 if (cat == "Computation") tab_btn.add_css_class ("ribbon-tab-scientific");
-                if (cat == "Web & Publish") tab_btn.add_css_class ("ribbon-tab-web");
+                if (cat == "Publish") tab_btn.add_css_class ("ribbon-tab-web");
 
                 if (first_tab == null) {
                     first_tab = tab_btn;
@@ -152,13 +156,24 @@ namespace Imladris {
             }
 
             tier1_box.append (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) { hexpand = true });
+
+            btn_collapse_ribbon = new Gtk.Button.from_icon_name ("pan-up-symbolic") {
+                tooltip_text = "Toggle Ribbon (Ctrl+F1)",
+                valign = Gtk.Align.CENTER
+            };
+            btn_collapse_ribbon.add_css_class ("flat");
+            btn_collapse_ribbon.clicked.connect (() => {
+                toggle_ribbon_visibility ();
+            });
+            tier1_box.append (btn_collapse_ribbon);
+
             tier1_box.append (new Gtk.WindowControls (Gtk.PackType.END));
             top_master_box.append (win_handle);
 
             // =================================================================
-            // TIER 2: DYNAMIC RIBBON DECK (All 9 Tabs)
+            // TIER 2: DYNAMIC MODERN RIBBON DECK (5 High-Density Tabs)
             // =================================================================
-            var ribbon_scroller = new Gtk.ScrolledWindow () {
+            ribbon_scroller = new Gtk.ScrolledWindow () {
                 vscrollbar_policy = Gtk.PolicyType.NEVER,
                 hscrollbar_policy = Gtk.PolicyType.AUTOMATIC
             };
@@ -169,12 +184,8 @@ namespace Imladris {
             ribbon_stack.add_named (build_home_ribbon (), "Home");
             ribbon_stack.add_named (build_insert_ribbon (), "Insert");
             ribbon_stack.add_named (build_computation_ribbon (), "Computation");
-            ribbon_stack.add_named (build_web_publish_ribbon (), "Web & Publish");
-            ribbon_stack.add_named (build_page_layout_ribbon (), "Page Layout");
-            ribbon_stack.add_named (build_references_ribbon (), "References");
-            ribbon_stack.add_named (build_review_ribbon (), "Review");
+            ribbon_stack.add_named (build_publish_ribbon (), "Publish");
             ribbon_stack.add_named (build_view_ribbon (), "View");
-            ribbon_stack.add_named (build_section_ribbon (), "Section");
 
             // =================================================================
             // TIER 3: QUICK ACCESS TOOLBAR & ADW.TABBAR
@@ -186,15 +197,15 @@ namespace Imladris {
             tier3_box.append (RibbonFactory.create_compact_button ("document-save-symbolic", null, false, false, true, null, "app.save"));
             tier3_box.append (RibbonFactory.create_compact_button ("document-send-symbolic", "PDF", false, false, true, null, "app.export_pdf"));
             tier3_box.append (RibbonFactory.create_compact_button ("applications-internet-symbolic", "HTML", false, false, true, null, "app.export_html"));
-            tier3_box.append (RibbonFactory.create_compact_button ("edit-undo-symbolic"));
-            tier3_box.append (RibbonFactory.create_compact_button ("edit-redo-symbolic"));
+            tier3_box.append (RibbonFactory.create_compact_button ("edit-undo-symbolic", null, false, false, true, null, "win.undo"));
+            tier3_box.append (RibbonFactory.create_compact_button ("edit-redo-symbolic", null, false, false, true, null, "win.redo"));
             var ai_quick_btn = RibbonFactory.create_compact_button ("system-run-symbolic", "AI Assistant");
             ((Gtk.Button) ai_quick_btn).clicked.connect (() => {
                 trigger_ai_assistant ();
             });
             tier3_box.append (ai_quick_btn);
 
-            var rstudio_toggle_btn = RibbonFactory.create_compact_button ("view-grid-symbolic", "RStudio 4-Quad / Apostrophe");
+            var rstudio_toggle_btn = RibbonFactory.create_compact_button ("view-grid-symbolic", "RStudio / Focus");
             ((Gtk.Button) rstudio_toggle_btn).clicked.connect (() => {
                 var mgr = Services.WorkspaceStateManager.get_default ();
                 var next_mode = mgr.active_layout == Services.LayoutMode.RSTUDIO
@@ -240,7 +251,7 @@ namespace Imladris {
             status_env_badge_lbl.add_css_class ("env-badge");
             status_bar.append (status_env_badge_lbl);
 
-            status_kernel_lbl = new Gtk.Label ("Kernels: R • Python 3 • Deno/TS");
+            status_kernel_lbl = new Gtk.Label ("Kernels: R • Python 3");
             status_bar.append (status_kernel_lbl);
 
             status_words_lbl = new Gtk.Label ("Words: 0 | Lines: 1");
@@ -248,15 +259,14 @@ namespace Imladris {
 
             status_bar.append (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) { hexpand = true });
 
-            var zoom_lbl = new Gtk.Label ("100%");
-            var zoom_scale = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 50, 200, 10) {
+            zoom_lbl = new Gtk.Label ("100%");
+            zoom_scale = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 50, 200, 10) {
                 draw_value = false,
                 width_request = 110
             };
             zoom_scale.set_value (100);
             zoom_scale.value_changed.connect (() => {
-                int z = (int) zoom_scale.get_value ();
-                zoom_lbl.label = @"$z%";
+                apply_zoom ((int) zoom_scale.get_value ());
             });
             status_bar.append (new Gtk.Label ("Zoom:"));
             status_bar.append (zoom_scale);
@@ -753,278 +763,394 @@ namespace Imladris {
             }
         }
 
+        private void setup_actions () {
+            var action_undo = new GLib.SimpleAction ("undo", null);
+            action_undo.activate.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.undo ();
+            });
+            this.add_action (action_undo);
+
+            var action_redo = new GLib.SimpleAction ("redo", null);
+            action_redo.activate.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.redo ();
+            });
+            this.add_action (action_redo);
+
+            var action_collapse = new GLib.SimpleAction ("collapse_ribbon", null);
+            action_collapse.activate.connect (() => {
+                toggle_ribbon_visibility ();
+            });
+            this.add_action (action_collapse);
+
+            var action_zoom_in = new GLib.SimpleAction ("zoom_in", null);
+            action_zoom_in.activate.connect (() => {
+                apply_zoom (current_zoom + 10);
+            });
+            this.add_action (action_zoom_in);
+
+            var action_zoom_out = new GLib.SimpleAction ("zoom_out", null);
+            action_zoom_out.activate.connect (() => {
+                apply_zoom (current_zoom - 10);
+            });
+            this.add_action (action_zoom_out);
+
+            var action_zoom_reset = new GLib.SimpleAction ("zoom_reset", null);
+            action_zoom_reset.activate.connect (() => {
+                apply_zoom (100);
+            });
+            this.add_action (action_zoom_reset);
+
+            var action_run_chunk = new GLib.SimpleAction ("run_chunk", null);
+            action_run_chunk.activate.connect (() => {
+                run_active_chunk ();
+            });
+            this.add_action (action_run_chunk);
+
+            var action_run_line = new GLib.SimpleAction ("run_line", null);
+            action_run_line.activate.connect (() => {
+                run_line_or_selection ();
+            });
+            this.add_action (action_run_line);
+        }
+
+        public void toggle_ribbon_visibility () {
+            ribbon_scroller.visible = !ribbon_scroller.visible;
+            if (btn_collapse_ribbon != null) {
+                btn_collapse_ribbon.icon_name = ribbon_scroller.visible ? "pan-up-symbolic" : "pan-down-symbolic";
+                btn_collapse_ribbon.tooltip_text = ribbon_scroller.visible ? "Collapse Ribbon (Ctrl+F1)" : "Expand Ribbon (Ctrl+F1)";
+            }
+        }
+
+        public void apply_zoom (int percent) {
+            current_zoom = percent.clamp (50, 200);
+            if ((int) zoom_scale.get_value () != current_zoom) {
+                zoom_scale.set_value (current_zoom);
+            }
+            zoom_lbl.label = @"$current_zoom%";
+            var d = get_active_document ();
+            if (d != null) {
+                d.set_zoom (current_zoom);
+            }
+        }
+
         // =====================================================================
-        // 1. HOME RIBBON (Live Rich-Text / Markdown Tag Binding)
+        // 1. HOME RIBBON (Modernized Libadwaita Linked Groups)
         // =====================================================================
         private Gtk.Widget build_home_ribbon () {
             var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
 
-            box.append (RibbonFactory.create_tall_button ("edit-paste-symbolic", "Paste", true));
-            box.append (RibbonFactory.create_vertical_stack ({
-                RibbonFactory.create_compact_button ("edit-cut-symbolic", "Cut"),
-                RibbonFactory.create_compact_button ("edit-copy-symbolic", "Copy")
-            }));
-            box.append (RibbonFactory.create_tall_button ("applications-graphics-symbolic", "Format\nPainter"));
+            // Group 1: Clipboard & History
+            var btn_undo = RibbonFactory.create_tool_button ("edit-undo-symbolic", null, "Undo (Ctrl+Z)", false, false, true, null, "win.undo");
+            var btn_redo = RibbonFactory.create_tool_button ("edit-redo-symbolic", null, "Redo (Ctrl+Shift+Z)", false, false, true, null, "win.redo");
+            box.append (RibbonFactory.create_linked_group ({ btn_undo, btn_redo }));
+
+            var btn_cut = RibbonFactory.create_tool_button ("edit-cut-symbolic", null, "Cut");
+            ((Gtk.Button) btn_cut).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.cut_clipboard (d.get_clipboard (), true);
+            });
+            var btn_copy = RibbonFactory.create_tool_button ("edit-copy-symbolic", null, "Copy");
+            ((Gtk.Button) btn_copy).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.copy_clipboard (d.get_clipboard ());
+            });
+            var btn_paste = RibbonFactory.create_tool_button ("edit-paste-symbolic", null, "Paste");
+            ((Gtk.Button) btn_paste).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.paste_clipboard (d.get_clipboard (), null, true);
+            });
+            box.append (RibbonFactory.create_linked_group ({ btn_cut, btn_copy, btn_paste }));
             box.append (RibbonFactory.create_vseparator ());
 
-            var font_matrix = new Gtk.Box (Gtk.Orientation.VERTICAL, 6) { valign = Gtk.Align.CENTER };
-            var f_row1 = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
-            f_row1.append (new Gtk.DropDown.from_strings ({ "JetBrains Mono", "Inter", "Calibri (Body)", "Cantarell" }));
-            f_row1.append (new Gtk.DropDown.from_strings ({ "10", "11", "12", "14", "16", "18", "24" }));
-            f_row1.append (RibbonFactory.create_compact_button (null, "A⁺"));
-            f_row1.append (RibbonFactory.create_compact_button (null, "A⁻"));
-            f_row1.append (RibbonFactory.create_compact_button ("edit-clear-symbolic"));
-            f_row1.append (RibbonFactory.create_compact_button (null, "Tt", true));
-
-            var f_row2 = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 2);
-            var btn_bold = (Gtk.Button) RibbonFactory.create_compact_button ("format-text-bold-symbolic");
-            btn_bold.clicked.connect (() => {
+            // Group 2: Typography & Formatting
+            var btn_bold = RibbonFactory.create_tool_button ("format-text-bold-symbolic", null, "Bold (**text**)");
+            ((Gtk.Button) btn_bold).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.apply_tag_or_syntax ("bold", "**");
             });
 
-            var btn_italic = (Gtk.Button) RibbonFactory.create_compact_button ("format-text-italic-symbolic");
-            btn_italic.clicked.connect (() => {
+            var btn_italic = RibbonFactory.create_tool_button ("format-text-italic-symbolic", null, "Italic (*text*)");
+            ((Gtk.Button) btn_italic).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.apply_tag_or_syntax ("italic", "*");
             });
 
-            var btn_under = (Gtk.Button) RibbonFactory.create_compact_button ("format-text-underline-symbolic");
-            btn_under.clicked.connect (() => {
+            var btn_under = RibbonFactory.create_tool_button ("format-text-underline-symbolic", null, "Underline (__text__)");
+            ((Gtk.Button) btn_under).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.apply_tag_or_syntax ("underline", "__");
+            });
+
+            var btn_strike = RibbonFactory.create_tool_button ("format-text-strikethrough-symbolic", null, "Strikethrough (~~text~~)");
+            ((Gtk.Button) btn_strike).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.apply_tag_or_syntax ("strikethrough", "~~");
+            });
+
+            var btn_code = RibbonFactory.create_tool_button ("utilities-terminal-symbolic", null, "Inline Code (`code`)");
+            ((Gtk.Button) btn_code).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.apply_tag_or_syntax ("code", "`");
             });
 
             var color_pop = PopoverFactory.create_color_palette_popover ((hex) => {
                 var d = get_active_document ();
                 if (d != null) d.source_buffer.insert_at_cursor (@"<span style=\"color:$hex;\">text</span>", -1);
             });
+            var btn_color = RibbonFactory.create_tool_button ("applications-graphics-symbolic", null, "Text Color", false, false, true, null, null, color_pop);
 
-            f_row2.append (btn_bold);
-            f_row2.append (btn_italic);
-            f_row2.append (btn_under);
-            f_row2.append (RibbonFactory.create_compact_button ("format-text-strikethrough-symbolic"));
-            f_row2.append (RibbonFactory.create_compact_button (null, "x²"));
-            f_row2.append (RibbonFactory.create_compact_button (null, "x₂"));
-            f_row2.append (RibbonFactory.create_compact_button (null, "Color", false, false, true, null, null, color_pop));
-
-            font_matrix.append (f_row1);
-            font_matrix.append (f_row2);
-            box.append (font_matrix);
+            box.append (RibbonFactory.create_linked_group ({ btn_bold, btn_italic, btn_under, btn_strike, btn_code, btn_color }));
             box.append (RibbonFactory.create_vseparator ());
 
-            // Styles Gallery wired to H1/H2/H3 tags
-            var gallery = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) { valign = Gtk.Align.CENTER };
-            gallery.add_css_class ("style-gallery-frame");
-            string[] styles = { "Normal", "Heading 1", "Heading 2", "Heading 3" };
-            Gtk.ToggleButton? first_style = null;
+            // Group 3: Headings & Paragraph Styles
+            var btn_h1 = new Gtk.Button.with_label ("H1") { tooltip_text = "Heading 1 (#)" };
+            btn_h1.add_css_class ("flat");
+            btn_h1.add_css_class ("ribbon-tool-btn");
+            btn_h1.clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.apply_heading (1);
+            });
+            var btn_h2 = new Gtk.Button.with_label ("H2") { tooltip_text = "Heading 2 (##)" };
+            btn_h2.add_css_class ("flat");
+            btn_h2.add_css_class ("ribbon-tool-btn");
+            btn_h2.clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.apply_heading (2);
+            });
+            var btn_h3 = new Gtk.Button.with_label ("H3") { tooltip_text = "Heading 3 (###)" };
+            btn_h3.add_css_class ("flat");
+            btn_h3.add_css_class ("ribbon-tool-btn");
+            btn_h3.clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.apply_heading (3);
+            });
+            box.append (RibbonFactory.create_linked_group ({ btn_h1, btn_h2, btn_h3 }));
 
-            foreach (string s_name in styles) {
-                var s_btn = new Gtk.ToggleButton ();
-                s_btn.add_css_class ("flat");
-                s_btn.add_css_class ("style-preset-card");
-                if (first_style == null) {
-                    first_style = s_btn;
-                    s_btn.active = true;
-                } else {
-                    s_btn.set_group (first_style);
-                }
-                var s_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-                s_box.append (new Gtk.Label ("AaBbCcD"));
-                s_box.append (new Gtk.Label (s_name));
-                s_btn.set_child (s_box);
-
-                string target_style = s_name;
-                s_btn.clicked.connect (() => {
-                    var d = get_active_document ();
-                    if (d != null && target_style == "Heading 1") d.apply_tag_or_syntax ("h1", "# ");
-                    if (d != null && target_style == "Heading 2") d.apply_tag_or_syntax ("h2", "## ");
-                    if (d != null && target_style == "Heading 3") d.apply_tag_or_syntax ("h3", "### ");
-                });
-                gallery.append (s_btn);
-            }
-            box.append (gallery);
-            box.append (RibbonFactory.create_tall_button ("document-properties-symbolic", "New Style", true));
+            var btn_bullet = RibbonFactory.create_tool_button ("view-list-bullet-symbolic", null, "Bullet List (- )");
+            ((Gtk.Button) btn_bullet).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.insert_list_item ("- ");
+            });
+            var btn_number = RibbonFactory.create_tool_button ("view-list-ordered-symbolic", null, "Numbered List (1. )");
+            ((Gtk.Button) btn_number).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.insert_list_item ("1. ");
+            });
+            var btn_quote = RibbonFactory.create_tool_button ("format-text-direction-ltr-symbolic", null, "Blockquote (> )");
+            ((Gtk.Button) btn_quote).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.insert_list_item ("> ");
+            });
+            box.append (RibbonFactory.create_linked_group ({ btn_bullet, btn_number, btn_quote }));
             box.append (RibbonFactory.create_vseparator ());
 
-            box.append (RibbonFactory.create_tall_button ("tools-check-spelling-symbolic", "Word Tools", true));
-            box.append (RibbonFactory.create_tall_button ("edit-find-replace-symbolic", "Find and\nReplace", true));
-            box.append (RibbonFactory.create_tall_button ("emblem-system-symbolic", "Settings", true));
+            // Group 4: Assistant & Settings
+            var btn_ai_home = RibbonFactory.create_tool_button ("system-run-symbolic", "AI Assistant", "Invoke AI Assistant");
+            ((Gtk.Button) btn_ai_home).clicked.connect (() => {
+                trigger_ai_assistant ();
+            });
+            box.append (btn_ai_home);
+
+            box.append (RibbonFactory.create_tool_button ("emblem-system-symbolic", "Preferences", "Open Preferences (Ctrl+,)", false, false, true, null, "app.preferences"));
+
             return box;
         }
 
         // =====================================================================
-        // 2. INSERT RIBBON (With Interactive 6x6 Table Picker Popover)
+        // 2. INSERT RIBBON (Modernized High-Density Layout)
         // =====================================================================
         private Gtk.Widget build_insert_ribbon () {
             var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
 
-            box.append (RibbonFactory.create_tall_button ("insert-object-symbolic", "Breaks", true));
-            box.append (RibbonFactory.create_tall_button ("document-new-symbolic", "Blank\nPage", true));
-            box.append (RibbonFactory.create_vseparator ());
-
+            // Group 1: Structure & Chunks
             var table_popover = SmartRibbonHelpers.create_table_builder_popover ((rows, cols) => {
                 var d = get_active_document ();
                 if (d != null) d.insert_markdown_table (rows, cols);
             });
-            box.append (RibbonFactory.create_tall_button ("view-grid-symbolic", "Table", false, false, false, true, null, null, table_popover));
+            var btn_table = RibbonFactory.create_tool_button ("view-grid-symbolic", "Table", "Insert Markdown Table", false, false, true, null, null, table_popover);
 
             var code_popover = SmartRibbonHelpers.create_code_chunk_popover ((snippet) => {
                 var d = get_active_document ();
                 if (d != null) d.source_buffer.insert_at_cursor (snippet, -1);
             });
-            box.append (RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Code\nChunk", false, false, false, true, null, null, code_popover));
+            var btn_chunk = RibbonFactory.create_tool_button ("utilities-terminal-symbolic", "Code Chunk", "Insert Code Chunk", false, false, true, null, null, code_popover);
 
+            var btn_math = RibbonFactory.create_tool_button ("insert-text-symbolic", "LaTeX Math", "Insert LaTeX Math Block ($$...$$)");
+            ((Gtk.Button) btn_math).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor ("\n$$\n\\frac{a}{b}\n$$\n", -1);
+            });
+
+            box.append (RibbonFactory.create_linked_group ({ btn_table, btn_chunk, btn_math }));
+            box.append (RibbonFactory.create_vseparator ());
+
+            // Group 2: Citations, References & Footnotes
             var cite_popover = SmartRibbonHelpers.create_citation_popover ((cite) => {
                 var d = get_active_document ();
                 if (d != null) d.source_buffer.insert_at_cursor (cite, -1);
             });
-            box.append (RibbonFactory.create_tall_button ("book-open-symbolic", "Citation\n(@cite)", false, false, false, true, null, null, cite_popover));
+            var btn_cite = RibbonFactory.create_tool_button ("book-open-symbolic", "Citation", "Insert Citation (@cite)", false, false, true, null, null, cite_popover);
 
+            var btn_xref = RibbonFactory.create_tool_button ("emblem-symbolic-link", "Cross-ref", "Insert Cross-Reference (@fig-)");
+            ((Gtk.Button) btn_xref).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor ("@fig-", -1);
+            });
+
+            var btn_fn = RibbonFactory.create_tool_button ("format-text-superscript-symbolic", "Footnote", "Insert Footnote (^[])");
+            ((Gtk.Button) btn_fn).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor ("^[Footnote text]", -1);
+            });
+
+            box.append (RibbonFactory.create_linked_group ({ btn_cite, btn_xref, btn_fn }));
+            box.append (RibbonFactory.create_vseparator ());
+
+            // Group 3: Media & Web Elements
+            var btn_img = RibbonFactory.create_tool_button ("insert-image-symbolic", "Image", "Insert Image");
+            ((Gtk.Button) btn_img).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor ("![Image caption](image.png)\n", -1);
+            });
+
+            var btn_link = RibbonFactory.create_tool_button ("insert-link-symbolic", "Hyperlink", "Insert Hyperlink");
+            ((Gtk.Button) btn_link).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor ("[Link text](https://example.com)", -1);
+            });
+
+            var btn_break = RibbonFactory.create_tool_button ("view-more-horizontal-symbolic", "Divider", "Insert Horizontal Rule (---)");
+            ((Gtk.Button) btn_break).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor ("\n---\n", -1);
+            });
+
+            box.append (RibbonFactory.create_linked_group ({ btn_img, btn_link, btn_break }));
+            box.append (RibbonFactory.create_vseparator ());
+
+            // Group 4: Symbols, Diagrams & Visuals
             var sym_popover = SmartRibbonHelpers.create_symbols_popover ((sym) => {
                 var d = get_active_document ();
                 if (d != null) d.source_buffer.insert_at_cursor (sym, -1);
             });
-            box.append (RibbonFactory.create_tall_button ("character-map-symbolic", "Symbols", false, false, false, true, null, null, sym_popover));
+            var btn_sym = RibbonFactory.create_tool_button ("character-map-symbolic", "Symbols", "Insert Math / Special Symbol", false, false, true, null, null, sym_popover);
 
             var emoji_popover = SmartRibbonHelpers.create_emoji_popover ((em) => {
                 var d = get_active_document ();
                 if (d != null) d.source_buffer.insert_at_cursor (em, -1);
             });
-            box.append (RibbonFactory.create_tall_button ("face-smile-symbolic", "Emoji", false, false, false, true, null, null, emoji_popover));
+            var btn_emoji = RibbonFactory.create_tool_button ("face-smile-symbolic", "Emoji", "Insert Emoji", false, false, true, null, null, emoji_popover);
 
-            box.append (RibbonFactory.create_tall_button ("insert-image-symbolic", "Picture", true));
-            box.append (RibbonFactory.create_tall_button ("applications-graphics-symbolic", "Shapes", true));
-            box.append (RibbonFactory.create_vertical_stack ({
-                RibbonFactory.create_compact_button ("view-list-symbolic", "Mermaid Diagram"),
-                RibbonFactory.create_compact_button ("x-office-presentation-symbolic", "ggplot / Chart")
-            }));
-            box.append (RibbonFactory.create_vseparator ());
+            var btn_mermaid = RibbonFactory.create_tool_button ("view-list-symbolic", "Mermaid", "Insert Mermaid Diagram");
+            ((Gtk.Button) btn_mermaid).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor ("\n```{mermaid}\nflowchart TD\n  A[Start] --> B[Process]\n  B --> C[Result]\n```\n", -1);
+            });
 
-            box.append (RibbonFactory.create_tall_button ("insert-text-symbolic", "LaTeX\nMath ($$)"));
-            box.append (RibbonFactory.create_tall_button ("character-map-symbolic", "Symbol", true));
-            box.append (RibbonFactory.create_tall_button ("insert-link-symbolic", "Hyperlink"));
-            box.append (RibbonFactory.create_vertical_stack ({
-                RibbonFactory.create_compact_button ("emblem-symbolic-link", "Cross-reference (@fig)"),
-                RibbonFactory.create_compact_button ("user-bookmarks-symbolic", "Citation (@cite)")
-            }));
+            var btn_plot = RibbonFactory.create_tool_button ("x-office-presentation-symbolic", "ggplot", "Insert ggplot2 snippet");
+            ((Gtk.Button) btn_plot).clicked.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.insert_at_cursor ("\n```{r}\n#| label: fig-plot\n#| fig-cap: 'Scatter Plot'\nlibrary(ggplot2)\nggplot(mtcars, aes(x = wt, y = mpg)) + geom_point()\n```\n", -1);
+            });
+
+            box.append (RibbonFactory.create_linked_group ({ btn_sym, btn_emoji, btn_mermaid, btn_plot }));
 
             return box;
         }
 
         // =====================================================================
-        // 3. COMPUTATION RIBBON (NEW: Rmd, Quarto .qmd, Jupyter .ipynb, R & Python)
+        // 3. COMPUTATION RIBBON (Polyglot R, Python & Quarto)
         // =====================================================================
         private Gtk.Widget build_computation_ribbon () {
             var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
 
             // Group 1: Insert Code Chunks
-            btn_insert_r = RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert R\nChunk {r}");
+            btn_insert_r = RibbonFactory.create_tool_button ("utilities-terminal-symbolic", "R Chunk", "Insert R Code Chunk ({r})");
             ((Gtk.Button) btn_insert_r).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.insert_code_chunk ("r", "echo: true");
             });
 
-            btn_insert_py = RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert Python\nChunk {python}");
+            btn_insert_py = RibbonFactory.create_tool_button ("utilities-terminal-symbolic", "Python Chunk", "Insert Python Code Chunk ({python})");
             ((Gtk.Button) btn_insert_py).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.insert_code_chunk ("python", "echo: true");
             });
 
-            btn_insert_ts = RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert TS/OJS\nChunk {ts}");
-            ((Gtk.Button) btn_insert_ts).clicked.connect (() => {
-                var d = get_active_document ();
-                if (d != null) d.insert_code_chunk ("ts");
-            });
-
-            box.append (btn_insert_r);
-            box.append (btn_insert_py);
-            box.append (btn_insert_ts);
+            box.append (RibbonFactory.create_linked_group ({ btn_insert_r, btn_insert_py }));
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 2: Chunk Execution Controls
-            btn_run_chunk = RibbonFactory.create_tall_button ("media-playback-start-symbolic", "Run\nChunk");
+            btn_run_chunk = RibbonFactory.create_tool_button ("media-playback-start-symbolic", "Run Chunk", "Run Active Chunk (Ctrl+Shift+Enter)");
             ((Gtk.Button) btn_run_chunk).clicked.connect (() => {
                 run_active_chunk ();
             });
 
-            btn_run_all = RibbonFactory.create_tall_button ("media-seek-forward-symbolic", "Run All\nChunks");
+            btn_run_all = RibbonFactory.create_tool_button ("media-seek-forward-symbolic", "Run All", "Run All Chunks in Document");
             ((Gtk.Button) btn_run_all).clicked.connect (() => {
                 run_all_chunks ();
             });
 
-            btn_run_above = RibbonFactory.create_compact_button ("media-skip-backward-symbolic", "Run Above");
+            btn_run_above = RibbonFactory.create_tool_button ("media-skip-backward-symbolic", "Run Above", "Run All Chunks Above");
             ((Gtk.Button) btn_run_above).clicked.connect (() => {
                 run_all_chunks ();
             });
 
-            btn_run_below = RibbonFactory.create_compact_button ("media-skip-forward-symbolic", "Run Below");
+            btn_run_below = RibbonFactory.create_tool_button ("media-skip-forward-symbolic", "Run Below", "Run Active and Below Chunks");
             ((Gtk.Button) btn_run_below).clicked.connect (() => {
                 run_active_chunk ();
             });
 
-            box.append (btn_run_chunk);
-            box.append (btn_run_all);
-            box.append (RibbonFactory.create_vertical_stack ({
-                btn_run_above,
-                btn_run_below
-            }));
+            box.append (RibbonFactory.create_linked_group ({ btn_run_chunk, btn_run_all, btn_run_above, btn_run_below }));
             box.append (RibbonFactory.create_vseparator ());
 
-            // Group 3: Script Execution Controls (Run Line/Selection, Source File, Interrupt)
-            btn_run_line = RibbonFactory.create_compact_button ("media-playback-start-symbolic", "Run Line / Sel");
+            // Group 3: Script Execution Controls
+            btn_run_line = RibbonFactory.create_tool_button ("media-playback-start-symbolic", "Run Line", "Run Current Line or Selection (Ctrl+Enter)");
             ((Gtk.Button) btn_run_line).clicked.connect (() => {
                 run_line_or_selection ();
             });
 
-            btn_source_file = RibbonFactory.create_compact_button ("document-send-symbolic", "Source File");
+            btn_source_file = RibbonFactory.create_tool_button ("document-send-symbolic", "Source", "Source Entire File in Kernel");
             ((Gtk.Button) btn_source_file).clicked.connect (() => {
                 source_active_file ();
             });
 
-            btn_interrupt = RibbonFactory.create_compact_button ("process-stop-symbolic", "Interrupt");
+            btn_interrupt = RibbonFactory.create_tool_button ("process-stop-symbolic", "Interrupt", "Interrupt Active Execution (SIGINT)");
             ((Gtk.Button) btn_interrupt).clicked.connect (() => {
                 interrupt_active_execution ();
             });
 
-            box.append (RibbonFactory.create_vertical_stack ({
-                btn_run_line,
-                btn_source_file,
-                btn_interrupt
-            }));
+            box.append (RibbonFactory.create_linked_group ({ btn_run_line, btn_source_file, btn_interrupt }));
             box.append (RibbonFactory.create_vseparator ());
 
-            // Group 4: Package Manager & Environment Sandboxing (renv / venv)
-            btn_package_installer = RibbonFactory.create_tall_button ("software-properties-symbolic", "Package\nInstaller");
-            ((Gtk.Button) btn_package_installer).clicked.connect (() => {
-                show_package_installer_dialog ();
-            });
-            box.append (btn_package_installer);
-
-            btn_snapshot_env = RibbonFactory.create_compact_button ("security-high-symbolic", "Snapshot Environment");
-            ((Gtk.Button) btn_snapshot_env).clicked.connect (() => {
-                snapshot_current_environment ();
-            });
-
-            btn_restore_env = RibbonFactory.create_compact_button ("view-refresh-symbolic", "Restore Environment");
-            ((Gtk.Button) btn_restore_env).clicked.connect (() => {
-                restore_current_environment ();
-            });
-
-            btn_restart_kernel = RibbonFactory.create_tall_button ("system-run-symbolic", "Restart\nKernel");
+            // Group 4: Package Manager & Environment Sandboxing
+            btn_restart_kernel = RibbonFactory.create_tool_button ("system-run-symbolic", "Restart Kernel", "Restart Active Kernel Sessions");
             ((Gtk.Button) btn_restart_kernel).clicked.connect (() => {
                 restart_active_kernel ();
             });
 
-            box.append (RibbonFactory.create_vertical_stack ({
-                btn_snapshot_env,
-                btn_restore_env
-            }));
-            box.append (btn_restart_kernel);
+            btn_package_installer = RibbonFactory.create_tool_button ("software-properties-symbolic", "Packages", "Open Package Installer (Ctrl+Shift+P)");
+            ((Gtk.Button) btn_package_installer).clicked.connect (() => {
+                show_package_installer_dialog ();
+            });
+
+            btn_snapshot_env = RibbonFactory.create_tool_button ("security-high-symbolic", "Snapshot", "Snapshot Environment Lockfile (renv/venv)");
+            ((Gtk.Button) btn_snapshot_env).clicked.connect (() => {
+                snapshot_current_environment ();
+            });
+
+            btn_restore_env = RibbonFactory.create_tool_button ("view-refresh-symbolic", "Restore", "Restore Environment from Lockfile");
+            ((Gtk.Button) btn_restore_env).clicked.connect (() => {
+                restore_current_environment ();
+            });
+
+            box.append (RibbonFactory.create_linked_group ({ btn_restart_kernel, btn_package_installer, btn_snapshot_env, btn_restore_env }));
             box.append (RibbonFactory.create_vseparator ());
 
-            var btn_comp_ai = (Gtk.Button) RibbonFactory.create_tall_button ("system-run-symbolic", "AI Coding\nAssistant");
-            btn_comp_ai.clicked.connect (() => {
+            var btn_comp_ai = RibbonFactory.create_tool_button ("system-run-symbolic", "AI Assistant", "Invoke AI Coding Assistant");
+            ((Gtk.Button) btn_comp_ai).clicked.connect (() => {
                 trigger_ai_assistant ();
             });
             box.append (btn_comp_ai);
@@ -1033,65 +1159,49 @@ namespace Imladris {
         }
 
         // =====================================================================
-        // 4. WEB & PUBLISH RIBBON (NEW: Quarto Render, PDF/HTML Export, TS & HTML5)
+        // 4. PUBLISH RIBBON (Export Pipeline, WebKit Preview & Artifacts)
         // =====================================================================
-        private Gtk.Widget build_web_publish_ribbon () {
+        private Gtk.Widget build_publish_ribbon () {
             var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
 
-            // Group 1: Quarto / RMarkdown Export Pipeline
-            btn_render_html = RibbonFactory.create_tall_button ("applications-internet-symbolic", "Render\nHTML", false, false, false, true, null, "app.export_html");
-            btn_render_pdf = RibbonFactory.create_tall_button ("document-send-symbolic", "Render\nPDF", false, false, false, true, null, "app.export_pdf");
-            btn_export_odt = RibbonFactory.create_tall_button ("x-office-document-symbolic", "Export\nODT", false, false, false, true, null, "app.export_odt");
-            btn_export_odp = RibbonFactory.create_tall_button ("x-office-presentation-symbolic", "Export\nODP", false, false, false, true, null, "app.export_odp");
-            btn_export_mallorn = RibbonFactory.create_tall_button ("package-x-generic-symbolic", "Export\n.mallorn", false, false, false, true, null, "app.export_mallorn");
-            btn_export_rstudio = RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Export\nRStudio", false, false, false, true, null, "app.export_rstudio");
-            btn_export_jupyter = RibbonFactory.create_tall_button ("applications-science-symbolic", "Export\nJupyter", false, false, false, true, null, "app.export_jupyter");
+            // Group 1: Primary Document Render & Export
+            btn_render_html = RibbonFactory.create_tool_button ("applications-internet-symbolic", "HTML", "Render Document to HTML", false, false, true, null, "app.export_html");
+            btn_render_pdf = RibbonFactory.create_tool_button ("document-send-symbolic", "PDF", "Render Document to PDF", false, false, true, null, "app.export_pdf");
+            btn_export_odt = RibbonFactory.create_tool_button ("x-office-document-symbolic", "ODT", "Export to OpenDocument Text (.odt)", false, false, true, null, "app.export_odt");
+            btn_export_odp = RibbonFactory.create_tool_button ("x-office-presentation-symbolic", "ODP", "Export to OpenDocument Presentation (.odp)", false, false, true, null, "app.export_odp");
 
-            box.append (btn_render_html);
-            box.append (btn_render_pdf);
-            box.append (btn_export_odt);
-            box.append (btn_export_odp);
-            box.append (btn_export_mallorn);
-            box.append (btn_export_rstudio);
-            box.append (btn_export_jupyter);
+            box.append (RibbonFactory.create_linked_group ({ btn_render_html, btn_render_pdf, btn_export_odt, btn_export_odp }));
             box.append (RibbonFactory.create_vseparator ());
 
-            // Group 2: TypeScript & Web Tooling
-            var btn_tsc = (Gtk.Button) RibbonFactory.create_tall_button ("system-run-symbolic", "Compile\nTypeScript");
-            btn_tsc.clicked.connect (() => {
-                var d = get_active_document ();
-                if (d != null) ExecutionEngine.run_command_async.begin ({ "tsc", "--version" }, d);
-            });
-            box.append (btn_tsc);
-            box.append (RibbonFactory.create_vertical_stack ({
-                RibbonFactory.create_compact_button ("package-x-generic-symbolic", "Bundle with esbuild"),
-                RibbonFactory.create_compact_button ("Insert-text-symbolic", "Format (Prettier)")
-            }));
+            // Group 2: Interoperability & Reproducibility Exports
+            btn_export_mallorn = RibbonFactory.create_tool_button ("package-x-generic-symbolic", ".mallorn", "Export Portable Reproducible Archive", false, false, true, null, "app.export_mallorn");
+            btn_export_rstudio = RibbonFactory.create_tool_button ("utilities-terminal-symbolic", "RStudio", "Export Project for RStudio", false, false, true, null, "app.export_rstudio");
+            btn_export_jupyter = RibbonFactory.create_tool_button ("applications-science-symbolic", "Jupyter", "Export Project for Jupyter Notebook", false, false, true, null, "app.export_jupyter");
+
+            box.append (RibbonFactory.create_linked_group ({ btn_export_mallorn, btn_export_rstudio, btn_export_jupyter }));
             box.append (RibbonFactory.create_vseparator ());
 
-            // Group 3: HTML5 Snippets & Live Preview Toggle
-            btn_html_helpers = RibbonFactory.create_tall_button ("text-html-symbolic", "HTML5\nBoilerplate", true);
-            box.append (btn_html_helpers);
-
-            btn_live_preview = RibbonFactory.create_tall_button ("view-refresh-symbolic", "Live WebKit\nPreview");
+            // Group 3: Live Preview & Diagnostics
+            btn_live_preview = RibbonFactory.create_tool_button ("view-refresh-symbolic", "Live Preview", "Render and Open Live WebKit Preview");
             ((Gtk.Button) btn_live_preview).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.show_live_preview ();
             });
             box.append (btn_live_preview);
 
-            var btn_preview = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("view-dual-symbolic", "Toggle Output\nConsole", false, true, true);
+            var btn_preview = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("view-dual-symbolic", "Console", "Toggle Output Console Panel", true, true, true);
             btn_preview.toggled.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.console_revealer.reveal_child = btn_preview.active;
             });
             box.append (btn_preview);
+            box.append (RibbonFactory.create_vseparator ());
 
-            var btn_web_ai = (Gtk.Button) RibbonFactory.create_tall_button ("system-run-symbolic", "AI Web\nAssistant");
-            btn_web_ai.clicked.connect (() => {
+            var btn_pub_ai = RibbonFactory.create_tool_button ("system-run-symbolic", "AI Assistant", "Invoke AI Publishing Assistant");
+            ((Gtk.Button) btn_pub_ai).clicked.connect (() => {
                 trigger_ai_assistant ();
             });
-            box.append (btn_web_ai);
+            box.append (btn_pub_ai);
 
             return box;
         }
@@ -1115,10 +1225,6 @@ namespace Imladris {
             if (btn_insert_py != null) {
                 btn_insert_py.visible = is_notebook;
                 btn_insert_py.sensitive = is_notebook;
-            }
-            if (btn_insert_ts != null) {
-                btn_insert_ts.visible = is_notebook;
-                btn_insert_ts.sensitive = is_notebook;
             }
 
             // 2. Chunk Execution Controls
@@ -1217,11 +1323,7 @@ namespace Imladris {
                 btn_export_jupyter.sensitive = is_notebook;
             }
 
-            // 8. HTML helpers & live preview
-            if (btn_html_helpers != null) {
-                btn_html_helpers.visible = is_html;
-                btn_html_helpers.sensitive = is_html;
-            }
+            // 8. Live preview
             if (btn_live_preview != null) {
                 btn_live_preview.visible = true;
                 btn_live_preview.sensitive = is_md || is_html || is_notebook;
@@ -1393,53 +1495,14 @@ namespace Imladris {
         }
 
         // =====================================================================
-        // 5. PAGE LAYOUT RIBBON
-        // =====================================================================
-        private Gtk.Widget build_page_layout_ribbon () {
-            var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
-            box.append (RibbonFactory.create_tall_button ("applications-graphics-symbolic", "Themes", true));
-            box.append (RibbonFactory.create_vseparator ());
-            box.append (RibbonFactory.create_tall_button ("view-fullscreen-symbolic", "Margins", true));
-            box.append (RibbonFactory.create_tall_button ("object-rotate-right-symbolic", "Orientation", true));
-            box.append (RibbonFactory.create_tall_button ("x-office-document-symbolic", "Size", true));
-            box.append (RibbonFactory.create_tall_button ("view-column-symbolic", "Columns", true));
-            return box;
-        }
-
-        // =====================================================================
-        // 6. REFERENCES RIBBON
-        // =====================================================================
-        private Gtk.Widget build_references_ribbon () {
-            var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
-            box.append (RibbonFactory.create_tall_button ("view-list-ordered-symbolic", "Insert\nTOC"));
-            box.append (RibbonFactory.create_tall_button ("view-refresh-symbolic", "Update TOC"));
-            box.append (RibbonFactory.create_vseparator ());
-            box.append (RibbonFactory.create_tall_button ("format-text-superscript-symbolic", "Insert\nFootnote"));
-            box.append (RibbonFactory.create_tall_button ("book-open-symbolic", "Insert BibTeX\nCitation", true));
-            return box;
-        }
-
-        // =====================================================================
-        // 7. REVIEW RIBBON
-        // =====================================================================
-        private Gtk.Widget build_review_ribbon () {
-            var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
-            box.append (RibbonFactory.create_tall_button ("tools-check-spelling-symbolic", "Spell\nCheck", true));
-            box.append (RibbonFactory.create_tall_button ("document-properties-symbolic", "Word\nCount"));
-            box.append (RibbonFactory.create_vseparator ());
-            box.append (RibbonFactory.create_tall_button ("user-available-symbolic", "New\nComment"));
-            return box;
-        }
-
-        // =====================================================================
-        // 8. VIEW RIBBON (Split Mode, Apostrophe Mode, RStudio Workbench Toggle)
+        // 5. VIEW RIBBON (Layouts, Split Modes, Zoom & Display Options)
         // =====================================================================
         private Gtk.Widget build_view_ribbon () {
             var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
 
-            // Group 1: Workspace Layout Mode Toggle
-            var btn_mode_apostrophe = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("edit-find-symbolic", "Apostrophe\nMode", false, true, true);
-            var btn_mode_rstudio = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("view-grid-symbolic", "RStudio\nWorkbench", false, true, false);
+            // Group 1: Workspace Mode Toggle
+            var btn_mode_apostrophe = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("edit-find-symbolic", "Focus Mode", "Apostrophe Distraction-Free Layout", true, true, true);
+            var btn_mode_rstudio = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("view-grid-symbolic", "RStudio 4-Quad", "RStudio-Style 4-Quadrant Workbench Layout", true, false, true);
             btn_mode_rstudio.set_group (btn_mode_apostrophe);
 
             btn_mode_apostrophe.toggled.connect (() => {
@@ -1453,15 +1516,14 @@ namespace Imladris {
                 }
             });
 
-            box.append (btn_mode_apostrophe);
-            box.append (btn_mode_rstudio);
+            box.append (RibbonFactory.create_linked_group ({ btn_mode_apostrophe, btn_mode_rstudio }));
             box.append (RibbonFactory.create_vseparator ());
 
-            // Group 2: Split Mode Switcher (Editor Only, Preview Only, Vertical, Horizontal)
-            var btn_split_v = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("view-column-symbolic", "Vertical\nSplit", false, true, true);
-            var btn_split_h = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("view-paged-symbolic", "Horizontal\nSplit", false, true, false);
-            var btn_edit_only = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("x-office-document-symbolic", "Editor\nOnly", false, true, false);
-            var btn_prev_only = (Gtk.ToggleButton) RibbonFactory.create_tall_button ("applications-internet-symbolic", "Preview\nOnly", false, true, false);
+            // Group 2: Split Mode Switcher
+            var btn_split_v = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("view-column-symbolic", "Vertical", "Side-by-Side Split", true, true, true);
+            var btn_split_h = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("view-paged-symbolic", "Horizontal", "Top-and-Bottom Split", true, false, true);
+            var btn_edit_only = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("x-office-document-symbolic", "Editor Only", "Editor-Only Mode", true, false, true);
+            var btn_prev_only = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("applications-internet-symbolic", "Preview Only", "Preview-Only Mode", true, false, true);
 
             btn_split_h.set_group (btn_split_v);
             btn_edit_only.set_group (btn_split_v);
@@ -1480,33 +1542,46 @@ namespace Imladris {
                 if (btn_prev_only.active) Services.WorkspaceStateManager.get_default ().set_split_mode (Services.SplitMode.PREVIEW_ONLY);
             });
 
-            box.append (btn_split_v);
-            box.append (btn_split_h);
-            box.append (btn_edit_only);
-            box.append (btn_prev_only);
+            box.append (RibbonFactory.create_linked_group ({ btn_split_v, btn_split_h, btn_edit_only, btn_prev_only }));
             box.append (RibbonFactory.create_vseparator ());
 
-            var chk_grid = new Gtk.Grid () { row_spacing = 4, column_spacing = 12, valign = Gtk.Align.CENTER };
-            chk_grid.attach (new Gtk.CheckButton.with_label ("Line Numbers") { active = true }, 0, 0, 1, 1);
-            chk_grid.attach (new Gtk.CheckButton.with_label ("Syntax Highlight") { active = true }, 0, 1, 1, 1);
-            chk_grid.attach (new Gtk.CheckButton.with_label ("Word Wrap") { active = true }, 1, 0, 1, 1);
-            chk_grid.attach (new Gtk.CheckButton.with_label ("Output Console"), 1, 1, 1, 1);
+            // Group 3: Zoom Controls
+            var btn_zoom_out = RibbonFactory.create_tool_button ("zoom-out-symbolic", null, "Zoom Out (Ctrl+-)", false, false, true, null, "win.zoom_out");
+            var btn_zoom_100 = RibbonFactory.create_tool_button ("zoom-original-symbolic", "100%", "Zoom 100% (Ctrl+0)", false, false, true, null, "win.zoom_reset");
+            var btn_zoom_in = RibbonFactory.create_tool_button ("zoom-in-symbolic", null, "Zoom In (Ctrl++)", false, false, true, null, "win.zoom_in");
+
+            box.append (RibbonFactory.create_linked_group ({ btn_zoom_out, btn_zoom_100, btn_zoom_in }));
+            box.append (RibbonFactory.create_vseparator ());
+
+            // Group 4: Editor Display Options
+            var chk_grid = new Gtk.Grid () { row_spacing = 2, column_spacing = 8, valign = Gtk.Align.CENTER };
+            var chk_line_no = new Gtk.CheckButton.with_label ("Line Numbers") { active = true };
+            chk_line_no.toggled.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_view.show_line_numbers = chk_line_no.active;
+            });
+            var chk_syntax = new Gtk.CheckButton.with_label ("Highlight") { active = true };
+            chk_syntax.toggled.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_buffer.highlight_syntax = chk_syntax.active;
+            });
+            var chk_wrap = new Gtk.CheckButton.with_label ("Word Wrap") { active = true };
+            chk_wrap.toggled.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.source_view.wrap_mode = chk_wrap.active ? Gtk.WrapMode.WORD_CHAR : Gtk.WrapMode.NONE;
+            });
+            var chk_console = new Gtk.CheckButton.with_label ("Console");
+            chk_console.toggled.connect (() => {
+                var d = get_active_document ();
+                if (d != null) d.console_revealer.reveal_child = chk_console.active;
+            });
+
+            chk_grid.attach (chk_line_no, 0, 0, 1, 1);
+            chk_grid.attach (chk_syntax, 0, 1, 1, 1);
+            chk_grid.attach (chk_wrap, 1, 0, 1, 1);
+            chk_grid.attach (chk_console, 1, 1, 1, 1);
             box.append (chk_grid);
-            return box;
-        }
 
-        // =====================================================================
-        // 9. SECTION RIBBON
-        // =====================================================================
-        private Gtk.Widget build_section_ribbon () {
-            var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
-            box.append (RibbonFactory.create_tall_button ("view-list-symbolic", "YAML Frontmatter\nInspector"));
-            box.append (RibbonFactory.create_vseparator ());
-            box.append (RibbonFactory.create_tall_button ("edit-cut-symbolic", "Split\nSection", true));
-            box.append (RibbonFactory.create_vertical_stack ({
-                RibbonFactory.create_compact_button ("list-add-symbolic", "Insert Section Before"),
-                RibbonFactory.create_compact_button ("list-add-symbolic", "Insert Section After")
-            }));
             return box;
         }
     }
