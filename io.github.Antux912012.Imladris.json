@@ -11,6 +11,7 @@
         "--socket=wayland",
         "--device=dri",
         "--filesystem=home",
+        "--filesystem=~/.cache/imladris:create",
         "--talk-name=org.freedesktop.Flatpak",
         "--metadata=X-DConf=default-settings"
     ],

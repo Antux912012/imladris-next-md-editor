@@ -14,24 +14,25 @@ namespace Imladris.Services {
             var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
             launcher.set_cwd (project_root);
 
-            string[] argv;
+            string[] raw_argv;
             switch (fmt) {
                 case DocumentFormat.QMD:
                 case DocumentFormat.IPYNB:
-                    argv = { "quarto", "render", input_file, "--to", "odt", "--output", output_odt };
+                    raw_argv = { "quarto", "render", input_file, "--to", "odt", "--output", output_odt };
                     break;
                 case DocumentFormat.RMD:
                     string r_expr = "rmarkdown::render('%s', output_format = 'odt_document', output_file = '%s')".printf (
                         input_file, output_odt
                     );
-                    argv = { "Rscript", "-e", r_expr };
+                    raw_argv = { "Rscript", "-e", r_expr };
                     break;
                 default:
-                    argv = { "pandoc", input_file, "-f", "markdown", "-t", "odt", "-o", output_odt, "--standalone" };
+                    raw_argv = { "pandoc", input_file, "-f", "markdown", "-t", "odt", "-o", output_odt, "--standalone" };
                     break;
             }
 
             try {
+                string[] argv = Core.PlatformUtils.build_host_command (raw_argv, project_root);
                 var proc = launcher.spawnv (argv);
                 yield proc.wait_check_async ();
             } catch (GLib.Error e) {
@@ -52,31 +53,32 @@ namespace Imladris.Services {
             launcher.set_cwd (project_root);
 
             string base_name = Path.get_basename (input_file);
-            string temp_pptx = Path.build_filename (Environment.get_tmp_dir (), "%s_slides.pptx".printf (base_name));
+            string temp_pptx = Path.build_filename (Core.PlatformUtils.get_shared_cache_dir ("tmp"), "%s_slides.pptx".printf (base_name));
 
             // Stage 1: Render intermediate slide deck to PPTX
-            string[] stage1_argv;
+            string[] raw_stage1_argv;
             if (fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB) {
-                stage1_argv = { "quarto", "render", input_file, "--to", "pptx", "--output", temp_pptx };
+                raw_stage1_argv = { "quarto", "render", input_file, "--to", "pptx", "--output", temp_pptx };
             } else if (fmt == DocumentFormat.RMD) {
                 string r_expr = "rmarkdown::render('%s', output_format = 'powerpoint_presentation', output_file = '%s')".printf (
                     input_file, temp_pptx
                 );
-                stage1_argv = { "Rscript", "-e", r_expr };
+                raw_stage1_argv = { "Rscript", "-e", r_expr };
             } else {
-                stage1_argv = { "pandoc", input_file, "-t", "pptx", "-o", temp_pptx, "--standalone" };
+                raw_stage1_argv = { "pandoc", input_file, "-t", "pptx", "-o", temp_pptx, "--standalone" };
             }
 
             try {
+                string[] stage1_argv = Core.PlatformUtils.build_host_command (raw_stage1_argv, project_root);
                 var stage1_proc = launcher.spawnv (stage1_argv);
                 yield stage1_proc.wait_check_async ();
 
                 // Stage 2: Convert PPTX -> ODP using headless LibreOffice
-                string? soffice_bin = Environment.find_program_in_path ("soffice")
-                    ?? Environment.find_program_in_path ("libreoffice");
+                string? soffice_bin = Core.PlatformUtils.find_program ("soffice")
+                    ?? Core.PlatformUtils.find_program ("libreoffice");
 
                 if (soffice_bin != null) {
-                    string[] stage2_argv = {
+                    string[] raw_stage2_argv = {
                         soffice_bin,
                         "--headless",
                         "--convert-to",
@@ -85,6 +87,7 @@ namespace Imladris.Services {
                         "--outdir",
                         output_odp_dir
                     };
+                    string[] stage2_argv = Core.PlatformUtils.build_host_command (raw_stage2_argv, project_root);
                     var stage2_proc = launcher.spawnv (stage2_argv);
                     yield stage2_proc.wait_check_async ();
                     FileUtils.remove (temp_pptx);
@@ -111,24 +114,26 @@ namespace Imladris.Services {
             ensure_parent_dir (output_path);
 
             if ((fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB) &&
-                GLib.Environment.find_program_in_path ("quarto") != null) {
+                Core.PlatformUtils.is_program_available ("quarto")) {
                 try {
                     var launcher = new GLib.SubprocessLauncher (GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
                     launcher.set_cwd (out_dir);
-                    string[] argv = { "quarto", "render", input_path, "--to", "odt", "--output", out_file };
+                    string[] raw_argv = { "quarto", "render", input_path, "--to", "odt", "--output", out_file };
+                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, out_dir);
                     var proc = launcher.spawnv (argv);
                     cli_succeeded = proc.wait_check ();
                 } catch (GLib.Error e) {
                     cli_succeeded = false;
                 }
             } else if (fmt == DocumentFormat.RMD &&
-                       GLib.Environment.find_program_in_path ("Rscript") != null) {
+                       Core.PlatformUtils.is_program_available ("Rscript")) {
                 try {
                     string r_expr = "if (requireNamespace('rmarkdown', quietly=TRUE)) rmarkdown::render('%s', output_format = 'odt_document', output_file = '%s', quiet = TRUE) else stop('no rmarkdown')".printf (
                         input_path.replace ("'", "\\'"),
                         output_path.replace ("'", "\\'")
                     );
-                    string[] argv = { "Rscript", "-e", r_expr };
+                    string[] raw_argv = { "Rscript", "-e", r_expr };
+                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, out_dir);
                     var proc = new GLib.Subprocess.newv (argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
                     cli_succeeded = proc.wait_check ();
                 } catch (GLib.Error e) {
@@ -136,9 +141,10 @@ namespace Imladris.Services {
                 }
             }
 
-            if (!cli_succeeded && GLib.Environment.find_program_in_path ("pandoc") != null) {
+            if (!cli_succeeded && Core.PlatformUtils.is_program_available ("pandoc")) {
                 try {
-                    string[] argv = { "pandoc", input_path, "-f", "markdown", "-t", "odt", "-o", output_path, "--standalone" };
+                    string[] raw_argv = { "pandoc", input_path, "-f", "markdown", "-t", "odt", "-o", output_path, "--standalone" };
+                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, out_dir);
                     var proc = new GLib.Subprocess.newv (argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
                     cli_succeeded = proc.wait_check ();
                 } catch (GLib.Error e) {
@@ -164,20 +170,21 @@ namespace Imladris.Services {
             string out_dir = GLib.Path.get_dirname (output_path);
             ensure_parent_dir (output_path);
 
-            string? soffice_bin = GLib.Environment.find_program_in_path ("soffice")
-                ?? GLib.Environment.find_program_in_path ("libreoffice");
+            string? soffice_bin = Core.PlatformUtils.find_program ("soffice")
+                ?? Core.PlatformUtils.find_program ("libreoffice");
 
             if (soffice_bin != null) {
                 string tmp_pptx = GLib.Path.build_filename (
-                    GLib.Environment.get_tmp_dir (),
+                    Core.PlatformUtils.get_shared_cache_dir ("tmp"),
                     @"imladris_slides_$(GLib.Random.next_int ()).pptx"
                 );
                 bool pptx_ready = false;
 
                 if ((fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB) &&
-                    GLib.Environment.find_program_in_path ("quarto") != null) {
+                    Core.PlatformUtils.is_program_available ("quarto")) {
                     try {
-                        string[] q_argv = { "quarto", "render", input_path, "--to", "pptx", "-o", tmp_pptx };
+                        string[] raw_q_argv = { "quarto", "render", input_path, "--to", "pptx", "-o", tmp_pptx };
+                        string[] q_argv = Core.PlatformUtils.build_host_command (raw_q_argv, out_dir);
                         var q_proc = new GLib.Subprocess.newv (q_argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
                         pptx_ready = q_proc.wait_check () && GLib.FileUtils.test (tmp_pptx, GLib.FileTest.EXISTS);
                     } catch (GLib.Error e) {
@@ -185,9 +192,10 @@ namespace Imladris.Services {
                     }
                 }
 
-                if (!pptx_ready && GLib.Environment.find_program_in_path ("pandoc") != null) {
+                if (!pptx_ready && Core.PlatformUtils.is_program_available ("pandoc")) {
                     try {
-                        string[] p_argv = { "pandoc", input_path, "-t", "pptx", "-o", tmp_pptx, "--standalone" };
+                        string[] raw_p_argv = { "pandoc", input_path, "-t", "pptx", "-o", tmp_pptx, "--standalone" };
+                        string[] p_argv = Core.PlatformUtils.build_host_command (raw_p_argv, out_dir);
                         var p_proc = new GLib.Subprocess.newv (p_argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
                         pptx_ready = p_proc.wait_check () && GLib.FileUtils.test (tmp_pptx, GLib.FileTest.EXISTS);
                     } catch (GLib.Error e) {
@@ -197,7 +205,8 @@ namespace Imladris.Services {
 
                 if (pptx_ready) {
                     try {
-                        string[] lo_argv = { soffice_bin, "--headless", "--convert-to", "odp", tmp_pptx, "--outdir", out_dir };
+                        string[] raw_lo_argv = { soffice_bin, "--headless", "--convert-to", "odp", tmp_pptx, "--outdir", out_dir };
+                        string[] lo_argv = Core.PlatformUtils.build_host_command (raw_lo_argv, out_dir);
                         var lo_proc = new GLib.Subprocess.newv (lo_argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
                         if (lo_proc.wait_check ()) {
                             string converted_name = GLib.Path.get_basename (tmp_pptx);

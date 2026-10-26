@@ -115,12 +115,12 @@ The Flatpak requests network access (package indices, optional AI endpoints), ho
 
 **Fedora**
 ```bash
-sudo dnf install ./imladris-0.7.0-1.fc44.x86_64.rpm
+sudo dnf install ./imladris-0.8.0-1.fc44.x86_64.rpm
 ```
 
 **Debian / Ubuntu**
 ```bash
-sudo dpkg -i imladris_0.7.0_amd64.deb && sudo apt-get install -f
+sudo dpkg -i imladris_0.8.0_amd64.deb && sudo apt-get install -f
 ```
 
 ## Build from source

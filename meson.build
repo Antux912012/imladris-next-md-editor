@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.7.0',
+  version: '0.8.0',
   default_options: ['warning_level=1']
 )
 
@@ -62,6 +62,7 @@ sources = files(
   'src/ui/AiSettingsDialog.vala',
   'src/core/SettingsManager.vala',
   'src/core/AiConfigManager.vala',
+  'src/core/PlatformUtils.vala',
 )
 
 executable('imladris',
@@ -107,6 +108,7 @@ test_sources = files(
   'src/core/ChunkParser.vala',
   'src/console/ReplBridge.vala',
   'src/editor/ChunkExecutionEngine.vala',
+  'src/core/PlatformUtils.vala',
 )
 
 test_exe = executable('test_mallorn_sandbox',

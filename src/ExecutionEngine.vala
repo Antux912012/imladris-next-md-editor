@@ -2,6 +2,18 @@ namespace Imladris {
 
     public class ExecutionEngine : Object {
 
+        private static string[] resolve_cmd_argv (string[] argv) {
+            if (argv.length == 0) return argv;
+            if (Core.PlatformUtils.is_flatpak ()) {
+                string prog = argv[0];
+                if (GLib.Environment.find_program_in_path (prog) == null ||
+                    prog == "R" || prog == "Rscript" || prog == "quarto" || prog == "pandoc") {
+                    return Core.PlatformUtils.build_host_command (argv);
+                }
+            }
+            return argv;
+        }
+
         /**
          * Asynchronously runs a CLI command (Rscript, python3, deno, tsc, quarto)
          * and streams stdout/stderr to the active DocumentPage's console pane.
@@ -10,7 +22,7 @@ namespace Imladris {
             page.append_console_log (@"▶ Executing: $(string.joinv (" ", argv))");
             try {
                 var proc = new GLib.Subprocess.newv (
-                    argv,
+                    resolve_cmd_argv (argv),
                     GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE
                 );
                 string? output = null;
@@ -28,7 +40,7 @@ namespace Imladris {
         public static async string capture_command_async (string[] argv) {
             try {
                 var proc = new GLib.Subprocess.newv (
-                    argv,
+                    resolve_cmd_argv (argv),
                     GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE
                 );
                 string? output = null;

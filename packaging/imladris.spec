@@ -1,5 +1,5 @@
 Name:           imladris
-Version:        0.7.0
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        Scientific notebook studio and Markdown editor
 
@@ -54,6 +54,9 @@ writing environment for technical authors, data scientists, and researchers.
 %{_datadir}/icons/hicolor/scalable/actions/ribbon-toggle-symbolic.svg
 
 %changelog
+* Mon Oct 26 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.8.0-1
+- Release 0.8.0: Transparent host R interpreter discovery and execution in Flatpak via flatpak-spawn, shared cache for plotting artifacts, and real-time package compilation log streaming.
+
 * Mon Oct 26 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.7.0-1
 - Release 0.7.0: 11-pillar expansion with clean UI launch modal, ribbon state machine, RStudio-style package installer, interactive console and inline code chunk outputs, pwd synchronization, and RStudio/Jupyter sandboxed exports.
 

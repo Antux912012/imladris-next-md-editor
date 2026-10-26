@@ -67,11 +67,12 @@ namespace Imladris.Services {
 
             // Try running renv::init(bare = TRUE) via Rscript if available
             bool rscript_succeeded = false;
-            if (Environment.find_program_in_path ("Rscript") != null) {
+            if (Core.PlatformUtils.is_program_available ("Rscript")) {
                 try {
                     var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
-                    launcher.set_cwd (project_path);
-                    string[] argv = { "Rscript", "-e", "if (requireNamespace('renv', quietly=TRUE)) { renv::init(bare = TRUE); renv::snapshot(prompt = FALSE); }" };
+                    if (project_path != "") launcher.set_cwd (project_path);
+                    string[] raw_argv = { "Rscript", "-e", "if (requireNamespace('renv', quietly=TRUE)) { renv::init(bare = TRUE); renv::snapshot(prompt = FALSE); }" };
+                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, project_path);
                     var proc = launcher.spawnv (argv);
                     rscript_succeeded = proc.wait_check ();
                 } catch (GLib.Error e) {
@@ -196,11 +197,12 @@ numpy>=1.24.0
         public static void snapshot_environment (string project_path) throws GLib.Error {
             // Update R renv.lock if renv exists and Rscript is available
             string renv_dir = Path.build_filename (project_path, "renv");
-            if (FileUtils.test (renv_dir, FileTest.IS_DIR) && Environment.find_program_in_path ("Rscript") != null) {
+            if (FileUtils.test (renv_dir, FileTest.IS_DIR) && Core.PlatformUtils.is_program_available ("Rscript")) {
                 try {
                     var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
-                    launcher.set_cwd (project_path);
-                    string[] argv = { "Rscript", "-e", "if (requireNamespace('renv', quietly=TRUE)) renv::snapshot(prompt = FALSE)" };
+                    if (project_path != "") launcher.set_cwd (project_path);
+                    string[] raw_argv = { "Rscript", "-e", "if (requireNamespace('renv', quietly=TRUE)) renv::snapshot(prompt = FALSE)" };
+                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, project_path);
                     var proc = launcher.spawnv (argv);
                     proc.wait_check ();
                 } catch (GLib.Error e) {
@@ -234,11 +236,12 @@ numpy>=1.24.0
         public static void restore_environment (string project_path) throws GLib.Error {
             // Restore R renv environment
             string renv_dir = Path.build_filename (project_path, "renv");
-            if (FileUtils.test (renv_dir, FileTest.IS_DIR) && Environment.find_program_in_path ("Rscript") != null) {
+            if (FileUtils.test (renv_dir, FileTest.IS_DIR) && Core.PlatformUtils.is_program_available ("Rscript")) {
                 try {
                     var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
-                    launcher.set_cwd (project_path);
-                    string[] argv = { "Rscript", "-e", "if (requireNamespace('renv', quietly=TRUE)) renv::restore(prompt = FALSE)" };
+                    if (project_path != "") launcher.set_cwd (project_path);
+                    string[] raw_argv = { "Rscript", "-e", "if (requireNamespace('renv', quietly=TRUE)) renv::restore(prompt = FALSE)" };
+                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, project_path);
                     var proc = launcher.spawnv (argv);
                     proc.wait_check ();
                 } catch (GLib.Error e) {

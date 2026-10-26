@@ -42,14 +42,18 @@ namespace Imladris.Execution {
             );
             launcher.set_cwd (project_root); // Pillar 5: Enforce pwd project root
 
-            string[] argv;
+            string[] raw_argv;
             if (runtime == LanguageRuntime.R) {
                 // R interactive REPL mode
-                argv = { "R", "--no-save", "--no-restore", "--interactive" };
+                raw_argv = { "R", "--no-save", "--no-restore", "--interactive" };
             } else {
                 // Python interactive REPL mode
-                argv = { "python3", "-u", "-i" };
+                raw_argv = { "python3", "-u", "-i" };
             }
+
+            string[] argv = (runtime == LanguageRuntime.R)
+                ? Core.PlatformUtils.build_host_command (raw_argv, project_root)
+                : raw_argv;
 
             process = launcher.spawnv (argv);
             _is_running = true;

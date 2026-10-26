@@ -1381,7 +1381,14 @@ namespace Imladris {
                     launcher.set_cwd (working_dir);
                 }
 
-                var proc = launcher.spawnv (args);
+                string[] spawn_args = args;
+                if (Core.PlatformUtils.is_flatpak ()) {
+                    if (args.length > 0 && GLib.Environment.find_program_in_path (args[0]) == null) {
+                        spawn_args = Core.PlatformUtils.build_host_command (args, working_dir);
+                    }
+                }
+
+                var proc = launcher.spawnv (spawn_args);
                 var dis = new GLib.DataInputStream (proc.get_stdout_pipe ());
                 string? line = null;
                 while ((line = yield dis.read_line_async (GLib.Priority.DEFAULT, null)) != null) {

@@ -86,8 +86,7 @@ namespace Imladris.Services {
                 return "✖ R interpreter (R/Rscript) not available on host system.";
             }
 
-            string plot_dir = GLib.Path.build_filename (GLib.Environment.get_tmp_dir (), "imladris_plots");
-            GLib.DirUtils.create_with_parents (plot_dir, 0755);
+            string plot_dir = Core.PlatformUtils.get_shared_cache_dir ("plots");
             string plot_file = GLib.Path.build_filename (plot_dir, @"plot_$(GLib.Random.next_int ()).png");
 
             bool has_plot = code.contains ("plot(") || code.contains ("plot (") ||
@@ -119,6 +118,7 @@ namespace Imladris.Services {
                     if (line == null) break;
                     if (line.contains (sentinel)) break;
                     output_sb.append (line + "\n");
+                    session_output_received ("r", line, false);
                 }
 
                 if (has_plot && GLib.FileUtils.test (plot_file, GLib.FileTest.EXISTS)) {
@@ -152,8 +152,7 @@ namespace Imladris.Services {
                 return "✖ Python 3 interpreter not available on host system.";
             }
 
-            string plot_dir = GLib.Path.build_filename (GLib.Environment.get_tmp_dir (), "imladris_plots");
-            GLib.DirUtils.create_with_parents (plot_dir, 0755);
+            string plot_dir = Core.PlatformUtils.get_shared_cache_dir ("plots");
             string plot_file = GLib.Path.build_filename (plot_dir, @"plot_$(GLib.Random.next_int ()).png");
 
             bool has_plot = code.contains ("plt.") || code.contains ("matplotlib") ||
@@ -189,6 +188,7 @@ namespace Imladris.Services {
                     if (line == null) break;
                     if (line.contains (sentinel)) break;
                     output_sb.append (line + "\n");
+                    session_output_received ("python", line, false);
                 }
 
                 if (has_plot && GLib.FileUtils.test (plot_file, GLib.FileTest.EXISTS)) {
@@ -226,18 +226,22 @@ namespace Imladris.Services {
         private void ensure_r_session () {
             if (r_initialized && r_process != null) return;
 
-            string? r_bin = GLib.Environment.find_program_in_path ("R");
-            if (r_bin == null) r_bin = GLib.Environment.find_program_in_path ("Rscript");
-            if (r_bin == null) return;
+            if (!Core.PlatformUtils.is_r_available ()) return;
+
+            string r_bin = Core.PlatformUtils.is_program_available ("R") ? "R" : "Rscript";
 
             try {
                 // In sandboxed projects, .Rprofile sources renv/activate.R, so don't pass --no-init-file
-                string[] argv = { r_bin, "--no-save", "--no-restore", "--quiet", "--interactive" };
+                string[] raw_argv = { r_bin, "--no-save", "--no-restore", "--quiet", "--interactive" };
+                string? cwd = (current_working_dir != "" && GLib.FileUtils.test (current_working_dir, GLib.FileTest.IS_DIR))
+                    ? current_working_dir : null;
+
+                string[] argv = Core.PlatformUtils.build_host_command (raw_argv, cwd);
                 var launcher = new GLib.SubprocessLauncher (
                     GLib.SubprocessFlags.STDIN_PIPE | GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE
                 );
-                if (current_working_dir != "" && GLib.FileUtils.test (current_working_dir, GLib.FileTest.IS_DIR)) {
-                    launcher.set_cwd (current_working_dir);
+                if (cwd != null) {
+                    launcher.set_cwd (cwd);
                 }
 
                 r_process = launcher.spawnv (argv);

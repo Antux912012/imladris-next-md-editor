@@ -14,6 +14,8 @@ namespace Imladris.Tests {
         GLib.Test.add_func ("/export/odt_and_odp_pipeline", test_export_pipeline_odt_odp);
         GLib.Test.add_func ("/chunks/chunk_parser", test_chunk_parser);
         GLib.Test.add_func ("/execution/repl_bridge_and_chunk_engine", test_repl_bridge_and_chunk_engine);
+        GLib.Test.add_func ("/core/platform_utils", test_platform_utils);
+        GLib.Test.add_func ("/sessions/host_r_session", test_host_r_session);
 
         return GLib.Test.run ();
     }
@@ -337,6 +339,73 @@ print(np.mean([1, 2, 3]))
         Timeout.add_seconds (15, () => {
             if (!test_passed) {
                 py_bridge.stop ();
+                loop.quit ();
+            }
+            return Source.REMOVE;
+        });
+
+        loop.run ();
+        assert (test_passed);
+    }
+
+    private static void test_platform_utils () {
+        // 1. Shared cache directory creation
+        string cache_plots = Core.PlatformUtils.get_shared_cache_dir ("plots");
+        assert (cache_plots.length > 0);
+        assert (FileUtils.test (cache_plots, FileTest.IS_DIR));
+
+        string cache_tmp = Core.PlatformUtils.get_shared_cache_dir ("tmp");
+        assert (cache_tmp.length > 0);
+        assert (FileUtils.test (cache_tmp, FileTest.IS_DIR));
+
+        // 2. Host command wrapping
+        string[] cmd = { "R", "--interactive" };
+        string[] wrapped = Core.PlatformUtils.build_host_command (cmd, "/test/path");
+        if (Core.PlatformUtils.is_flatpak ()) {
+            assert (wrapped[0] == "flatpak-spawn");
+            assert (wrapped[1] == "--host");
+            assert (wrapped[2] == "--watch-bus");
+            assert (wrapped[3] == "--directory=/test/path");
+            assert (wrapped[4] == "R");
+            assert (wrapped[5] == "--interactive");
+        } else {
+            assert (wrapped.length == 2);
+            assert (wrapped[0] == "R");
+            assert (wrapped[1] == "--interactive");
+        }
+
+        // 3. Program availability check
+        assert (Core.PlatformUtils.is_program_available ("sh"));
+        assert (!Core.PlatformUtils.is_program_available ("__non_existent_binary_xyz_123__"));
+    }
+
+    private static void test_host_r_session () {
+        if (!Core.PlatformUtils.is_r_available ()) {
+            GLib.Test.message ("R is not available in test runner; skipping host R session test.");
+            return;
+        }
+
+        var sm = Services.PersistentSessionManager.get_default ();
+        var loop = new MainLoop ();
+        bool test_passed = false;
+
+        string? plot_file = null;
+        sm.execute_r.begin ("host_val <- 21 * 2; cat('R_RESULT:', host_val, '\\n');", (obj, res) => {
+            string output = sm.execute_r.end (res, out plot_file);
+            assert (output.contains ("R_RESULT: 42"));
+
+            // Check persistence across calls
+            sm.execute_r.begin ("cat('PERSIST_TEST:', host_val + 8, '\\n');", (obj2, res2) => {
+                string? p2 = null;
+                string output2 = sm.execute_r.end (res2, out p2);
+                assert (output2.contains ("PERSIST_TEST: 50"));
+                test_passed = true;
+                loop.quit ();
+            });
+        });
+
+        Timeout.add_seconds (15, () => {
+            if (!test_passed) {
                 loop.quit ();
             }
             return Source.REMOVE;

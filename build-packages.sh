@@ -52,7 +52,7 @@ command=imladris
 shared=ipc;network;
 sockets=fallback-x11;wayland;
 devices=dri;
-filesystems=home;
+filesystems=home;~/.cache/imladris:create;
 EOF_META
 
   run_meson_build "build-flatpak" "/app" "${PROJECT_DIR}/build-flatpak-app/files"
@@ -94,6 +94,7 @@ PYEOF
     --socket=wayland \
     --device=dri \
     --filesystem=home \
+    --filesystem=~/.cache/imladris:create \
     --talk-name=org.freedesktop.Flatpak \
     --metadata=X-DConf=default-settings
 

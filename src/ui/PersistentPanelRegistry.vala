@@ -697,9 +697,19 @@ namespace Imladris.UI {
 
             if (engine == "r") {
                 string? plot_file = null;
+                bool any_line_streamed = false;
+                ulong sig_id = 0;
+                sig_id = Services.PersistentSessionManager.get_default ().session_output_received.connect ((eng, line, is_err) => {
+                    if (eng == "r") {
+                        any_line_streamed = true;
+                        doc_page.append_console_log (line);
+                    }
+                });
+
                 Services.PersistentSessionManager.get_default ().execute_r.begin (code, (obj, res) => {
+                    Services.PersistentSessionManager.get_default ().disconnect (sig_id);
                     string output = Services.PersistentSessionManager.get_default ().execute_r.end (res, out plot_file).strip ();
-                    if (output.length > 0) {
+                    if (!any_line_streamed && output.length > 0) {
                         doc_page.append_console_log (@"Out [$count]:\n$output");
                     }
                     if (plot_file != null) {
@@ -714,9 +724,19 @@ namespace Imladris.UI {
                 });
             } else if (engine == "python") {
                 string? plot_file = null;
+                bool any_line_streamed = false;
+                ulong sig_id = 0;
+                sig_id = Services.PersistentSessionManager.get_default ().session_output_received.connect ((eng, line, is_err) => {
+                    if (eng == "python") {
+                        any_line_streamed = true;
+                        doc_page.append_console_log (line);
+                    }
+                });
+
                 Services.PersistentSessionManager.get_default ().execute_python.begin (code, (obj, res) => {
+                    Services.PersistentSessionManager.get_default ().disconnect (sig_id);
                     string output = Services.PersistentSessionManager.get_default ().execute_python.end (res, out plot_file).strip ();
-                    if (output.length > 0) {
+                    if (!any_line_streamed && output.length > 0) {
                         doc_page.append_console_log (@"Out [$count]:\n$output");
                     }
                     if (plot_file != null) {

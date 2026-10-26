@@ -23,12 +23,15 @@ namespace Imladris.UI {
 
     public class EnvironmentTools : GLib.Object {
         public static bool has_uv () {
-            string? uv_path = GLib.Environment.find_program_in_path ("uv");
-            return uv_path != null && uv_path.length > 0;
+            return Core.PlatformUtils.is_program_available ("uv");
         }
 
         public static string get_uv_path () {
-            return GLib.Environment.find_program_in_path ("uv") ?? "uv";
+            return Core.PlatformUtils.find_program ("uv") ?? "uv";
+        }
+
+        public static bool has_r () {
+            return Core.PlatformUtils.is_r_available ();
         }
     }
 

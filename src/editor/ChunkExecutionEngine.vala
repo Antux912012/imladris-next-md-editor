@@ -39,7 +39,7 @@ namespace Imladris.Execution {
          */
         public async ChunkResult execute_chunk (LanguageRuntime lang, string raw_code, string chunk_id) throws GLib.Error {
             var result = new ChunkResult ();
-            string tmp_dir = GLib.Environment.get_tmp_dir ();
+            string tmp_dir = Core.PlatformUtils.get_shared_cache_dir ("tmp");
             string plot_filename = GLib.Path.build_filename (tmp_dir, "imladris_plot_%s.png".printf (chunk_id));
 
             string sentinel = "__IMLADRIS_CHUNK_DONE_%s__".printf (chunk_id);

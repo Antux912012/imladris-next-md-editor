@@ -56,6 +56,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.8.0" date="2026-10-26">
+      <description>
+        <p>Release v0.8.0 introduces transparent host R interpreter discovery and execution support inside Flatpak sandboxes via the flatpak-spawn host portal, shared host-sandbox cache directory (~/.cache/imladris) for graphics plots and temporary scripts, and real-time package compilation log streaming to the interactive console pane.</p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-10-26">
       <description>
         <p>Release v0.7.0 brings the complete 11-pillar expansion, modernized Libadwaita Ribbon menu with 5 consolidated high-density tabs and collapsible deck (Ctrl+F1), appearance theming with GNOME default accent colors, and a vastly expanded AI Assistant subsystem: First-class support for Google Gemini (AI Studio and Google OAuth token), Claude (Anthropic Messages API with thinking blocks), OpenAI (GPT-4o, o1, o3-mini), Cursor API compatibility, NVIDIA NIM cloud endpoints, DeepSeek (including DeepSeek-R1 reasoning stream extraction), Kimi (Moonshot AI), Qwen (Alibaba DashScope), Ollama, and LM Studio local server with persistent user credentials; clean launch modal with clean UI labels, context-aware ribbon state machine, RStudio-style package installer for CRAN and PyPI, interactive R and Python persistent consoles with inline chunk output cards and plot rendering, automatic pwd synchronization, sandboxed project engine with RStudio and Jupyter export, 1:1 DCF parity for .mallorn bundles, and headless ODT/ODP pipeline.</p>
