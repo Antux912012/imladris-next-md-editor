@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.8.0',
+  version: '0.9.0',
   default_options: ['warning_level=1']
 )
 
@@ -60,9 +60,11 @@ sources = files(
   'src/ui/ThemeSelectorWidget.vala',
   'src/ui/AccentColorSelectorWidget.vala',
   'src/ui/AiSettingsDialog.vala',
+  'src/ui/ToolchainSetupDialog.vala',
   'src/core/SettingsManager.vala',
   'src/core/AiConfigManager.vala',
   'src/core/PlatformUtils.vala',
+  'src/core/ToolchainManager.vala',
 )
 
 executable('imladris',
@@ -109,6 +111,7 @@ test_sources = files(
   'src/console/ReplBridge.vala',
   'src/editor/ChunkExecutionEngine.vala',
   'src/core/PlatformUtils.vala',
+  'src/core/ToolchainManager.vala',
 )
 
 test_exe = executable('test_mallorn_sandbox',

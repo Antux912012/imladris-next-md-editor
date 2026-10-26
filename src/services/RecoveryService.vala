@@ -26,21 +26,13 @@ namespace Imladris.Services {
 
         public RecoveryService () {
             Object ();
-            string user_cache = GLib.Environment.get_user_cache_dir ();
-            cache_dir = GLib.Path.build_filename (user_cache, "imladris", "recovery");
+            cache_dir = Core.PlatformUtils.get_shared_cache_dir ("recovery");
             manifest_path = GLib.Path.build_filename (cache_dir, "manifest.json");
             ensure_directory ();
         }
 
         private void ensure_directory () {
-            try {
-                var dir = GLib.File.new_for_path (cache_dir);
-                if (!dir.query_exists ()) {
-                    dir.make_directory_with_parents ();
-                }
-            } catch (GLib.Error e) {
-                GLib.warning ("Failed to create recovery cache directory: %s", e.message);
-            }
+            GLib.DirUtils.create_with_parents (cache_dir, 0700);
         }
 
         public async void snapshot_async (string doc_id, string? file_path, string doc_type, string content, int line, int offset, bool is_dirty) {

@@ -711,6 +711,9 @@ namespace Imladris.UI {
                     string output = Services.PersistentSessionManager.get_default ().execute_r.end (res, out plot_file).strip ();
                     if (!any_line_streamed && output.length > 0) {
                         doc_page.append_console_log (@"Out [$count]:\n$output");
+                        if (output.contains ("Install Toolchain") && main_window != null) {
+                            main_window.show_toolchain_setup_dialog ();
+                        }
                     }
                     if (plot_file != null) {
                         load_plot_image (plot_file);
@@ -738,6 +741,9 @@ namespace Imladris.UI {
                     string output = Services.PersistentSessionManager.get_default ().execute_python.end (res, out plot_file).strip ();
                     if (!any_line_streamed && output.length > 0) {
                         doc_page.append_console_log (@"Out [$count]:\n$output");
+                        if (output.contains ("Install Toolchain") && main_window != null) {
+                            main_window.show_toolchain_setup_dialog ();
+                        }
                     }
                     if (plot_file != null) {
                         load_plot_image (plot_file);

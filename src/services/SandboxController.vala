@@ -6,22 +6,21 @@ namespace Imladris.Services {
          * Pillars 6 & 7: Manages renv (R) and venv (Python) sandboxes based on primary format.
          */
         public static async void init_sandbox (string project_root, DocumentFormat fmt) throws GLib.Error {
+            var tm = Core.ToolchainManager.get_default ();
+            if (tm.is_micromamba_installed ()) {
+                yield tm.create_project_sandbox_async (
+                    project_root,
+                    fmt == DocumentFormat.RMD || fmt == DocumentFormat.QMD,
+                    fmt == DocumentFormat.IPYNB || fmt == DocumentFormat.QMD,
+                    fmt == DocumentFormat.QMD
+                );
+            }
+
             var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
             launcher.set_cwd (project_root);
 
             if (fmt == DocumentFormat.RMD || fmt == DocumentFormat.QMD) {
-                string[] r_argv = {
-                    "Rscript",
-                    "-e",
-                    "if (!requireNamespace('renv', quietly=TRUE)) install.packages('renv', repos='https://cloud.r-project.org'); renv::init(bare = TRUE, restart = FALSE); renv::snapshot(prompt = FALSE)"
-                };
-                try {
-                    var r_proc = launcher.spawnv (r_argv);
-                    yield r_proc.wait_check_async ();
-                } catch (GLib.Error e) {
-                    // Fall back to stub initialization
-                    init_r_sandbox (project_root);
-                }
+                init_r_sandbox (project_root);
             }
 
             if (fmt == DocumentFormat.IPYNB || fmt == DocumentFormat.QMD) {

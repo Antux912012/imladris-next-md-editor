@@ -11,31 +11,24 @@ namespace Imladris.Services {
             string output_odt,
             DocumentFormat fmt
         ) throws GLib.Error {
-            var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
-            launcher.set_cwd (project_root);
-
-            string[] raw_argv;
+            bool ok = false;
             switch (fmt) {
                 case DocumentFormat.QMD:
                 case DocumentFormat.IPYNB:
-                    raw_argv = { "quarto", "render", input_file, "--to", "odt", "--output", output_odt };
+                    ok = yield run_tool_process_async ("quarto", { "render", input_file, "--to", "odt", "--output", output_odt }, project_root);
                     break;
                 case DocumentFormat.RMD:
                     string r_expr = "rmarkdown::render('%s', output_format = 'odt_document', output_file = '%s')".printf (
                         input_file, output_odt
                     );
-                    raw_argv = { "Rscript", "-e", r_expr };
+                    ok = yield run_tool_process_async ("Rscript", { "-e", r_expr }, project_root);
                     break;
                 default:
-                    raw_argv = { "pandoc", input_file, "-f", "markdown", "-t", "odt", "-o", output_odt, "--standalone" };
+                    ok = yield run_tool_process_async ("pandoc", { input_file, "-f", "markdown", "-t", "odt", "-o", output_odt, "--standalone" }, project_root);
                     break;
             }
 
-            try {
-                string[] argv = Core.PlatformUtils.build_host_command (raw_argv, project_root);
-                var proc = launcher.spawnv (argv);
-                yield proc.wait_check_async ();
-            } catch (GLib.Error e) {
+            if (!ok) {
                 export_to_odt (input_file, output_odt);
             }
         }
@@ -99,6 +92,79 @@ namespace Imladris.Services {
             }
         }
 
+        private static bool run_tool_process (string tool_name, string[] sub_args, string working_dir) {
+            string? resolved_path = null;
+            string? env_prefix = null;
+            var source = Core.PlatformUtils.resolve_runtime (tool_name, working_dir, out resolved_path, out env_prefix);
+            if (source == Core.RuntimeSource.MISSING) {
+                return false;
+            }
+
+            try {
+                var launcher = new GLib.SubprocessLauncher (GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
+                launcher.set_cwd (working_dir);
+
+                string[] full_raw = new string[1 + sub_args.length];
+                full_raw[0] = (resolved_path != null) ? resolved_path : tool_name;
+                for (int i = 0; i < sub_args.length; i++) full_raw[i + 1] = sub_args[i];
+
+                string[] argv;
+                if (source == Core.RuntimeSource.HOST_FLATPAK_SPAWN) {
+                    string[] host_raw = new string[1 + sub_args.length];
+                    host_raw[0] = tool_name;
+                    for (int i = 0; i < sub_args.length; i++) host_raw[i + 1] = sub_args[i];
+                    argv = Core.PlatformUtils.build_host_command (host_raw, working_dir);
+                } else if (source == Core.RuntimeSource.MANAGED_GLOBAL || source == Core.RuntimeSource.PROJECT_SANDBOX) {
+                    Core.PlatformUtils.configure_managed_env (launcher, env_prefix);
+                    argv = full_raw;
+                } else {
+                    argv = full_raw;
+                }
+
+                var proc = launcher.spawnv (argv);
+                return proc.wait_check ();
+            } catch (GLib.Error e) {
+                return false;
+            }
+        }
+
+        private static async bool run_tool_process_async (string tool_name, string[] sub_args, string working_dir) {
+            string? resolved_path = null;
+            string? env_prefix = null;
+            var source = Core.PlatformUtils.resolve_runtime (tool_name, working_dir, out resolved_path, out env_prefix);
+            if (source == Core.RuntimeSource.MISSING) {
+                return false;
+            }
+
+            try {
+                var launcher = new GLib.SubprocessLauncher (GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
+                launcher.set_cwd (working_dir);
+
+                string[] full_raw = new string[1 + sub_args.length];
+                full_raw[0] = (resolved_path != null) ? resolved_path : tool_name;
+                for (int i = 0; i < sub_args.length; i++) full_raw[i + 1] = sub_args[i];
+
+                string[] argv;
+                if (source == Core.RuntimeSource.HOST_FLATPAK_SPAWN) {
+                    string[] host_raw = new string[1 + sub_args.length];
+                    host_raw[0] = tool_name;
+                    for (int i = 0; i < sub_args.length; i++) host_raw[i + 1] = sub_args[i];
+                    argv = Core.PlatformUtils.build_host_command (host_raw, working_dir);
+                } else if (source == Core.RuntimeSource.MANAGED_GLOBAL || source == Core.RuntimeSource.PROJECT_SANDBOX) {
+                    Core.PlatformUtils.configure_managed_env (launcher, env_prefix);
+                    argv = full_raw;
+                } else {
+                    argv = full_raw;
+                }
+
+                var proc = launcher.spawnv (argv);
+                yield proc.wait_check_async ();
+                return true;
+            } catch (GLib.Error e) {
+                return false;
+            }
+        }
+
         /**
          * Exports a source document (.md, .Rmd, .Qmd, .ipynb) to OpenDocument Text (.odt).
          * Automatically selects quarto, Rscript (rmarkdown), or pandoc based on extension,
@@ -114,42 +180,19 @@ namespace Imladris.Services {
             ensure_parent_dir (output_path);
 
             if ((fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB) &&
-                Core.PlatformUtils.is_program_available ("quarto")) {
-                try {
-                    var launcher = new GLib.SubprocessLauncher (GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
-                    launcher.set_cwd (out_dir);
-                    string[] raw_argv = { "quarto", "render", input_path, "--to", "odt", "--output", out_file };
-                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, out_dir);
-                    var proc = launcher.spawnv (argv);
-                    cli_succeeded = proc.wait_check ();
-                } catch (GLib.Error e) {
-                    cli_succeeded = false;
-                }
+                Core.PlatformUtils.is_program_available ("quarto", out_dir)) {
+                cli_succeeded = run_tool_process ("quarto", { "render", input_path, "--to", "odt", "--output", out_file }, out_dir);
             } else if (fmt == DocumentFormat.RMD &&
-                       Core.PlatformUtils.is_program_available ("Rscript")) {
-                try {
-                    string r_expr = "if (requireNamespace('rmarkdown', quietly=TRUE)) rmarkdown::render('%s', output_format = 'odt_document', output_file = '%s', quiet = TRUE) else stop('no rmarkdown')".printf (
-                        input_path.replace ("'", "\\'"),
-                        output_path.replace ("'", "\\'")
-                    );
-                    string[] raw_argv = { "Rscript", "-e", r_expr };
-                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, out_dir);
-                    var proc = new GLib.Subprocess.newv (argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
-                    cli_succeeded = proc.wait_check ();
-                } catch (GLib.Error e) {
-                    cli_succeeded = false;
-                }
+                       Core.PlatformUtils.is_program_available ("Rscript", out_dir)) {
+                string r_expr = "if (requireNamespace('rmarkdown', quietly=TRUE)) rmarkdown::render('%s', output_format = 'odt_document', output_file = '%s', quiet = TRUE) else stop('no rmarkdown')".printf (
+                    input_path.replace ("'", "\\'"),
+                    output_path.replace ("'", "\\'")
+                );
+                cli_succeeded = run_tool_process ("Rscript", { "-e", r_expr }, out_dir);
             }
 
-            if (!cli_succeeded && Core.PlatformUtils.is_program_available ("pandoc")) {
-                try {
-                    string[] raw_argv = { "pandoc", input_path, "-f", "markdown", "-t", "odt", "-o", output_path, "--standalone" };
-                    string[] argv = Core.PlatformUtils.build_host_command (raw_argv, out_dir);
-                    var proc = new GLib.Subprocess.newv (argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
-                    cli_succeeded = proc.wait_check ();
-                } catch (GLib.Error e) {
-                    cli_succeeded = false;
-                }
+            if (!cli_succeeded && Core.PlatformUtils.is_program_available ("pandoc", out_dir)) {
+                cli_succeeded = run_tool_process ("pandoc", { input_path, "-f", "markdown", "-t", "odt", "-o", output_path, "--standalone" }, out_dir);
             }
 
             if (!cli_succeeded || !GLib.FileUtils.test (output_path, GLib.FileTest.EXISTS)) {
@@ -170,8 +213,8 @@ namespace Imladris.Services {
             string out_dir = GLib.Path.get_dirname (output_path);
             ensure_parent_dir (output_path);
 
-            string? soffice_bin = Core.PlatformUtils.find_program ("soffice")
-                ?? Core.PlatformUtils.find_program ("libreoffice");
+            string? soffice_bin = Core.PlatformUtils.find_program ("soffice", out_dir)
+                ?? Core.PlatformUtils.find_program ("libreoffice", out_dir);
 
             if (soffice_bin != null) {
                 string tmp_pptx = GLib.Path.build_filename (
@@ -181,26 +224,14 @@ namespace Imladris.Services {
                 bool pptx_ready = false;
 
                 if ((fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB) &&
-                    Core.PlatformUtils.is_program_available ("quarto")) {
-                    try {
-                        string[] raw_q_argv = { "quarto", "render", input_path, "--to", "pptx", "-o", tmp_pptx };
-                        string[] q_argv = Core.PlatformUtils.build_host_command (raw_q_argv, out_dir);
-                        var q_proc = new GLib.Subprocess.newv (q_argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
-                        pptx_ready = q_proc.wait_check () && GLib.FileUtils.test (tmp_pptx, GLib.FileTest.EXISTS);
-                    } catch (GLib.Error e) {
-                        pptx_ready = false;
-                    }
+                    Core.PlatformUtils.is_program_available ("quarto", out_dir)) {
+                    pptx_ready = run_tool_process ("quarto", { "render", input_path, "--to", "pptx", "-o", tmp_pptx }, out_dir)
+                                 && GLib.FileUtils.test (tmp_pptx, GLib.FileTest.EXISTS);
                 }
 
-                if (!pptx_ready && Core.PlatformUtils.is_program_available ("pandoc")) {
-                    try {
-                        string[] raw_p_argv = { "pandoc", input_path, "-t", "pptx", "-o", tmp_pptx, "--standalone" };
-                        string[] p_argv = Core.PlatformUtils.build_host_command (raw_p_argv, out_dir);
-                        var p_proc = new GLib.Subprocess.newv (p_argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
-                        pptx_ready = p_proc.wait_check () && GLib.FileUtils.test (tmp_pptx, GLib.FileTest.EXISTS);
-                    } catch (GLib.Error e) {
-                        pptx_ready = false;
-                    }
+                if (!pptx_ready && Core.PlatformUtils.is_program_available ("pandoc", out_dir)) {
+                    pptx_ready = run_tool_process ("pandoc", { input_path, "-t", "pptx", "-o", tmp_pptx, "--standalone" }, out_dir)
+                                 && GLib.FileUtils.test (tmp_pptx, GLib.FileTest.EXISTS);
                 }
 
                 if (pptx_ready) {

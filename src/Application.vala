@@ -22,6 +22,7 @@ namespace Imladris {
             { "export_rstudio", on_export_rstudio },
             { "export_jupyter", on_export_jupyter },
             { "package_installer", on_package_installer },
+            { "toolchain_setup", on_toolchain_setup },
             { "snapshot_environment", on_snapshot_environment },
             { "restore_environment", on_restore_environment },
             { "restart_kernel", on_restart_kernel },
@@ -178,6 +179,11 @@ namespace Imladris {
         private void on_package_installer () {
             var win = this.active_window as Window;
             if (win != null) win.show_package_installer_dialog ();
+        }
+
+        private void on_toolchain_setup () {
+            var win = this.active_window as Window;
+            if (win != null) win.show_toolchain_setup_dialog ();
         }
 
         private void on_snapshot_environment () {

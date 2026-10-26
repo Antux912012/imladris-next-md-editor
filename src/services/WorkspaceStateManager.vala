@@ -5,9 +5,8 @@ namespace Imladris.Services {
         RSTUDIO;
 
         public static LayoutMode from_extension (string filename) {
-            string lower = filename.down ();
-            if (lower.has_suffix (".qmd") || lower.has_suffix (".rmd") ||
-                lower.has_suffix (".ipynb") || lower.has_suffix (".r") || lower.has_suffix (".py")) {
+            var fmt = DocumentFormat.from_filename (filename);
+            if (fmt.is_computational_notebook () || fmt.is_r_primary () || fmt.is_python_primary ()) {
                 return RSTUDIO;
             }
             // Pillar 10: Simple .md and .html default to fast-path Apostrophe mode

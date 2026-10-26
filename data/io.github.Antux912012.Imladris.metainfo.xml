@@ -56,6 +56,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.9.0" date="2026-10-26">
+      <description>
+        <p>Release v0.9.0 introduces the Automated micromamba Data Science Toolchain Manager and 4-tier runtime resolution hierarchy (Project Sandbox → Managed Global Toolchain → Host Flatpak Spawn → Host Native). Provides one-click automated installation of R 4.4 with dev compilers, IRkernel, pre-compiled tidyverse, Python 3.12 with uv, and Quarto CLI into user storage ($XDG_DATA_HOME/imladris/toolchains/) with zero root permissions and zero host compilation errors. Enables completely self-contained execution on clean Linux installations inside Flatpak containers.</p>
+      </description>
+    </release>
     <release version="0.8.0" date="2026-10-26">
       <description>
         <p>Release v0.8.0 introduces transparent host R interpreter discovery and execution support inside Flatpak sandboxes via the flatpak-spawn host portal, shared host-sandbox cache directory (~/.cache/imladris) for graphics plots and temporary scripts, and real-time package compilation log streaming to the interactive console pane.</p>

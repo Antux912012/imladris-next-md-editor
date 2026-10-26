@@ -65,6 +65,17 @@ An intuitive, Libadwaita-native dialog (`Ctrl+Shift+P` or from the Packages pane
 - **Environment Aware**: Automatically routes installations to your project's sandboxed environment (`renv` / `.venv`) or system libraries, automatically triggering lockfile snapshots (`renv.lock`, `requirements.txt`).
 - **Quick-Add Curated Chips**: 1-click popular package buttons for data science, statistics, machine learning, and visualization libraries.
 
+### Automated `micromamba` Toolchain & 4-Tier Runtime Resolution
+Imladris v0.9.0 introduces a built-in automated Data Science Toolchain Manager powered by `micromamba` (a static ~18MB C++ binary with zero host dependencies):
+- **Zero-Configuration Provisioning**: One-click automated setup of R 4.4 (with dev compilers, `make`, `pkg-config`, and IRkernel), pre-compiled `tidyverse`, Python 3.12 (with `uv` and ipykernel), and Quarto CLI into user storage (`$XDG_DATA_HOME/imladris/toolchains/`).
+- **Clean Flatpak Self-Sufficiency**: Works completely self-contained on fresh Linux systems without needing pre-installed host interpreters or compilers.
+- **Automated CRAN Compatibility**: Configures `Rprofile.site` with default cloud CRAN mirror and multi-core parallel compilation so `install.packages()` never fails on missing Linux headers.
+- **4-Tier Resolution Order**:
+  1. *Project Sandbox* (`<project_root>/.imladris-env/bin/`)
+  2. *Managed Global Toolchain* (`$XDG_DATA_HOME/imladris/toolchains/mamba_root/envs/base-ds/bin/`)
+  3. *Host Fallback* (native `$PATH` or `flatpak-spawn --host` portal)
+  4. *One-Click Interactive Setup* (actionable prompt & real-time log modal)
+
 ### Export
 Documents go to HTML, PDF, **ODT** and **ODP**. Imladris uses Quarto, rmarkdown or Pandoc when they're installed, goes through LibreOffice for slides, and falls back to a built-in OpenDocument writer when none of that is available.
 

@@ -108,6 +108,7 @@ namespace Imladris {
             brand_menu.append_section ("File & Export", io_sec);
 
             var prefs_sec = new GLib.Menu ();
+            prefs_sec.append ("Data Science Toolchains...", "app.toolchain_setup");
             prefs_sec.append ("Preferences", "app.preferences");
             brand_menu.append_section (null, prefs_sec);
 
@@ -816,6 +817,12 @@ namespace Imladris {
                 run_line_or_selection ();
             });
             this.add_action (action_run_line);
+
+            var action_toolchain = new GLib.SimpleAction ("toolchain_setup", null);
+            action_toolchain.activate.connect (() => {
+                show_toolchain_setup_dialog ();
+            });
+            this.add_action (action_toolchain);
         }
 
         public void toggle_ribbon_visibility () {
@@ -1149,7 +1156,12 @@ namespace Imladris {
                 restore_current_environment ();
             });
 
-            box.append (RibbonFactory.create_linked_group ({ btn_restart_kernel, btn_package_installer, btn_snapshot_env, btn_restore_env }));
+            var btn_toolchains = RibbonFactory.create_tool_button ("preferences-system-symbolic", "Toolchains", "Automated R, Python & Quarto Toolchain Setup");
+            ((Gtk.Button) btn_toolchains).clicked.connect (() => {
+                show_toolchain_setup_dialog ();
+            });
+
+            box.append (RibbonFactory.create_linked_group ({ btn_restart_kernel, btn_package_installer, btn_snapshot_env, btn_restore_env, btn_toolchains }));
             box.append (RibbonFactory.create_vseparator ());
 
             var btn_comp_ai = RibbonFactory.create_tool_button ("system-run-symbolic", "AI Assistant", "Invoke AI Coding Assistant");
@@ -1363,6 +1375,17 @@ namespace Imladris {
             });
 
             modal.present (this);
+        }
+
+        public void show_toolchain_setup_dialog () {
+            var dlg = new UI.ToolchainSetupDialog ();
+            dlg.installation_completed.connect (() => {
+                var doc = get_active_document ();
+                if (doc != null) {
+                    doc.append_console_log ("✔ Data Science Toolchain installed and verified. Ready to execute code.");
+                }
+            });
+            dlg.present (this);
         }
 
         public async void run_python_pip_and_snapshot (string py_bin, string[] args, string working_dir, bool sandboxed) {

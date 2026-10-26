@@ -11,7 +11,8 @@ namespace Imladris.Services {
             return _instance;
         }
 
-        public string current_working_dir { get; private set; default = ""; }
+        private string _current_working_dir = "";
+        public string current_working_dir { get { return _current_working_dir; } }
         public ProjectType active_project_type { get; private set; default = ProjectType.STANDARD; }
 
         public signal void working_directory_changed (string new_dir);
@@ -30,7 +31,7 @@ namespace Imladris.Services {
         private bool py_initialized = false;
 
         public PersistentSessionManager () {
-            this.current_working_dir = GLib.Environment.get_current_dir ();
+            this._current_working_dir = GLib.Environment.get_current_dir ();
         }
 
         /**
@@ -41,7 +42,7 @@ namespace Imladris.Services {
         public void set_working_directory (string dir_path, ProjectType ptype = ProjectType.STANDARD) {
             if (!GLib.FileUtils.test (dir_path, GLib.FileTest.IS_DIR)) return;
 
-            this.current_working_dir = dir_path;
+            this._current_working_dir = dir_path;
             this.active_project_type = ptype;
 
             if (GLib.Environment.set_current_dir (dir_path) != 0) {
@@ -83,7 +84,7 @@ namespace Imladris.Services {
             ensure_r_session ();
 
             if (r_stdin == null || r_stdout == null) {
-                return "✖ R interpreter (R/Rscript) not available on host system.";
+                return "✖ R interpreter (R/Rscript) is not available. Click 'Install Toolchain' to install R automatically.";
             }
 
             string plot_dir = Core.PlatformUtils.get_shared_cache_dir ("plots");
@@ -149,7 +150,7 @@ namespace Imladris.Services {
             ensure_python_session ();
 
             if (py_stdin == null || py_stdout == null) {
-                return "✖ Python 3 interpreter not available on host system.";
+                return "✖ Python 3 interpreter is not available. Click 'Install Toolchain' to install Python automatically.";
             }
 
             string plot_dir = Core.PlatformUtils.get_shared_cache_dir ("plots");
@@ -226,22 +227,45 @@ namespace Imladris.Services {
         private void ensure_r_session () {
             if (r_initialized && r_process != null) return;
 
-            if (!Core.PlatformUtils.is_r_available ()) return;
+            string? cwd = (current_working_dir != "" && GLib.FileUtils.test (current_working_dir, GLib.FileTest.IS_DIR))
+                ? current_working_dir : null;
 
-            string r_bin = Core.PlatformUtils.is_program_available ("R") ? "R" : "Rscript";
+            string? resolved_path = null;
+            string? env_prefix = null;
+            var source = Core.PlatformUtils.resolve_runtime ("R", cwd, out resolved_path, out env_prefix);
+            if (source == Core.RuntimeSource.MISSING) {
+                source = Core.PlatformUtils.resolve_runtime ("Rscript", cwd, out resolved_path, out env_prefix);
+            }
+
+            if (source == Core.RuntimeSource.MISSING) {
+                r_initialized = false;
+                return;
+            }
 
             try {
-                // In sandboxed projects, .Rprofile sources renv/activate.R, so don't pass --no-init-file
-                string[] raw_argv = { r_bin, "--no-save", "--no-restore", "--quiet", "--interactive" };
-                string? cwd = (current_working_dir != "" && GLib.FileUtils.test (current_working_dir, GLib.FileTest.IS_DIR))
-                    ? current_working_dir : null;
-
-                string[] argv = Core.PlatformUtils.build_host_command (raw_argv, cwd);
                 var launcher = new GLib.SubprocessLauncher (
                     GLib.SubprocessFlags.STDIN_PIPE | GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE
                 );
                 if (cwd != null) {
                     launcher.set_cwd (cwd);
+                }
+
+                string[] raw_argv = {
+                    (resolved_path != null) ? resolved_path : "R",
+                    "--no-save",
+                    "--no-restore",
+                    "--quiet",
+                    "--interactive"
+                };
+
+                string[] argv;
+                if (source == Core.RuntimeSource.HOST_FLATPAK_SPAWN) {
+                    argv = Core.PlatformUtils.build_host_command ({ "R", "--no-save", "--no-restore", "--quiet", "--interactive" }, cwd);
+                } else if (source == Core.RuntimeSource.MANAGED_GLOBAL || source == Core.RuntimeSource.PROJECT_SANDBOX) {
+                    Core.PlatformUtils.configure_managed_env (launcher, env_prefix);
+                    argv = raw_argv;
+                } else {
+                    argv = raw_argv;
                 }
 
                 r_process = launcher.spawnv (argv);
@@ -260,22 +284,43 @@ namespace Imladris.Services {
         private void ensure_python_session () {
             if (py_initialized && py_process != null) return;
 
-            string py_bin = "python3";
-            // Check for sandboxed virtual environment python binary
-            if (current_working_dir != "") {
-                string venv_py = GLib.Path.build_filename (current_working_dir, ".venv", "bin", "python");
-                if (GLib.FileUtils.test (venv_py, GLib.FileTest.IS_EXECUTABLE)) {
-                    py_bin = venv_py;
-                }
+            string? cwd = (current_working_dir != "" && GLib.FileUtils.test (current_working_dir, GLib.FileTest.IS_DIR))
+                ? current_working_dir : null;
+
+            string? resolved_path = null;
+            string? env_prefix = null;
+            var source = Core.PlatformUtils.resolve_runtime ("python3", cwd, out resolved_path, out env_prefix);
+            if (source == Core.RuntimeSource.MISSING) {
+                source = Core.PlatformUtils.resolve_runtime ("python", cwd, out resolved_path, out env_prefix);
+            }
+
+            if (source == Core.RuntimeSource.MISSING) {
+                py_initialized = false;
+                return;
             }
 
             try {
-                string[] argv = { py_bin, "-i", "-u" };
                 var launcher = new GLib.SubprocessLauncher (
                     GLib.SubprocessFlags.STDIN_PIPE | GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE
                 );
-                if (current_working_dir != "" && GLib.FileUtils.test (current_working_dir, GLib.FileTest.IS_DIR)) {
-                    launcher.set_cwd (current_working_dir);
+                if (cwd != null) {
+                    launcher.set_cwd (cwd);
+                }
+
+                string[] raw_argv = {
+                    (resolved_path != null) ? resolved_path : "python3",
+                    "-i",
+                    "-u"
+                };
+
+                string[] argv;
+                if (source == Core.RuntimeSource.HOST_FLATPAK_SPAWN) {
+                    argv = Core.PlatformUtils.build_host_command ({ "python3", "-i", "-u" }, cwd);
+                } else if (source == Core.RuntimeSource.MANAGED_GLOBAL || source == Core.RuntimeSource.PROJECT_SANDBOX) {
+                    Core.PlatformUtils.configure_managed_env (launcher, env_prefix);
+                    argv = raw_argv;
+                } else {
+                    argv = raw_argv;
                 }
 
                 py_process = launcher.spawnv (argv);

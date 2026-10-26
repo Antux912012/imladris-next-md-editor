@@ -42,18 +42,38 @@ namespace Imladris.Execution {
             );
             launcher.set_cwd (project_root); // Pillar 5: Enforce pwd project root
 
-            string[] raw_argv;
-            if (runtime == LanguageRuntime.R) {
-                // R interactive REPL mode
-                raw_argv = { "R", "--no-save", "--no-restore", "--interactive" };
-            } else {
-                // Python interactive REPL mode
-                raw_argv = { "python3", "-u", "-i" };
+            string prog_name = (runtime == LanguageRuntime.R) ? "R" : "python3";
+            string? resolved_path = null;
+            string? env_prefix = null;
+            var source = Core.PlatformUtils.resolve_runtime (prog_name, project_root, out resolved_path, out env_prefix);
+
+            if (source == Core.RuntimeSource.MISSING && runtime == LanguageRuntime.PYTHON) {
+                source = Core.PlatformUtils.resolve_runtime ("python", project_root, out resolved_path, out env_prefix);
             }
 
-            string[] argv = (runtime == LanguageRuntime.R)
-                ? Core.PlatformUtils.build_host_command (raw_argv, project_root)
-                : raw_argv;
+            string[] raw_args;
+            if (runtime == LanguageRuntime.R) {
+                raw_args = { "--no-save", "--no-restore", "--interactive" };
+            } else {
+                raw_args = { "-u", "-i" };
+            }
+
+            string[] argv;
+            if (source == Core.RuntimeSource.MANAGED_GLOBAL || source == Core.RuntimeSource.PROJECT_SANDBOX) {
+                Core.PlatformUtils.configure_managed_env (launcher, env_prefix);
+                argv = new string[1 + raw_args.length];
+                argv[0] = (resolved_path != null) ? resolved_path : prog_name;
+                for (int i = 0; i < raw_args.length; i++) argv[i + 1] = raw_args[i];
+            } else if (source == Core.RuntimeSource.HOST_FLATPAK_SPAWN) {
+                string[] host_raw = new string[1 + raw_args.length];
+                host_raw[0] = prog_name;
+                for (int i = 0; i < raw_args.length; i++) host_raw[i + 1] = raw_args[i];
+                argv = Core.PlatformUtils.build_host_command (host_raw, project_root);
+            } else {
+                argv = new string[1 + raw_args.length];
+                argv[0] = (resolved_path != null) ? resolved_path : prog_name;
+                for (int i = 0; i < raw_args.length; i++) argv[i + 1] = raw_args[i];
+            }
 
             process = launcher.spawnv (argv);
             _is_running = true;

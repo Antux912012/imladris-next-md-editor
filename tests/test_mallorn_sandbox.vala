@@ -15,6 +15,8 @@ namespace Imladris.Tests {
         GLib.Test.add_func ("/chunks/chunk_parser", test_chunk_parser);
         GLib.Test.add_func ("/execution/repl_bridge_and_chunk_engine", test_repl_bridge_and_chunk_engine);
         GLib.Test.add_func ("/core/platform_utils", test_platform_utils);
+        GLib.Test.add_func ("/core/toolchain_manager", test_toolchain_manager);
+        GLib.Test.add_func ("/core/runtime_resolution_tiers", test_runtime_resolution_tiers);
         GLib.Test.add_func ("/sessions/host_r_session", test_host_r_session);
 
         return GLib.Test.run ();
@@ -377,6 +379,70 @@ print(np.mean([1, 2, 3]))
         // 3. Program availability check
         assert (Core.PlatformUtils.is_program_available ("sh"));
         assert (!Core.PlatformUtils.is_program_available ("__non_existent_binary_xyz_123__"));
+    }
+
+    private static void test_toolchain_manager () {
+        var tm = Core.ToolchainManager.get_default ();
+        assert (tm != null);
+        assert (tm.base_dir.length > 0);
+        assert (tm.bin_dir.length > 0);
+        assert (tm.mamba_bin.length > 0);
+        assert (tm.mamba_root.length > 0);
+        assert (tm.default_env.length > 0);
+
+        string arch = Core.ToolchainManager.get_platform_arch ();
+        assert (arch == "linux-64" || arch == "linux-aarch64");
+
+        // Test Rprofile.site configuration writing
+        string dummy_env = Path.build_filename (Environment.get_tmp_dir (), @"test_env_$(GLib.Random.next_int ())");
+        tm.configure_rprofile_site (dummy_env);
+
+        string rprofile_path = Path.build_filename (dummy_env, "lib", "R", "etc", "Rprofile.site");
+        assert (FileUtils.test (rprofile_path, FileTest.EXISTS));
+
+        string content;
+        try {
+            FileUtils.get_contents (rprofile_path, out content);
+            assert (content.contains ("Managed by Imladris Toolchain Manager"));
+            assert (content.contains ("https://cloud.r-project.org"));
+            assert (content.contains ("Ncpus"));
+        } catch (GLib.Error e) {
+            assert_not_reached ();
+        }
+    }
+
+    private static void test_runtime_resolution_tiers () {
+        string dummy_proj = Path.build_filename (Environment.get_tmp_dir (), @"test_proj_$(GLib.Random.next_int ())");
+        string env_bin_dir = Path.build_filename (dummy_proj, ".imladris-env", "bin");
+        DirUtils.create_with_parents (env_bin_dir, 0755);
+
+        string dummy_exe = Path.build_filename (env_bin_dir, "custom_r_engine");
+        try {
+            FileUtils.set_contents (dummy_exe, "#!/bin/sh\necho custom\n");
+            FileUtils.chmod (dummy_exe, 0755);
+        } catch (GLib.Error e) {
+            assert_not_reached ();
+        }
+
+        // Test Tier 1: Project sandbox resolution
+        string? resolved_path = null;
+        string? env_prefix = null;
+        var source = Core.PlatformUtils.resolve_runtime ("custom_r_engine", dummy_proj, out resolved_path, out env_prefix);
+        assert (source == Core.RuntimeSource.PROJECT_SANDBOX);
+        assert (resolved_path == dummy_exe);
+        assert (env_prefix == Path.build_filename (dummy_proj, ".imladris-env"));
+
+        // Test Tier 4: Missing binary resolution
+        string? missing_path = null;
+        string? missing_env = null;
+        var missing_source = Core.PlatformUtils.resolve_runtime ("__missing_binary_404__", dummy_proj, out missing_path, out missing_env);
+        assert (missing_source == Core.RuntimeSource.MISSING);
+        assert (missing_path == null);
+        assert (missing_env == null);
+
+        // Test environment configuration injection
+        var launcher = new GLib.SubprocessLauncher (GLib.SubprocessFlags.NONE);
+        Core.PlatformUtils.configure_managed_env (launcher, env_prefix);
     }
 
     private static void test_host_r_session () {
