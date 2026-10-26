@@ -17,7 +17,7 @@
       <li>Sandbox Dependency Engine: Isolated environments with renv for R and venv for Python</li>
       <li>The .mallorn Exchange Format: 1:1 bidirectional compatibility with RStudio projects and portable single-file bundles</li>
       <li>OpenDocument Export Pipeline: Headless export to ODT and ODP presentations</li>
-      <li>Three-Tier Ribbon Interface: Contextual tabs for File, Insert, Format, Review, and AI Tools</li>
+      <li>Adaptive Modern Ribbon: High-density GTK4 and Libadwaita tabs for Home, Insert, Computation, Publish, and View with linked controls and quick collapse (Ctrl+F1)</li>
       <li>Real-Time Live Preview: WebKitGTK 6.0 preview with KaTeX mathematics, Mermaid diagrams, and syntax highlighting</li>
       <li>Dual AI Co-Author: In-editor writing assistant with support for local offline models and cloud LLMs</li>
       <li>Model Context Protocol (MCP): Built-in MCP server integration for agentic document analysis and data retrieval</li>
@@ -32,8 +32,16 @@
   </branding>
   <screenshots>
     <screenshot type="default">
-      <image width="1550" height="929">https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/data/screenshots/imladris-screenshot.png</image>
+      <image width="1920" height="1080">https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/data/screenshots/imladris-screenshot.png</image>
       <caption>Imladris polyglot scientific authoring workspace and notebook studio</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1920" height="1080">https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/data/screenshots/imladris-preferences-theming.png</image>
+      <caption>Appearance preferences with theme selection and GNOME accent colors</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1920" height="1080">https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/data/screenshots/imladris-preferences-ai.png</image>
+      <caption>Multi-provider AI assistant configuration with direct API key portal links</caption>
     </screenshot>
   </screenshots>
   <launchable type="desktop-id">io.github.Antux912012.Imladris.desktop</launchable>
@@ -50,7 +58,7 @@
   <releases>
     <release version="0.7.0" date="2026-10-26">
       <description>
-        <p>Release v0.7.0 brings the complete 11-pillar expansion and a vastly expanded AI Assistant subsystem: First-class support for Google Gemini (AI Studio and Google OAuth token), Claude (Anthropic Messages API with thinking blocks), OpenAI (GPT-4o, o1, o3-mini), Cursor API compatibility, NVIDIA NIM cloud endpoints, DeepSeek (including DeepSeek-R1 reasoning stream extraction), Kimi (Moonshot AI), Qwen (Alibaba DashScope), Ollama, and LM Studio local server with persistent user credentials; clean launch modal with clean UI labels, context-aware ribbon state machine, RStudio-style package installer for CRAN and PyPI, interactive R and Python persistent consoles with inline chunk output cards and plot rendering, automatic pwd synchronization, sandboxed project engine with RStudio and Jupyter export, 1:1 DCF parity for .mallorn bundles, and headless ODT/ODP pipeline.</p>
+        <p>Release v0.7.0 brings the complete 11-pillar expansion, modernized Libadwaita Ribbon menu with 5 consolidated high-density tabs and collapsible deck (Ctrl+F1), appearance theming with GNOME default accent colors, and a vastly expanded AI Assistant subsystem: First-class support for Google Gemini (AI Studio and Google OAuth token), Claude (Anthropic Messages API with thinking blocks), OpenAI (GPT-4o, o1, o3-mini), Cursor API compatibility, NVIDIA NIM cloud endpoints, DeepSeek (including DeepSeek-R1 reasoning stream extraction), Kimi (Moonshot AI), Qwen (Alibaba DashScope), Ollama, and LM Studio local server with persistent user credentials; clean launch modal with clean UI labels, context-aware ribbon state machine, RStudio-style package installer for CRAN and PyPI, interactive R and Python persistent consoles with inline chunk output cards and plot rendering, automatic pwd synchronization, sandboxed project engine with RStudio and Jupyter export, 1:1 DCF parity for .mallorn bundles, and headless ODT/ODP pipeline.</p>
       </description>
     </release>
     <release version="0.6.0" date="2026-10-26">

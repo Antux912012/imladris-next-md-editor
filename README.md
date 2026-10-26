@@ -30,7 +30,13 @@ The itch it scratches is simple. RStudio is great for analysis but heavy for pro
 - **Writer mode** for `.md` and `.html`: no kernels are started, nothing computational is shown, and the ribbon shows only formatting, live preview and export.
 - **Workbench mode** for `.Rmd`, `.qmd`, `.ipynb`, `.R` and `.py`: source editor, environment/outline pane, console + terminal, and a files/plots/packages pane.
 
-The ribbon follows suit. It's a small state machine (`Window.update_ribbon_state_machine`) that shows or greys out actions based on the document format and project type, so you don't see "Restart Kernel" on a Markdown note.
+### Modernized Libadwaita Ribbon Menu
+The Ribbon menu has been modernized to integrate seamlessly with GNOME Libadwaita and GTK4 design language:
+- **5 High-Density Tabs**: Consolidated 9 fragmented tabs into 5 high-utility tabs: `Home`, `Insert`, `Computation`, `Publish`, and `View`.
+- **Linked Controls & Design Tokens**: Uses native `@headerbar_bg_color`, `@window_bg_color`, and `@accent_color` tokens with linked button groups (`.linked`), reducing vertical height by ~35px to a sleek ~52px deck.
+- **Collapsible Ribbon (`Ctrl+F1`)**: Quickly collapse or expand the ribbon deck on demand with the top-bar chevron button or `<Control>F1` shortcut for maximum editor focus.
+- **Wired Functional Tools**: Built-in undo/redo (`Ctrl+Z` / `Ctrl+Shift+Z`), headings (`#`, `##`, `###`), lists and blockquotes, interactive 6x6 table picker popover, code chunk popover, citation popovers, LaTeX math (`$$`), Mermaid diagrams, ggplot2 snippets, and live zoom slider.
+- **Context-Aware State Machine**: A dedicated engine (`Window.update_ribbon_state_machine`) adapts visible and sensitive states based on document format and project sandbox type, avoiding irrelevant actions.
 
 ### Running code
 - Persistent **R** and **Python** sessions (`ReplBridge`) run as long-lived subprocesses, so variables survive between chunks like they do in a real REPL.
@@ -73,11 +79,19 @@ Imladris includes a dedicated AI writing and coding panel with out-of-the-box su
 - **Local Ollama & LM Studio**: Zero-cloud offline privacy via Ollama (`localhost:11434`) or LM Studio Local Server (`localhost:1234`).
 - **Custom OpenAI-Compatible**: Connect to any endpoint (Groq, Mistral, Together, vLLM, private proxies).
 
+<p align="center">
+  <img src="data/screenshots/imladris-preferences-ai.png" alt="Multi-Provider AI Assistant Configuration" width="700">
+</p>
+
 Credentials and model choices are persisted locally in `~/.config/imladris/ai_config.json` (restricted to user read-write mode `0600`) and automatically detect standard environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `MOONSHOT_API_KEY`, `DASHSCOPE_API_KEY`, `CURSOR_API_KEY`, `NVIDIA_API_KEY`).
 
 ### Extras
 - **Appearance & GNOME Accents** (menu → Preferences, `Ctrl+,`): switch between System Theme, Light, Dark, and Eye Friendly (warm sepia) palettes. Includes GNOME Settings-style circular accent color swatches (Blue, Teal, Green, Yellow, Orange, Red, Pink, Purple, Slate) with live synchronization to `org.gnome.desktop.interface accent-color`.
 - **Hardware acceleration toggle** (menu → Preferences, `Ctrl+,`): switches every WebKit view between GPU compositing and pure software rendering, live, with the choice stored in GSettings. Handy on VMs, older hardware or flaky drivers.
+
+<p align="center">
+  <img src="data/screenshots/imladris-preferences-theming.png" alt="Appearance Preferences and GNOME Accent Colors" width="700">
+</p>
 
 Built-in MCP server (`imladris --mcp-server`), and crash recovery that keeps shadow copies of unsaved work in `~/.cache/imladris/recovery/`. The AI assistant is off the critical path: nothing is sent anywhere unless you configure an endpoint and use it.
 
@@ -132,9 +146,13 @@ imladris --mcp-server
 | :--- | :--- |
 | `Ctrl+N` | New project / document dialog |
 | `Ctrl+O` / `Ctrl+S` | Open / Save |
+| `Ctrl+F1` | Toggle Ribbon collapse / expand |
+| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / Redo |
+| `Ctrl++` / `Ctrl+-` / `Ctrl+0` | Zoom In / Zoom Out / Reset Zoom (100%) |
 | `Ctrl+Shift+P` | Package installer |
 | `Ctrl+Enter` | Run line or selection |
 | `Ctrl+Shift+Enter` | Run current chunk |
+| `Ctrl+,` | Preferences (Appearance & AI Providers) |
 | `Ctrl+Q` | Quit |
 
 ---
