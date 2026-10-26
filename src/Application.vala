@@ -19,6 +19,16 @@ namespace Imladris {
             { "export_odt", on_export_odt },
             { "export_odp", on_export_odp },
             { "export_mallorn", on_export_mallorn },
+            { "export_rstudio", on_export_rstudio },
+            { "export_jupyter", on_export_jupyter },
+            { "package_installer", on_package_installer },
+            { "snapshot_environment", on_snapshot_environment },
+            { "restore_environment", on_restore_environment },
+            { "restart_kernel", on_restart_kernel },
+            { "run_cell", on_run_cell },
+            { "run_all_cells", on_run_all_cells },
+            { "run_line_selection", on_run_line_selection },
+            { "interrupt_execution", on_interrupt_execution },
             { "print", on_print_document },
             { "quit", on_quit }
         };
@@ -37,6 +47,7 @@ namespace Imladris {
             this.set_accels_for_action ("app.new_project_modal", { "<Control>n", "<Control><Shift>n" });
             this.set_accels_for_action ("app.open", { "<Control>o" });
             this.set_accels_for_action ("app.save", { "<Control>s" });
+            this.set_accels_for_action ("app.package_installer", { "<Control><Shift>p" });
             this.set_accels_for_action ("app.quit", { "<Control>q" });
 
             var provider = new Gtk.CssProvider ();
@@ -137,6 +148,56 @@ namespace Imladris {
         private void on_export_mallorn () {
             var win = this.active_window as Window;
             if (win != null) win.export_mallorn_archive_async.begin ();
+        }
+
+        private void on_export_rstudio () {
+            var win = this.active_window as Window;
+            if (win != null) win.export_to_rstudio_async.begin ();
+        }
+
+        private void on_export_jupyter () {
+            var win = this.active_window as Window;
+            if (win != null) win.export_to_jupyter_async.begin ();
+        }
+
+        private void on_package_installer () {
+            var win = this.active_window as Window;
+            if (win != null) win.show_package_installer_dialog ();
+        }
+
+        private void on_snapshot_environment () {
+            var win = this.active_window as Window;
+            if (win != null) win.snapshot_current_environment ();
+        }
+
+        private void on_restore_environment () {
+            var win = this.active_window as Window;
+            if (win != null) win.restore_current_environment ();
+        }
+
+        private void on_restart_kernel () {
+            var win = this.active_window as Window;
+            if (win != null) win.restart_active_kernel ();
+        }
+
+        private void on_run_cell () {
+            var win = this.active_window as Window;
+            if (win != null) win.run_active_chunk ();
+        }
+
+        private void on_run_all_cells () {
+            var win = this.active_window as Window;
+            if (win != null) win.run_all_chunks ();
+        }
+
+        private void on_run_line_selection () {
+            var win = this.active_window as Window;
+            if (win != null) win.run_line_or_selection ();
+        }
+
+        private void on_interrupt_execution () {
+            var win = this.active_window as Window;
+            if (win != null) win.interrupt_active_execution ();
         }
 
         private void on_print_document () {

@@ -43,11 +43,16 @@
   <provides>
     <binary>imladris</binary>
   </provides>
-  <developer id="io.github.Antux912012">
+  <developer id="io.github.antux912012">
     <name>Antonio De Gaetano</name>
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.0" date="2026-10-26">
+      <description>
+        <p>Release v0.7.0 brings the complete 11-pillar expansion: Clean launch modal with clean UI labels, context-aware ribbon state machine, RStudio-style package installer for CRAN and PyPI, interactive R and Python persistent consoles with inline chunk output cards and plot rendering, automatic pwd synchronization, sandboxed project engine with RStudio and Jupyter export, 1:1 DCF parity for .mallorn bundles, and headless ODT/ODP pipeline.</p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-10-26">
       <description>
         <p>Release v0.6.0 introduces the 6 core pillars: Categorized creation pop-up dialog with 9 creation targets, sandboxed vs standard project engines (renv and venv isolation), the 1:1 RStudio-compatible .mallorn exchange format, and comprehensive ODT and ODP OpenDocument export pipelines.</p>

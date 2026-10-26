@@ -20,6 +20,10 @@ namespace Imladris.UI {
         public WebKit.WebView plots_webview { get; private set; }
         public Gtk.ListBox files_list { get; private set; }
 
+        private Gtk.Label? files_dir_lbl = null;
+        private string current_browser_dir = "";
+        private string root_project_dir = "";
+
         private int execution_counter = 0;
 
         public PersistentPanelRegistry (DocumentPage page, Window? win) {
@@ -414,20 +418,46 @@ namespace Imladris.UI {
             render_default_scientific_plot ();
             panels.set (PanelId.PLOTS, plots_box);
 
-            // 9. FILES PANEL (Project Directory Browser)
+            // 9. FILES PANEL (Project Directory Browser with Folder Traversal)
             var files_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
                 hexpand = true,
                 vexpand = true
             };
-            var files_bar = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6) {
+            var files_bar = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) {
                 margin_top = 4,
                 margin_bottom = 4,
                 margin_start = 8,
                 margin_end = 8
             };
-            files_bar.append (new Gtk.Label ("Workspace Files") { css_classes = { "dim-label", "caption" } });
+            files_dir_lbl = new Gtk.Label ("📁 Workspace") {
+                css_classes = { "dim-label", "caption" },
+                ellipsize = Pango.EllipsizeMode.START,
+                max_width_chars = 24
+            };
+            files_bar.append (files_dir_lbl);
             files_bar.append (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) { hexpand = true });
-            var refresh_files_btn = new Gtk.Button.from_icon_name ("view-refresh-symbolic");
+
+            var up_btn = new Gtk.Button.from_icon_name ("go-up-symbolic") {
+                tooltip_text = "Up to Parent Directory"
+            };
+            up_btn.add_css_class ("flat");
+            up_btn.clicked.connect (() => {
+                navigate_files_up ();
+            });
+            files_bar.append (up_btn);
+
+            var home_btn = new Gtk.Button.from_icon_name ("go-home-symbolic") {
+                tooltip_text = "Go to Project Root"
+            };
+            home_btn.add_css_class ("flat");
+            home_btn.clicked.connect (() => {
+                navigate_files_home ();
+            });
+            files_bar.append (home_btn);
+
+            var refresh_files_btn = new Gtk.Button.from_icon_name ("view-refresh-symbolic") {
+                tooltip_text = "Refresh Workspace Files"
+            };
             refresh_files_btn.add_css_class ("flat");
             refresh_files_btn.clicked.connect (() => {
                 populate_files_browser ();
@@ -442,8 +472,13 @@ namespace Imladris.UI {
                 margin_bottom = 6
             };
             files_list.row_activated.connect ((row) => {
+                bool is_dir = row.get_data<bool> ("is-dir");
                 string? fpath = row.get_data<string> ("file-path");
-                if (fpath != null && main_window != null) {
+                if (fpath == null) return;
+                if (is_dir) {
+                    current_browser_dir = fpath;
+                    populate_files_browser ();
+                } else if (main_window != null) {
                     main_window.open_file_from_path.begin (fpath);
                 }
             });
@@ -455,6 +490,19 @@ namespace Imladris.UI {
             files_box.append (files_scroll);
             populate_files_browser ();
             panels.set (PanelId.FILES, files_box);
+
+            // Connect PersistentSessionManager signals for pwd & plots sync
+            Services.PersistentSessionManager.get_default ().working_directory_changed.connect ((new_dir) => {
+                this.current_browser_dir = new_dir;
+                this.root_project_dir = new_dir;
+                populate_files_browser ();
+                Gtk.TextIter end;
+                terminal_view.buffer.get_end_iter (out end);
+                terminal_view.buffer.insert (ref end, @"\n[Working Directory changed to: $new_dir]\n$$ ", -1);
+            });
+            Services.PersistentSessionManager.get_default ().plot_generated.connect ((plot_path) => {
+                load_plot_image (plot_path);
+            });
 
             // 10. HELP PANEL (Documentation & RStudio Workbench Reference)
             var help_view = new WebKit.WebView () {
@@ -496,6 +544,81 @@ namespace Imladris.UI {
             refresh_environment_and_outline ();
         }
 
+        /**
+         * Pillar 4: Shared State Execution — Line or Selection (Ctrl+Enter)
+         */
+        public void execute_current_line_or_selection () {
+            string code_to_run = "";
+            Gtk.TextIter sel_start, sel_end;
+            bool has_sel = doc_page.source_buffer.get_selection_bounds (out sel_start, out sel_end);
+
+            if (has_sel) {
+                code_to_run = doc_page.source_buffer.get_text (sel_start, sel_end, false).strip ();
+            } else {
+                Gtk.TextIter cursor;
+                doc_page.source_buffer.get_iter_at_mark (out cursor, doc_page.source_buffer.get_insert ());
+                int line_idx = cursor.get_line ();
+                Gtk.TextIter line_start, line_end;
+                doc_page.source_buffer.get_iter_at_line (out line_start, line_idx);
+                line_end = line_start;
+                line_end.forward_to_line_end ();
+                code_to_run = doc_page.source_buffer.get_text (line_start, line_end, false).strip ();
+
+                // Advance cursor to next line (RStudio & Jupyter behavior)
+                if (line_end.forward_line ()) {
+                    doc_page.source_buffer.place_cursor (line_end);
+                    doc_page.source_view.scroll_to_iter (line_end, 0.1, false, 0.0, 0.0);
+                }
+            }
+
+            if (code_to_run.length == 0) return;
+
+            string engine = detect_engine_at_cursor ();
+            run_code_snippet_in_console (engine, code_to_run);
+        }
+
+        private string detect_engine_at_cursor () {
+            Gtk.TextIter cursor;
+            doc_page.source_buffer.get_iter_at_mark (out cursor, doc_page.source_buffer.get_insert ());
+            int cursor_line = cursor.get_line ();
+
+            string[] lines = doc_page.source_buffer.text.split ("\n");
+            bool inside_chunk = false;
+            string chunk_engine = "python";
+
+            for (int i = 0; i < lines.length; i++) {
+                string trimmed = lines[i].strip ();
+                if (!inside_chunk && (trimmed.has_prefix ("```{") || trimmed.has_prefix ("```python") || trimmed.has_prefix ("```r") || trimmed.has_prefix ("```bash"))) {
+                    inside_chunk = true;
+                    if (trimmed.contains ("r}") || trimmed.has_prefix ("```r")) chunk_engine = "r";
+                    else if (trimmed.contains ("bash") || trimmed.contains ("sh}")) chunk_engine = "bash";
+                    else chunk_engine = "python";
+                    continue;
+                }
+                if (inside_chunk && trimmed == "```") {
+                    if (cursor_line <= i) {
+                        return chunk_engine;
+                    }
+                    inside_chunk = false;
+                    continue;
+                }
+                if (inside_chunk && cursor_line == i) {
+                    return chunk_engine;
+                }
+            }
+
+            if (doc_page.doc_type == "r" || (doc_page.file_location != null && doc_page.file_location.get_basename ().has_suffix (".R"))) {
+                return "r";
+            }
+            if (doc_page.doc_type == "rmd" || (doc_page.file_location != null && doc_page.file_location.get_basename ().has_suffix (".Rmd"))) {
+                return "r";
+            }
+            return "python";
+        }
+
+        /**
+         * Pillar 4 & 11: Chunk Execution (Ctrl+Shift+Enter) with Inline Card Output
+         */
         public void execute_active_cell () {
             string text = doc_page.source_buffer.text;
             Gtk.TextIter cursor;
@@ -507,6 +630,7 @@ namespace Imladris.UI {
             var code_sb = new GLib.StringBuilder ();
             bool inside_chunk = false;
             bool found_target_chunk = false;
+            int chunk_end_line = -1;
 
             for (int i = 0; i < lines.length; i++) {
                 string trimmed = lines[i].strip ();
@@ -521,6 +645,7 @@ namespace Imladris.UI {
                 if (inside_chunk && trimmed == "```") {
                     if (cursor_line <= i) {
                         found_target_chunk = true;
+                        chunk_end_line = i;
                         break;
                     }
                     inside_chunk = false;
@@ -533,18 +658,12 @@ namespace Imladris.UI {
 
             string code_to_run = code_sb.str.strip ();
             if (!found_target_chunk || code_to_run.length == 0) {
-                // Fallback: run current line or selected text
-                Gtk.TextIter s, e;
-                if (doc_page.source_buffer.get_selection_bounds (out s, out e)) {
-                    code_to_run = doc_page.source_buffer.get_text (s, e, false).strip ();
-                } else if (cursor_line < lines.length) {
-                    code_to_run = lines[cursor_line].strip ();
-                }
+                // Fallback: execute current line or selection
+                execute_current_line_or_selection ();
+                return;
             }
 
-            if (code_to_run.length > 0) {
-                run_code_snippet_in_console (engine, code_to_run);
-            }
+            run_code_snippet_in_console (engine, code_to_run, chunk_end_line);
         }
 
         public void execute_all_cells () {
@@ -553,8 +672,8 @@ namespace Imladris.UI {
             string engine = "python";
             var code_sb = new GLib.StringBuilder ();
 
-            foreach (string line in lines) {
-                string trimmed = line.strip ();
+            for (int i = 0; i < lines.length; i++) {
+                string trimmed = lines[i].strip ();
                 if (!inside_chunk && (trimmed.has_prefix ("```{") || trimmed.has_prefix ("```python") || trimmed.has_prefix ("```r") || trimmed.has_prefix ("```bash"))) {
                     inside_chunk = true;
                     code_sb.truncate (0);
@@ -567,35 +686,67 @@ namespace Imladris.UI {
                     inside_chunk = false;
                     string snippet = code_sb.str.strip ();
                     if (snippet.length > 0) {
-                        run_code_snippet_in_console (engine, snippet);
+                        run_code_snippet_in_console (engine, snippet, i);
                     }
                     continue;
                 }
                 if (inside_chunk && !trimmed.has_prefix ("#|")) {
-                    code_sb.append (line + "\n");
+                    code_sb.append (lines[i] + "\n");
                 }
             }
         }
 
-        public void run_code_snippet_in_console (string engine, string code) {
+        public void run_code_snippet_in_console (string engine, string code, int inline_chunk_line = -1) {
             execution_counter++;
             int count = execution_counter;
             doc_page.append_console_log (@"\nIn [$count] ($engine):\n$code");
 
-            string[] argv;
             if (engine == "r") {
-                argv = { "Rscript", "-e", code };
-            } else if (engine == "bash") {
-                argv = { "bash", "-c", code };
+                string? plot_file = null;
+                Services.PersistentSessionManager.get_default ().execute_r.begin (code, (obj, res) => {
+                    string output = Services.PersistentSessionManager.get_default ().execute_r.end (res, out plot_file).strip ();
+                    if (output.length > 0) {
+                        doc_page.append_console_log (@"Out [$count]:\n$output");
+                    }
+                    if (plot_file != null) {
+                        load_plot_image (plot_file);
+                        string base_plot = GLib.Path.get_basename (plot_file);
+                        doc_page.append_console_log (@"📊 [Plot rendered in Quadrant 4: $base_plot]");
+                    }
+                    if (inline_chunk_line >= 0) {
+                        doc_page.display_inline_chunk_output (inline_chunk_line, output, plot_file, count);
+                    }
+                    refresh_environment_and_outline ();
+                });
+            } else if (engine == "python") {
+                string? plot_file = null;
+                Services.PersistentSessionManager.get_default ().execute_python.begin (code, (obj, res) => {
+                    string output = Services.PersistentSessionManager.get_default ().execute_python.end (res, out plot_file).strip ();
+                    if (output.length > 0) {
+                        doc_page.append_console_log (@"Out [$count]:\n$output");
+                    }
+                    if (plot_file != null) {
+                        load_plot_image (plot_file);
+                        string base_plot = GLib.Path.get_basename (plot_file);
+                        doc_page.append_console_log (@"📊 [Plot rendered in Quadrant 4: $base_plot]");
+                    }
+                    if (inline_chunk_line >= 0) {
+                        doc_page.display_inline_chunk_output (inline_chunk_line, output, plot_file, count);
+                    }
+                    refresh_environment_and_outline ();
+                });
             } else {
-                argv = { "python3", "-c", code };
+                ExecutionEngine.capture_command_async.begin ({ "bash", "-c", code }, (obj, res) => {
+                    string output = ExecutionEngine.capture_command_async.end (res).strip ();
+                    if (output.length > 0) {
+                        doc_page.append_console_log (@"Out [$count]:\n$output");
+                    }
+                    if (inline_chunk_line >= 0) {
+                        doc_page.display_inline_chunk_output (inline_chunk_line, output, null, count);
+                    }
+                    refresh_environment_and_outline ();
+                });
             }
-
-            ExecutionEngine.capture_command_async.begin (argv, (obj, res) => {
-                string output = ExecutionEngine.capture_command_async.end (res).strip ();
-                doc_page.append_console_log (@"Out [$count]:\n$output");
-                refresh_environment_and_outline ();
-            });
         }
 
         private void run_shell_command (string cmd) {
@@ -800,6 +951,89 @@ namespace Imladris.UI {
             plots_webview.load_html (svg_html, null);
         }
 
+        public void load_plot_image (string plot_file_path) {
+            if (!GLib.FileUtils.test (plot_file_path, GLib.FileTest.EXISTS)) return;
+            string uri;
+            try {
+                uri = GLib.Filename.to_uri (plot_file_path);
+            } catch (GLib.ConvertError e) {
+                uri = "file://" + plot_file_path;
+            }
+            string fname = GLib.Path.get_basename (plot_file_path);
+            string html = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {
+    margin: 0;
+    padding: 16px;
+    background: #ffffff;
+    font-family: system-ui, sans-serif;
+    color: #1e293b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .plot-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px;
+    background: #f8fafc;
+    width: 94%%;
+    max-width: 650px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    text-align: center;
+  }
+  .plot-img {
+    max-width: 100%%;
+    height: auto;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+  }
+  .plot-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 10px;
+    color: #0f172a;
+  }
+  .plot-sub {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+  <div class="plot-card">
+    <img class="plot-img" src="%s" alt="Generated Plot" />
+    <div class="plot-title">%s</div>
+    <div class="plot-sub">Rendered Graphic Output • Quadrant 4</div>
+  </div>
+</body>
+</html>""".printf (uri, fname);
+            plots_webview.load_html (html, null);
+        }
+
+        private void navigate_files_up () {
+            if (current_browser_dir == "") return;
+            var f = GLib.File.new_for_path (current_browser_dir);
+            var parent = f.get_parent ();
+            if (parent != null) {
+                current_browser_dir = parent.get_path ();
+                populate_files_browser ();
+            }
+        }
+
+        private void navigate_files_home () {
+            if (root_project_dir != "") {
+                current_browser_dir = root_project_dir;
+            } else {
+                current_browser_dir = Services.PersistentSessionManager.get_default ().current_working_dir;
+            }
+            populate_files_browser ();
+        }
+
         public void populate_files_browser () {
             Gtk.Widget? child = files_list.get_first_child ();
             while (child != null) {
@@ -808,29 +1042,96 @@ namespace Imladris.UI {
                 child = next;
             }
 
-            string dir_path = GLib.Environment.get_current_dir ();
-            if (doc_page.file_location != null && doc_page.file_location.get_parent () != null) {
-                string? p = doc_page.file_location.get_parent ().get_path ();
-                if (p != null) dir_path = p;
+            if (current_browser_dir == "") {
+                if (doc_page.file_location != null && doc_page.file_location.get_parent () != null) {
+                    current_browser_dir = doc_page.file_location.get_parent ().get_path ();
+                } else {
+                    current_browser_dir = Services.PersistentSessionManager.get_default ().current_working_dir;
+                }
+            }
+            if (root_project_dir == "") {
+                root_project_dir = current_browser_dir;
+            }
+
+            string dir_path = current_browser_dir;
+            if (files_dir_lbl != null) {
+                string base_name = GLib.Path.get_basename (dir_path);
+                files_dir_lbl.label = @"📁 $base_name";
+            }
+
+            // Up row if deeper than root
+            if (current_browser_dir != root_project_dir) {
+                var up_row = new Gtk.ListBoxRow ();
+                var up_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8) {
+                    margin_top = 4, margin_bottom = 4, margin_start = 6, margin_end = 6
+                };
+                up_box.append (new Gtk.Image.from_icon_name ("go-up-symbolic"));
+                up_box.append (new Gtk.Label (".. (Parent Directory)") { xalign = 0, hexpand = true });
+                up_row.set_child (up_box);
+                var f = GLib.File.new_for_path (current_browser_dir);
+                var parent = f.get_parent ();
+                if (parent != null) {
+                    up_row.set_data<string> ("file-path", parent.get_path ());
+                    up_row.set_data<bool> ("is-dir", true);
+                    files_list.append (up_row);
+                }
             }
 
             try {
                 var dir = GLib.Dir.open (dir_path, 0);
                 string? name = null;
+                var dir_entries = new Gee.ArrayList<string> ();
+                var file_entries = new Gee.ArrayList<string> ();
+
                 while ((name = dir.read_name ()) != null) {
                     if (name.has_prefix (".")) continue;
                     string full = GLib.Path.build_filename (dir_path, name);
-                    if (GLib.FileUtils.test (full, GLib.FileTest.IS_REGULAR)) {
-                        var row = new Gtk.ListBoxRow ();
-                        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8) {
-                            margin_top = 4, margin_bottom = 4, margin_start = 6, margin_end = 6
-                        };
-                        box.append (new Gtk.Image.from_icon_name ("text-x-generic-symbolic"));
-                        box.append (new Gtk.Label (name) { xalign = 0, hexpand = true });
-                        row.set_child (box);
-                        row.set_data<string> ("file-path", full);
-                        files_list.append (row);
+                    if (GLib.FileUtils.test (full, GLib.FileTest.IS_DIR)) {
+                        dir_entries.add (name);
+                    } else if (GLib.FileUtils.test (full, GLib.FileTest.IS_REGULAR)) {
+                        file_entries.add (name);
                     }
+                }
+
+                dir_entries.sort ();
+                file_entries.sort ();
+
+                foreach (var dname in dir_entries) {
+                    string full = GLib.Path.build_filename (dir_path, dname);
+                    var row = new Gtk.ListBoxRow ();
+                    var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8) {
+                        margin_top = 4, margin_bottom = 4, margin_start = 6, margin_end = 6
+                    };
+                    box.append (new Gtk.Image.from_icon_name ("folder-symbolic"));
+                    box.append (new Gtk.Label (dname + "/") { xalign = 0, hexpand = true });
+                    row.set_child (box);
+                    row.set_data<string> ("file-path", full);
+                    row.set_data<bool> ("is-dir", true);
+                    files_list.append (row);
+                }
+
+                foreach (var fname in file_entries) {
+                    string full = GLib.Path.build_filename (dir_path, fname);
+                    var row = new Gtk.ListBoxRow ();
+                    var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8) {
+                        margin_top = 4, margin_bottom = 4, margin_start = 6, margin_end = 6
+                    };
+                    string icon_name = "text-x-generic-symbolic";
+                    if (fname.has_suffix (".R") || fname.has_suffix (".py") || fname.has_suffix (".sh")) {
+                        icon_name = "utilities-terminal-symbolic";
+                    } else if (fname.has_suffix (".ipynb") || fname.has_suffix (".qmd") || fname.has_suffix (".Rmd")) {
+                        icon_name = "applications-science-symbolic";
+                    } else if (fname.has_suffix (".html") || fname.has_suffix (".htm")) {
+                        icon_name = "text-html-symbolic";
+                    } else if (fname.has_suffix (".png") || fname.has_suffix (".jpg") || fname.has_suffix (".svg")) {
+                        icon_name = "image-x-generic-symbolic";
+                    }
+                    box.append (new Gtk.Image.from_icon_name (icon_name));
+                    box.append (new Gtk.Label (fname) { xalign = 0, hexpand = true });
+                    row.set_child (box);
+                    row.set_data<string> ("file-path", full);
+                    row.set_data<bool> ("is-dir", false);
+                    files_list.append (row);
                 }
             } catch (GLib.Error e) {
                 warning ("Directory scan error: %s", e.message);

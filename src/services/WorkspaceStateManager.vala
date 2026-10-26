@@ -6,10 +6,11 @@ namespace Imladris.Services {
 
         public static LayoutMode from_extension (string filename) {
             string lower = filename.down ();
-            if (lower.has_suffix (".qmd") || lower.has_suffix (".rmd")) {
+            if (lower.has_suffix (".qmd") || lower.has_suffix (".rmd") ||
+                lower.has_suffix (".ipynb") || lower.has_suffix (".r") || lower.has_suffix (".py")) {
                 return RSTUDIO;
             }
-            // Markdown and notebooks default to Apostrophe writer mode, with notebook 1-click toggle to RStudio
+            // Pillar 10: Simple .md and .html default to fast-path Apostrophe mode
             return APOSTROPHE;
         }
 

@@ -10,6 +10,36 @@ namespace Imladris {
         private Gtk.Label status_words_lbl;
         private Gtk.Label status_kernel_lbl;
 
+        public string current_project_dir { get; private set; default = ""; }
+        public ProjectType current_project_type { get; private set; default = ProjectType.STANDARD; }
+
+        // Ribbon buttons tracked for Context-Aware State Machine (Pillar 2)
+        private Gtk.Widget? btn_insert_r = null;
+        private Gtk.Widget? btn_insert_py = null;
+        private Gtk.Widget? btn_insert_ts = null;
+        private Gtk.Widget? btn_run_chunk = null;
+        private Gtk.Widget? btn_run_all = null;
+        private Gtk.Widget? btn_run_above = null;
+        private Gtk.Widget? btn_run_below = null;
+        private Gtk.Widget? btn_run_line = null;
+        private Gtk.Widget? btn_source_file = null;
+        private Gtk.Widget? btn_interrupt = null;
+        private Gtk.Widget? btn_restart_kernel = null;
+        private Gtk.Widget? btn_package_installer = null;
+        private Gtk.Widget? btn_snapshot_env = null;
+        private Gtk.Widget? btn_restore_env = null;
+        private Gtk.Widget? btn_render_html = null;
+        private Gtk.Widget? btn_render_pdf = null;
+        private Gtk.Widget? btn_export_odt = null;
+        private Gtk.Widget? btn_export_odp = null;
+        private Gtk.Widget? btn_export_mallorn = null;
+        private Gtk.Widget? btn_export_rstudio = null;
+        private Gtk.Widget? btn_export_jupyter = null;
+        private Gtk.Widget? btn_html_helpers = null;
+        private Gtk.Widget? btn_live_preview = null;
+
+        private UI.PackageIndexCache pkg_index_cache = new UI.PackageIndexCache ();
+
         public Window (Adw.Application app) {
             Object (
                 application: app,
@@ -55,6 +85,8 @@ namespace Imladris {
             io_sec.append ("Export OpenDocument Text (.odt)", "app.export_odt");
             io_sec.append ("Export OpenDocument Presentation (.odp)", "app.export_odp");
             io_sec.append ("Export Portable .mallorn Archive", "app.export_mallorn");
+            io_sec.append ("Export for RStudio", "app.export_rstudio");
+            io_sec.append ("Export for Jupyter", "app.export_jupyter");
             io_sec.append ("Quit Imladris", "app.quit");
             brand_menu.append_section ("File & Export", io_sec);
 
@@ -238,6 +270,13 @@ namespace Imladris {
                     string fname = d.file_location != null ? d.file_location.get_basename () : @"untitled.$(d.doc_type)";
                     Services.WorkspaceStateManager.get_default ().resolve_mode_for_file (fname);
                     d.set_split_orientation (Services.WorkspaceStateManager.get_default ().active_split);
+                    var fmt = d.get_document_format ();
+                    update_ribbon_state_machine (fmt, current_project_type);
+                    if (d.file_location != null && d.file_location.get_parent () != null) {
+                        Services.PersistentSessionManager.get_default ().set_working_directory (
+                            d.file_location.get_parent ().get_path (), current_project_type
+                        );
+                    }
                 }
             });
 
@@ -300,6 +339,7 @@ namespace Imladris {
             if (file != null) {
                 doc_page.file_location = file;
             }
+            doc_page.project_type = current_project_type;
             doc_page.stats_changed.connect ((words, lines, badge) => {
                 status_badge_lbl.label = badge;
                 status_words_lbl.label = @"Words: $words | Lines: $lines";
@@ -310,11 +350,21 @@ namespace Imladris {
             page.icon = new GLib.ThemedIcon ("x-office-document-symbolic");
             tab_view.selected_page = page;
             doc_page.emit_buffer_stats ();
+
+            var fmt = doc_page.get_document_format ();
+            update_ribbon_state_machine (fmt, current_project_type);
         }
 
         public void show_new_project_modal () {
             var dlg = new UI.NewProjectDialog ();
             dlg.item_created.connect ((file, config, is_standalone) => {
+                this.current_project_type = config.project_type;
+                if (file.get_parent () != null) {
+                    this.current_project_dir = file.get_parent ().get_path ();
+                    Services.PersistentSessionManager.get_default ().set_working_directory (
+                        this.current_project_dir, config.project_type
+                    );
+                }
                 update_environment_badge (config.project_type);
                 open_file_from_path.begin (file.get_path ());
             });
@@ -403,7 +453,11 @@ namespace Imladris {
                 var parent_dir = file.get_parent ();
                 if (parent_dir != null) {
                     var ptype = Services.SandboxController.detect_project_type (parent_dir.get_path ());
+                    this.current_project_type = ptype;
+                    this.current_project_dir = parent_dir.get_path ();
+                    Services.PersistentSessionManager.get_default ().set_working_directory (this.current_project_dir, ptype);
                     update_environment_badge (ptype);
+                    update_ribbon_state_machine (fmt, ptype);
                 }
 
                 Services.WorkspaceStateManager.get_default ().resolve_mode_for_file (name);
@@ -483,12 +537,33 @@ namespace Imladris {
             }
         }
 
+        public async bool confirm_standard_project_export_if_needed () {
+            if (current_project_type == ProjectType.STANDARD) {
+                var alert = new Adw.AlertDialog (
+                    "System Libraries (Non-Portable)",
+                    "This project relies on system libraries and may fail to run on other machines if required packages are missing."
+                );
+                alert.add_response ("cancel", "Cancel");
+                alert.add_response ("continue", "Continue Export");
+                alert.set_response_appearance ("continue", Adw.ResponseAppearance.SUGGESTED);
+                alert.set_default_response ("continue");
+                alert.set_close_response ("cancel");
+                string response = yield alert.choose (this, null);
+                return (response == "continue");
+            }
+            return true;
+        }
+
         public async void export_document_dialog_async (string format) {
             var doc = get_active_document ();
             if (doc == null || doc.file_location == null) {
                 if (doc != null) {
                     doc.append_console_log (@"⚠ Please save the document before exporting to $(format.up ()).");
                 }
+                return;
+            }
+
+            if (!(yield confirm_standard_project_export_if_needed ())) {
                 return;
             }
 
@@ -534,6 +609,10 @@ namespace Imladris {
                 return;
             }
 
+            if (!(yield confirm_standard_project_export_if_needed ())) {
+                return;
+            }
+
             var project_dir = doc.file_location.get_parent ();
             string proj_name = project_dir.get_basename ();
 
@@ -558,6 +637,88 @@ namespace Imladris {
             } catch (GLib.Error e) {
                 if (doc != null) {
                     doc.append_console_log (@"✖ Export .mallorn dialog failed: $(e.message)");
+                }
+            }
+        }
+
+        public async void export_to_rstudio_async () {
+            var doc = get_active_document ();
+            if (doc == null || doc.file_location == null) {
+                if (doc != null) {
+                    doc.append_console_log ("⚠ Please save the document or project before exporting for RStudio.");
+                }
+                return;
+            }
+
+            if (!(yield confirm_standard_project_export_if_needed ())) {
+                return;
+            }
+
+            var project_dir = doc.file_location.get_parent ();
+            string proj_name = project_dir.get_basename ();
+
+            var dialog = new Gtk.FileDialog () {
+                title = "Export Project for RStudio",
+                modal = true
+            };
+
+            try {
+                var folder = yield dialog.select_folder (this, null);
+                if (folder != null) {
+                    yield save_document_async ();
+                    string target_dir = Path.build_filename (folder.get_path (), proj_name);
+                    doc.append_console_log (@"▶ Exporting project '$proj_name' to RStudio workspace at $target_dir...");
+                    try {
+                        Services.SandboxController.export_to_rstudio (project_dir.get_path (), target_dir);
+                        doc.append_console_log (@"✔ Successfully exported RStudio project to $target_dir");
+                    } catch (GLib.Error e) {
+                        doc.append_console_log (@"✖ Failed to export for RStudio: $(e.message)");
+                    }
+                }
+            } catch (GLib.Error e) {
+                if (doc != null) {
+                    doc.append_console_log (@"✖ Export to RStudio dialog cancelled or failed: $(e.message)");
+                }
+            }
+        }
+
+        public async void export_to_jupyter_async () {
+            var doc = get_active_document ();
+            if (doc == null || doc.file_location == null) {
+                if (doc != null) {
+                    doc.append_console_log ("⚠ Please save the document or project before exporting for Jupyter.");
+                }
+                return;
+            }
+
+            if (!(yield confirm_standard_project_export_if_needed ())) {
+                return;
+            }
+
+            var project_dir = doc.file_location.get_parent ();
+            string proj_name = project_dir.get_basename ();
+
+            var dialog = new Gtk.FileDialog () {
+                title = "Export Project for Jupyter Notebook",
+                modal = true
+            };
+
+            try {
+                var folder = yield dialog.select_folder (this, null);
+                if (folder != null) {
+                    yield save_document_async ();
+                    string target_dir = Path.build_filename (folder.get_path (), proj_name);
+                    doc.append_console_log (@"▶ Exporting project '$proj_name' to Jupyter workspace at $target_dir...");
+                    try {
+                        Services.SandboxController.export_to_jupyter (project_dir.get_path (), target_dir);
+                        doc.append_console_log (@"✔ Successfully exported Jupyter project to $target_dir");
+                    } catch (GLib.Error e) {
+                        doc.append_console_log (@"✖ Failed to export for Jupyter: $(e.message)");
+                    }
+                }
+            } catch (GLib.Error e) {
+                if (doc != null) {
+                    doc.append_console_log (@"✖ Export to Jupyter dialog cancelled or failed: $(e.message)");
                 }
             }
         }
@@ -742,65 +903,110 @@ namespace Imladris {
             var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
 
             // Group 1: Insert Code Chunks
-            var btn_r = (Gtk.Button) RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert R\nChunk {r}");
-            btn_r.clicked.connect (() => {
+            btn_insert_r = RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert R\nChunk {r}");
+            ((Gtk.Button) btn_insert_r).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.insert_code_chunk ("r", "echo: true");
             });
 
-            var btn_py = (Gtk.Button) RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert Python\nChunk {python}");
-            btn_py.clicked.connect (() => {
+            btn_insert_py = RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert Python\nChunk {python}");
+            ((Gtk.Button) btn_insert_py).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.insert_code_chunk ("python", "echo: true");
             });
 
-            var btn_ts = (Gtk.Button) RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert TS/OJS\nChunk {ts}");
-            btn_ts.clicked.connect (() => {
+            btn_insert_ts = RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Insert TS/OJS\nChunk {ts}");
+            ((Gtk.Button) btn_insert_ts).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.insert_code_chunk ("ts");
             });
 
-            box.append (btn_r);
-            box.append (btn_py);
-            box.append (btn_ts);
+            box.append (btn_insert_r);
+            box.append (btn_insert_py);
+            box.append (btn_insert_ts);
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 2: Chunk Execution Controls
-            var btn_run_cell = (Gtk.Button) RibbonFactory.create_tall_button ("media-playback-start-symbolic", "Run\nChunk");
-            btn_run_cell.clicked.connect (() => {
-                var d = get_active_document ();
-                if (d != null) ExecutionEngine.run_command_async.begin ({ "python3", "-c", "print('Chunk executed successfully!')" }, d);
+            btn_run_chunk = RibbonFactory.create_tall_button ("media-playback-start-symbolic", "Run\nChunk");
+            ((Gtk.Button) btn_run_chunk).clicked.connect (() => {
+                run_active_chunk ();
             });
 
-            var btn_run_all = (Gtk.Button) RibbonFactory.create_tall_button ("media-seek-forward-symbolic", "Run All\nChunks");
-            btn_run_all.clicked.connect (() => {
-                var d = get_active_document ();
-                if (d != null) ExecutionEngine.run_command_async.begin ({ "Rscript", "--version" }, d);
+            btn_run_all = RibbonFactory.create_tall_button ("media-seek-forward-symbolic", "Run All\nChunks");
+            ((Gtk.Button) btn_run_all).clicked.connect (() => {
+                run_all_chunks ();
             });
 
-            box.append (btn_run_cell);
+            btn_run_above = RibbonFactory.create_compact_button ("media-skip-backward-symbolic", "Run Above");
+            ((Gtk.Button) btn_run_above).clicked.connect (() => {
+                run_all_chunks ();
+            });
+
+            btn_run_below = RibbonFactory.create_compact_button ("media-skip-forward-symbolic", "Run Below");
+            ((Gtk.Button) btn_run_below).clicked.connect (() => {
+                run_active_chunk ();
+            });
+
+            box.append (btn_run_chunk);
             box.append (btn_run_all);
             box.append (RibbonFactory.create_vertical_stack ({
-                RibbonFactory.create_compact_button ("media-skip-backward-symbolic", "Run Above"),
-                RibbonFactory.create_compact_button ("media-skip-forward-symbolic", "Run Below")
+                btn_run_above,
+                btn_run_below
             }));
             box.append (RibbonFactory.create_vseparator ());
 
-            // Group 3: Chunk Options Matrix (#| echo, eval, warning, cache)
-            var opt_grid = new Gtk.Grid () { row_spacing = 4, column_spacing = 12, valign = Gtk.Align.CENTER };
-            opt_grid.attach (new Gtk.CheckButton.with_label ("echo: true") { active = true }, 0, 0, 1, 1);
-            opt_grid.attach (new Gtk.CheckButton.with_label ("eval: true") { active = true }, 0, 1, 1, 1);
-            opt_grid.attach (new Gtk.CheckButton.with_label ("warning: false") { active = true }, 1, 0, 1, 1);
-            opt_grid.attach (new Gtk.CheckButton.with_label ("cache: false"), 1, 1, 1, 1);
-            box.append (opt_grid);
-            box.append (RibbonFactory.create_vseparator ());
+            // Group 3: Script Execution Controls (Run Line/Selection, Source File, Interrupt)
+            btn_run_line = RibbonFactory.create_compact_button ("media-playback-start-symbolic", "Run Line / Sel");
+            ((Gtk.Button) btn_run_line).clicked.connect (() => {
+                run_line_or_selection ();
+            });
 
-            // Group 4: Kernel & Jupyter (.ipynb) Conversion
-            box.append (RibbonFactory.create_tall_button ("system-run-symbolic", "Restart\nKernel"));
+            btn_source_file = RibbonFactory.create_compact_button ("document-send-symbolic", "Source File");
+            ((Gtk.Button) btn_source_file).clicked.connect (() => {
+                source_active_file ();
+            });
+
+            btn_interrupt = RibbonFactory.create_compact_button ("process-stop-symbolic", "Interrupt");
+            ((Gtk.Button) btn_interrupt).clicked.connect (() => {
+                interrupt_active_execution ();
+            });
+
             box.append (RibbonFactory.create_vertical_stack ({
-                RibbonFactory.create_compact_button ("view-refresh-symbolic", "Convert .ipynb ↔ .qmd"),
-                RibbonFactory.create_compact_button ("folder-saved-search-symbolic", "Manage renv / venv")
+                btn_run_line,
+                btn_source_file,
+                btn_interrupt
             }));
+            box.append (RibbonFactory.create_vseparator ());
+
+            // Group 4: Package Manager & Environment Sandboxing (renv / venv)
+            btn_package_installer = RibbonFactory.create_tall_button ("software-properties-symbolic", "Package\nInstaller");
+            ((Gtk.Button) btn_package_installer).clicked.connect (() => {
+                show_package_installer_dialog ();
+            });
+            box.append (btn_package_installer);
+
+            btn_snapshot_env = RibbonFactory.create_compact_button ("security-high-symbolic", "Snapshot Environment");
+            ((Gtk.Button) btn_snapshot_env).clicked.connect (() => {
+                snapshot_current_environment ();
+            });
+
+            btn_restore_env = RibbonFactory.create_compact_button ("view-refresh-symbolic", "Restore Environment");
+            ((Gtk.Button) btn_restore_env).clicked.connect (() => {
+                restore_current_environment ();
+            });
+
+            btn_restart_kernel = RibbonFactory.create_tall_button ("system-run-symbolic", "Restart\nKernel");
+            ((Gtk.Button) btn_restart_kernel).clicked.connect (() => {
+                restart_active_kernel ();
+            });
+
+            box.append (RibbonFactory.create_vertical_stack ({
+                btn_snapshot_env,
+                btn_restore_env
+            }));
+            box.append (btn_restart_kernel);
+            box.append (RibbonFactory.create_vseparator ());
+
             var btn_comp_ai = (Gtk.Button) RibbonFactory.create_tall_button ("system-run-symbolic", "AI Coding\nAssistant");
             btn_comp_ai.clicked.connect (() => {
                 trigger_ai_assistant ();
@@ -817,16 +1023,21 @@ namespace Imladris {
             var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
 
             // Group 1: Quarto / RMarkdown Export Pipeline
-            var btn_html = (Gtk.Button) RibbonFactory.create_tall_button ("applications-internet-symbolic", "Render\nHTML", false, false, false, true, null, "app.export_html");
-            var btn_pdf = (Gtk.Button) RibbonFactory.create_tall_button ("document-send-symbolic", "Render\nPDF", false, false, false, true, null, "app.export_pdf");
-            box.append (btn_html);
-            box.append (btn_pdf);
-            var btn_odt = (Gtk.Button) RibbonFactory.create_tall_button ("x-office-document-symbolic", "Export\nODT", false, false, false, true, null, "app.export_odt");
-            var btn_odp = (Gtk.Button) RibbonFactory.create_tall_button ("x-office-presentation-symbolic", "Export\nODP", false, false, false, true, null, "app.export_odp");
-            var btn_mallorn = (Gtk.Button) RibbonFactory.create_tall_button ("package-x-generic-symbolic", "Export\n.mallorn", false, false, false, true, null, "app.export_mallorn");
-            box.append (btn_odt);
-            box.append (btn_odp);
-            box.append (btn_mallorn);
+            btn_render_html = RibbonFactory.create_tall_button ("applications-internet-symbolic", "Render\nHTML", false, false, false, true, null, "app.export_html");
+            btn_render_pdf = RibbonFactory.create_tall_button ("document-send-symbolic", "Render\nPDF", false, false, false, true, null, "app.export_pdf");
+            btn_export_odt = RibbonFactory.create_tall_button ("x-office-document-symbolic", "Export\nODT", false, false, false, true, null, "app.export_odt");
+            btn_export_odp = RibbonFactory.create_tall_button ("x-office-presentation-symbolic", "Export\nODP", false, false, false, true, null, "app.export_odp");
+            btn_export_mallorn = RibbonFactory.create_tall_button ("package-x-generic-symbolic", "Export\n.mallorn", false, false, false, true, null, "app.export_mallorn");
+            btn_export_rstudio = RibbonFactory.create_tall_button ("utilities-terminal-symbolic", "Export\nRStudio", false, false, false, true, null, "app.export_rstudio");
+            btn_export_jupyter = RibbonFactory.create_tall_button ("applications-science-symbolic", "Export\nJupyter", false, false, false, true, null, "app.export_jupyter");
+
+            box.append (btn_render_html);
+            box.append (btn_render_pdf);
+            box.append (btn_export_odt);
+            box.append (btn_export_odp);
+            box.append (btn_export_mallorn);
+            box.append (btn_export_rstudio);
+            box.append (btn_export_jupyter);
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 2: TypeScript & Web Tooling
@@ -843,9 +1054,11 @@ namespace Imladris {
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 3: HTML5 Snippets & Live Preview Toggle
-            box.append (RibbonFactory.create_tall_button ("text-html-symbolic", "HTML5\nBoilerplate", true));
-            var btn_live_preview = (Gtk.Button) RibbonFactory.create_tall_button ("view-refresh-symbolic", "Live WebKit\nPreview");
-            btn_live_preview.clicked.connect (() => {
+            btn_html_helpers = RibbonFactory.create_tall_button ("text-html-symbolic", "HTML5\nBoilerplate", true);
+            box.append (btn_html_helpers);
+
+            btn_live_preview = RibbonFactory.create_tall_button ("view-refresh-symbolic", "Live WebKit\nPreview");
+            ((Gtk.Button) btn_live_preview).clicked.connect (() => {
                 var d = get_active_document ();
                 if (d != null) d.show_live_preview ();
             });
@@ -865,6 +1078,302 @@ namespace Imladris {
             box.append (btn_web_ai);
 
             return box;
+        }
+
+        /**
+         * Pillar 2: Context-Aware Ribbon State Machine
+         * Dynamically adapts visible and sensitive states based on active Project Type and Document Format
+         */
+        public void update_ribbon_state_machine (DocumentFormat fmt, ProjectType ptype) {
+            bool is_md = (fmt == DocumentFormat.MD);
+            bool is_html = (fmt == DocumentFormat.HTML);
+            bool is_script = (fmt == DocumentFormat.RSCRIPT || fmt == DocumentFormat.PYSCRIPT);
+            bool is_notebook = (fmt == DocumentFormat.RMD || fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB);
+            bool is_sandboxed = (ptype == ProjectType.SANDBOXED);
+
+            // 1. Insert Chunks
+            if (btn_insert_r != null) {
+                btn_insert_r.visible = is_notebook;
+                btn_insert_r.sensitive = is_notebook;
+            }
+            if (btn_insert_py != null) {
+                btn_insert_py.visible = is_notebook;
+                btn_insert_py.sensitive = is_notebook;
+            }
+            if (btn_insert_ts != null) {
+                btn_insert_ts.visible = is_notebook;
+                btn_insert_ts.sensitive = is_notebook;
+            }
+
+            // 2. Chunk Execution Controls
+            if (btn_run_chunk != null) {
+                btn_run_chunk.visible = !is_html;
+                btn_run_chunk.sensitive = is_notebook;
+            }
+            if (btn_run_all != null) {
+                btn_run_all.visible = !is_html;
+                btn_run_all.sensitive = is_notebook;
+            }
+            if (btn_run_above != null) {
+                btn_run_above.visible = is_notebook;
+                btn_run_above.sensitive = is_notebook;
+            }
+            if (btn_run_below != null) {
+                btn_run_below.visible = is_notebook;
+                btn_run_below.sensitive = is_notebook;
+            }
+
+            // 3. Script Execution Controls
+            if (btn_run_line != null) {
+                btn_run_line.visible = is_script || is_notebook;
+                btn_run_line.sensitive = is_script || is_notebook;
+            }
+            if (btn_source_file != null) {
+                btn_source_file.visible = is_script || is_notebook;
+                btn_source_file.sensitive = is_script || is_notebook;
+            }
+            if (btn_interrupt != null) {
+                btn_interrupt.visible = is_script || is_notebook;
+                btn_interrupt.sensitive = is_script || is_notebook;
+            }
+
+            // 4. Kernel / Persistent Sessions
+            if (btn_restart_kernel != null) {
+                btn_restart_kernel.visible = !is_md && !is_html;
+                btn_restart_kernel.sensitive = is_script || is_notebook;
+            }
+
+            // 5. Package Installer
+            if (btn_package_installer != null) {
+                btn_package_installer.visible = !is_md && !is_html;
+                btn_package_installer.sensitive = is_script || is_notebook;
+            }
+
+            // 6. Snapshot & Restore Environment (Pillar 2 rules)
+            if (btn_snapshot_env != null) {
+                btn_snapshot_env.visible = is_notebook || (is_script && is_sandboxed);
+                if (is_sandboxed) {
+                    btn_snapshot_env.sensitive = true;
+                    btn_snapshot_env.tooltip_text = "Lock environment package versions (renv::snapshot / pip freeze)";
+                } else {
+                    btn_snapshot_env.sensitive = false;
+                    btn_snapshot_env.tooltip_text = "Only available in Sandboxed Projects";
+                }
+            }
+            if (btn_restore_env != null) {
+                btn_restore_env.visible = is_notebook || (is_script && is_sandboxed);
+                if (is_sandboxed) {
+                    btn_restore_env.sensitive = true;
+                    btn_restore_env.tooltip_text = "Restore exact package versions from lockfile (renv::restore / pip install -r)";
+                } else {
+                    btn_restore_env.sensitive = false;
+                    btn_restore_env.tooltip_text = "Only available in Sandboxed Projects";
+                }
+            }
+
+            // 7. Knit / Render / Export
+            if (btn_render_html != null) {
+                btn_render_html.visible = true;
+                btn_render_html.sensitive = !is_script;
+            }
+            if (btn_render_pdf != null) {
+                btn_render_pdf.visible = !is_html;
+                btn_render_pdf.sensitive = !is_script;
+            }
+            if (btn_export_odt != null) {
+                btn_export_odt.visible = !is_html;
+                btn_export_odt.sensitive = is_md || is_notebook;
+            }
+            if (btn_export_odp != null) {
+                btn_export_odp.visible = !is_html;
+                btn_export_odp.sensitive = is_md || is_notebook;
+            }
+            if (btn_export_mallorn != null) {
+                btn_export_mallorn.visible = is_notebook;
+                btn_export_mallorn.sensitive = is_notebook;
+            }
+            if (btn_export_rstudio != null) {
+                btn_export_rstudio.visible = is_notebook;
+                btn_export_rstudio.sensitive = is_notebook;
+            }
+            if (btn_export_jupyter != null) {
+                btn_export_jupyter.visible = is_notebook;
+                btn_export_jupyter.sensitive = is_notebook;
+            }
+
+            // 8. HTML helpers & live preview
+            if (btn_html_helpers != null) {
+                btn_html_helpers.visible = is_html;
+                btn_html_helpers.sensitive = is_html;
+            }
+            if (btn_live_preview != null) {
+                btn_live_preview.visible = true;
+                btn_live_preview.sensitive = is_md || is_html || is_notebook;
+            }
+        }
+
+        // Action Handlers for Pillars 2, 3, 4
+        public void show_package_installer_dialog () {
+            var doc = get_active_document ();
+            var fmt = DocumentFormat.QMD;
+            if (doc != null) {
+                fmt = doc.get_document_format ();
+            }
+            var eco = (fmt == DocumentFormat.PYSCRIPT || fmt == DocumentFormat.IPYNB)
+                ? UI.PackageEcosystem.PYTHON_PYPI
+                : UI.PackageEcosystem.R_CRAN;
+            string pdir = current_project_dir != "" ? current_project_dir : Services.PersistentSessionManager.get_default ().current_working_dir;
+            if (pdir == "") pdir = GLib.Environment.get_current_dir ();
+            bool is_sandboxed = (current_project_type == ProjectType.SANDBOXED);
+
+            var ctx = new UI.ProjectContext (pdir, is_sandboxed, eco);
+            var modal = new UI.PackageInstallerModal (ctx, pkg_index_cache);
+
+            modal.execute_r_command.connect ((r_code) => {
+                var d = get_active_document ();
+                if (d != null) {
+                    d.panel_registry.run_code_snippet_in_console ("r", r_code);
+                }
+            });
+
+            modal.execute_python_command.connect ((py_bin, args, working_dir, sandboxed) => {
+                run_python_pip_and_snapshot.begin (py_bin, args, working_dir, sandboxed);
+            });
+
+            modal.present (this);
+        }
+
+        public async void run_python_pip_and_snapshot (string py_bin, string[] args, string working_dir, bool sandboxed) {
+            var doc = get_active_document ();
+            if (doc != null) {
+                string cmd_disp = string.joinv (" ", args);
+                doc.append_console_log (@"▶ [Python/pip] Executing: $cmd_disp");
+            }
+
+            try {
+                var launcher = new GLib.SubprocessLauncher (
+                    GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE
+                );
+                if (working_dir != "" && GLib.FileUtils.test (working_dir, GLib.FileTest.IS_DIR)) {
+                    launcher.set_cwd (working_dir);
+                }
+
+                var proc = launcher.spawnv (args);
+                var dis = new GLib.DataInputStream (proc.get_stdout_pipe ());
+                string? line = null;
+                while ((line = yield dis.read_line_async (GLib.Priority.DEFAULT, null)) != null) {
+                    if (doc != null && line.strip ().length > 0) {
+                        doc.append_console_log (line);
+                    }
+                }
+                yield proc.wait_async (null);
+
+                if (doc != null) {
+                    doc.append_console_log ("✔ Package installation finished.");
+                }
+
+                if (sandboxed && working_dir != "") {
+                    Services.SandboxController.snapshot_environment (working_dir);
+                    if (doc != null) {
+                        doc.append_console_log ("✔ Sandboxed project requirements.txt updated.");
+                    }
+                }
+            } catch (GLib.Error e) {
+                if (doc != null) {
+                    doc.append_console_log (@"✖ Package installer error: $(e.message)");
+                }
+            }
+        }
+
+        public void snapshot_current_environment () {
+            if (current_project_type != ProjectType.SANDBOXED) {
+                var doc = get_active_document ();
+                if (doc != null) {
+                    doc.append_console_log ("⚠ Environment snapshot is only available in Sandboxed Projects.");
+                }
+                return;
+            }
+            string pdir = current_project_dir != "" ? current_project_dir : GLib.Environment.get_current_dir ();
+            var doc = get_active_document ();
+            try {
+                Services.SandboxController.snapshot_environment (pdir);
+                if (doc != null) {
+                    doc.append_console_log (@"✔ Environment lockfile snapshotted in $pdir");
+                }
+            } catch (GLib.Error e) {
+                if (doc != null) {
+                    doc.append_console_log (@"✖ Snapshot error: $(e.message)");
+                }
+            }
+        }
+
+        public void restore_current_environment () {
+            if (current_project_type != ProjectType.SANDBOXED) {
+                var doc = get_active_document ();
+                if (doc != null) {
+                    doc.append_console_log ("⚠ Environment restore is only available in Sandboxed Projects.");
+                }
+                return;
+            }
+            string pdir = current_project_dir != "" ? current_project_dir : GLib.Environment.get_current_dir ();
+            var doc = get_active_document ();
+            try {
+                Services.SandboxController.restore_environment (pdir);
+                if (doc != null) {
+                    doc.append_console_log (@"✔ Restoring isolated packages in $pdir (renv / venv)...");
+                }
+            } catch (GLib.Error e) {
+                if (doc != null) {
+                    doc.append_console_log (@"✖ Restore error: $(e.message)");
+                }
+            }
+        }
+
+        public void restart_active_kernel () {
+            Services.PersistentSessionManager.get_default ().restart_all_sessions ();
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.append_console_log ("✔ Active persistent R and Python sessions restarted.");
+            }
+        }
+
+        public void interrupt_active_execution () {
+            Services.PersistentSessionManager.get_default ().interrupt_active_execution ();
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.append_console_log ("⏹ Execution interrupted (SIGINT sent).");
+            }
+        }
+
+        public void run_line_or_selection () {
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.panel_registry.execute_current_line_or_selection ();
+            }
+        }
+
+        public void run_active_chunk () {
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.panel_registry.execute_active_cell ();
+            }
+        }
+
+        public void run_all_chunks () {
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.panel_registry.execute_all_cells ();
+            }
+        }
+
+        public void source_active_file () {
+            var doc = get_active_document ();
+            if (doc == null) return;
+            string code = doc.source_buffer.text.strip ();
+            if (code.length == 0) return;
+            var fmt = doc.get_document_format ();
+            string engine = (fmt == DocumentFormat.RSCRIPT || fmt == DocumentFormat.RMD) ? "r" : "python";
+            doc.panel_registry.run_code_snippet_in_console (engine, code);
         }
 
         // =====================================================================

@@ -71,10 +71,10 @@ namespace Imladris.UI {
             page.add (meta_group);
 
             // =================================================================
-            // SECTION 1: Workspace Projects (Multi-File, Stateful: Targets a-b)
+            // SECTION 1: Workspace Projects (Multi-File, Stateful)
             // =================================================================
             var proj_group = new Adw.PreferencesGroup () {
-                title = "1. Workspace Projects (Multi-File, Stateful — .Rmd, .Qmd, .ipynb)",
+                title = "Workspace Projects",
                 description = "Full project scaffolding with data/, images/, bibliography/, and 1:1 RStudio (.Rproj / .mallorn) compatibility."
             };
 
@@ -92,13 +92,13 @@ namespace Imladris.UI {
             };
             proj_group.add (project_format_row);
 
-            // Target (a): Standard Project
+            // Target: Standard Project
             var row_standard = new Adw.ActionRow () {
-                title = "a. Create a Standard Project",
+                title = "Create a Project",
                 subtitle = "Binds to host global R (R_LIBS_USER) and Python (sys.path) libraries. Warning: exporting to other systems may break if host libraries are missing."
             };
             row_standard.add_prefix (new Gtk.Image.from_icon_name ("folder-symbolic"));
-            var btn_create_standard = new Gtk.Button.with_label ("Create Standard") {
+            var btn_create_standard = new Gtk.Button.with_label ("Create Project") {
                 valign = Gtk.Align.CENTER
             };
             btn_create_standard.add_css_class ("warning");
@@ -109,9 +109,9 @@ namespace Imladris.UI {
             row_standard.add_suffix (btn_create_standard);
             proj_group.add (row_standard);
 
-            // Target (b): Sandboxed Project
+            // Target: Sandboxed Project
             var row_sandboxed = new Adw.ActionRow () {
-                title = "b. Create a Sandboxed Project (Recommended)",
+                title = "Create a Sandboxed project",
                 subtitle = "Isolated, reproducible environment. Initializes local renv (R) and .venv/requirements.txt (Python) so exact package versions are portable."
             };
             row_sandboxed.add_prefix (new Gtk.Image.from_icon_name ("security-high-symbolic"));
@@ -140,58 +140,58 @@ namespace Imladris.UI {
             page.add (proj_group);
 
             // =================================================================
-            // SECTION 2: Standalone Simple Files (Single-File Mode: Targets c-i)
+            // SECTION 2: Standalone Simple Files (Single-File Mode)
             // =================================================================
             var standalone_group = new Adw.PreferencesGroup () {
-                title = "2. Standalone Simple Files (Single-File Mode)",
+                title = "Standalone Simple Files",
                 description = "Create a single self-contained file with starter boilerplate."
             };
 
             add_standalone_target_row (
                 standalone_group,
-                "c. Simple Markdown (.md)",
+                "Create a simple .md",
                 "Lightweight prose editing in Apostrophe mode with live preview, bypassing compute kernels.",
                 "text-x-generic-symbolic",
                 DocumentFormat.MD
             );
             add_standalone_target_row (
                 standalone_group,
-                "d. Simple HTML (.html)",
+                "Create a simple .html",
                 "Standard HTML5 boilerplate with live WebKitGTK 6.0 DOM preview.",
                 "text-html-symbolic",
                 DocumentFormat.HTML
             );
             add_standalone_target_row (
                 standalone_group,
-                "e. R Script (.R)",
+                "Create a R script file",
                 "Standard R script bound to system Rscript executable.",
                 "utilities-terminal-symbolic",
                 DocumentFormat.RSCRIPT
             );
             add_standalone_target_row (
                 standalone_group,
-                "f. R Markdown (.Rmd)",
+                "Create a .Rmd",
                 "Standalone R Markdown document with YAML frontmatter and knitr setup chunk.",
                 "x-office-document-symbolic",
                 DocumentFormat.RMD
             );
             add_standalone_target_row (
                 standalone_group,
-                "g. Quarto Document (.Qmd)",
+                "Create a .Qmd",
                 "Standalone Quarto scientific document with YAML frontmatter template.",
                 "document-edit-symbolic",
                 DocumentFormat.QMD
             );
             add_standalone_target_row (
                 standalone_group,
-                "h. Jupyter Notebook (.ipynb)",
+                "Create a .ipynb",
                 "Valid JSON schema v4 notebook structure with bidirectional cell editing.",
                 "applications-science-symbolic",
                 DocumentFormat.IPYNB
             );
             add_standalone_target_row (
                 standalone_group,
-                "i. Python Script (.py)",
+                "Create a Python script",
                 "Standard Python 3 script bound to system Python interpreter.",
                 "utilities-terminal-symbolic",
                 DocumentFormat.PYSCRIPT

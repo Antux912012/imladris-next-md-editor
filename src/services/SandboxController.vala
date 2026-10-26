@@ -3,6 +3,52 @@ namespace Imladris.Services {
     public class SandboxController : GLib.Object {
 
         /**
+         * Pillars 6 & 7: Manages renv (R) and venv (Python) sandboxes based on primary format.
+         */
+        public static async void init_sandbox (string project_root, DocumentFormat fmt) throws GLib.Error {
+            var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
+            launcher.set_cwd (project_root);
+
+            if (fmt == DocumentFormat.RMD || fmt == DocumentFormat.QMD) {
+                string[] r_argv = {
+                    "Rscript",
+                    "-e",
+                    "if (!requireNamespace('renv', quietly=TRUE)) install.packages('renv', repos='https://cloud.r-project.org'); renv::init(bare = TRUE, restart = FALSE); renv::snapshot(prompt = FALSE)"
+                };
+                try {
+                    var r_proc = launcher.spawnv (r_argv);
+                    yield r_proc.wait_check_async ();
+                } catch (GLib.Error e) {
+                    // Fall back to stub initialization
+                    init_r_sandbox (project_root);
+                }
+            }
+
+            if (fmt == DocumentFormat.IPYNB || fmt == DocumentFormat.QMD) {
+                string[] py_argv = { "python3", "-m", "venv", ".venv" };
+                try {
+                    var py_proc = launcher.spawnv (py_argv);
+                    yield py_proc.wait_check_async ();
+                } catch (GLib.Error e) {
+                    init_py_sandbox (project_root);
+                }
+
+                string req_path = Path.build_filename (project_root, "requirements.txt");
+                if (!FileUtils.test (req_path, FileTest.EXISTS)) {
+                    FileUtils.set_contents (req_path, "# Imladris Sandboxed Python Dependencies\n");
+                }
+            }
+        }
+
+        public static void export_to_rstudio (string project_path, string dest_path) throws GLib.Error {
+            export_for_rstudio (project_path, dest_path);
+        }
+
+        public static void export_to_jupyter (string project_path, string dest_path) throws GLib.Error {
+            export_for_jupyter (project_path, dest_path);
+        }
+
+        /**
          * Initializes an isolated R sandbox in project_path using renv.
          * Generates .Rprofile, renv/activate.R, and renv.lock.
          */
@@ -177,6 +223,51 @@ numpy>=1.24.0
                     }
                 } catch (GLib.Error e) {
                     // Snapshot skipped or failed
+                }
+            }
+        }
+
+        /**
+         * Restores isolated environment packages from lockfiles (renv::restore() for R,
+         * pip install -r requirements.txt for Python).
+         */
+        public static void restore_environment (string project_path) throws GLib.Error {
+            // Restore R renv environment
+            string renv_dir = Path.build_filename (project_path, "renv");
+            if (FileUtils.test (renv_dir, FileTest.IS_DIR) && Environment.find_program_in_path ("Rscript") != null) {
+                try {
+                    var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
+                    launcher.set_cwd (project_path);
+                    string[] argv = { "Rscript", "-e", "if (requireNamespace('renv', quietly=TRUE)) renv::restore(prompt = FALSE)" };
+                    var proc = launcher.spawnv (argv);
+                    proc.wait_check ();
+                } catch (GLib.Error e) {
+                    // Restore failed
+                }
+            }
+
+            // Restore Python .venv environment
+            string venv_python = Path.build_filename (project_path, ".venv", "bin", "python");
+            string req_path = Path.build_filename (project_path, "requirements.txt");
+            if (FileUtils.test (venv_python, FileTest.EXISTS) && FileUtils.test (req_path, FileTest.EXISTS)) {
+                try {
+                    string content;
+                    FileUtils.get_contents (req_path, out content);
+                    bool has_packages = false;
+                    foreach (var line in content.split ("\n")) {
+                        string trimmed = line.strip ();
+                        if (trimmed.length > 0 && !trimmed.has_prefix ("#")) {
+                            has_packages = true;
+                            break;
+                        }
+                    }
+                    if (has_packages) {
+                        string[] argv = { venv_python, "-m", "pip", "install", "-r", req_path };
+                        var proc = new Subprocess.newv (argv, SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
+                        proc.wait_check ();
+                    }
+                } catch (GLib.Error e) {
+                    // Restore failed
                 }
             }
         }

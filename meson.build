@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.6.0',
+  version: '0.7.0',
   default_options: ['warning_level=1']
 )
 
@@ -41,15 +41,19 @@ sources = files(
   'src/core/notebook_serializer.vala',
   'src/core/project_scaffolder.vala',
   'src/core/MallornManager.vala',
+  'src/core/ChunkParser.vala',
   'src/adapters/DocumentAdapter.vala',
   'src/services/RecoveryService.vala',
   'src/services/WorkspaceStateManager.vala',
   'src/services/SandboxController.vala',
+  'src/services/PersistentSessionManager.vala',
   'src/services/ExportService.vala',
   'src/core/layout/DockTypes.vala',
   'src/ui/PersistentPanelRegistry.vala',
   'src/ui/RStudioDockGrid.vala',
   'src/ui/new_project_dialog.vala',
+  'src/ui/PackageInstallerDialog.vala',
+  'src/ui/InlineChunkOutputWidget.vala',
 )
 
 executable('imladris',
@@ -83,7 +87,9 @@ test_sources = files(
   'src/core/MallornManager.vala',
   'src/adapters/DocumentAdapter.vala',
   'src/services/SandboxController.vala',
+  'src/services/PersistentSessionManager.vala',
   'src/services/ExportService.vala',
+  'src/core/ChunkParser.vala',
 )
 
 test_exe = executable('test_mallorn_sandbox',
@@ -92,6 +98,6 @@ test_exe = executable('test_mallorn_sandbox',
   vala_args: ['--target-glib=2.76'],
 )
 
-test('mallorn_sandbox_tests', test_exe)
+test('mallorn_sandbox_tests', test_exe, timeout: 120)
 
 

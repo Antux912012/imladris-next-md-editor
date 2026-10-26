@@ -3,6 +3,100 @@ namespace Imladris.Services {
     public class ExportService : GLib.Object {
 
         /**
+         * Pillar 9: OpenDocument Text (.odt) Export Pipeline via Quarto, RMarkdown, Pandoc.
+         */
+        public static async void export_to_odt_async (
+            string project_root,
+            string input_file,
+            string output_odt,
+            DocumentFormat fmt
+        ) throws GLib.Error {
+            var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
+            launcher.set_cwd (project_root);
+
+            string[] argv;
+            switch (fmt) {
+                case DocumentFormat.QMD:
+                case DocumentFormat.IPYNB:
+                    argv = { "quarto", "render", input_file, "--to", "odt", "--output", output_odt };
+                    break;
+                case DocumentFormat.RMD:
+                    string r_expr = "rmarkdown::render('%s', output_format = 'odt_document', output_file = '%s')".printf (
+                        input_file, output_odt
+                    );
+                    argv = { "Rscript", "-e", r_expr };
+                    break;
+                default:
+                    argv = { "pandoc", input_file, "-f", "markdown", "-t", "odt", "-o", output_odt, "--standalone" };
+                    break;
+            }
+
+            try {
+                var proc = launcher.spawnv (argv);
+                yield proc.wait_check_async ();
+            } catch (GLib.Error e) {
+                export_to_odt (input_file, output_odt);
+            }
+        }
+
+        /**
+         * Pillar 9: OpenDocument Presentation (.odp) Export Pipeline via Quarto/Pandoc -> PPTX -> LibreOffice.
+         */
+        public static async void export_to_odp_async (
+            string project_root,
+            string input_file,
+            string output_odp_dir,
+            DocumentFormat fmt
+        ) throws GLib.Error {
+            var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_PIPE | SubprocessFlags.STDERR_MERGE);
+            launcher.set_cwd (project_root);
+
+            string base_name = Path.get_basename (input_file);
+            string temp_pptx = Path.build_filename (Environment.get_tmp_dir (), "%s_slides.pptx".printf (base_name));
+
+            // Stage 1: Render intermediate slide deck to PPTX
+            string[] stage1_argv;
+            if (fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB) {
+                stage1_argv = { "quarto", "render", input_file, "--to", "pptx", "--output", temp_pptx };
+            } else if (fmt == DocumentFormat.RMD) {
+                string r_expr = "rmarkdown::render('%s', output_format = 'powerpoint_presentation', output_file = '%s')".printf (
+                    input_file, temp_pptx
+                );
+                stage1_argv = { "Rscript", "-e", r_expr };
+            } else {
+                stage1_argv = { "pandoc", input_file, "-t", "pptx", "-o", temp_pptx, "--standalone" };
+            }
+
+            try {
+                var stage1_proc = launcher.spawnv (stage1_argv);
+                yield stage1_proc.wait_check_async ();
+
+                // Stage 2: Convert PPTX -> ODP using headless LibreOffice
+                string? soffice_bin = Environment.find_program_in_path ("soffice")
+                    ?? Environment.find_program_in_path ("libreoffice");
+
+                if (soffice_bin != null) {
+                    string[] stage2_argv = {
+                        soffice_bin,
+                        "--headless",
+                        "--convert-to",
+                        "odp",
+                        temp_pptx,
+                        "--outdir",
+                        output_odp_dir
+                    };
+                    var stage2_proc = launcher.spawnv (stage2_argv);
+                    yield stage2_proc.wait_check_async ();
+                    FileUtils.remove (temp_pptx);
+                } else {
+                    export_to_odp (input_file, Path.build_filename (output_odp_dir, base_name + ".odp"));
+                }
+            } catch (GLib.Error e) {
+                export_to_odp (input_file, Path.build_filename (output_odp_dir, base_name + ".odp"));
+            }
+        }
+
+        /**
          * Exports a source document (.md, .Rmd, .Qmd, .ipynb) to OpenDocument Text (.odt).
          * Automatically selects quarto, Rscript (rmarkdown), or pandoc based on extension,
          * falling back to the built-in OASIS OpenDocument Text ZIP packager if CLI tools

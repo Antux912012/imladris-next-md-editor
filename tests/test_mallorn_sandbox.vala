@@ -9,7 +9,10 @@ namespace Imladris.Tests {
         GL_Test_scaffolding_and_archive ();
         GLib.Test.add_func ("/sandbox/r_and_py_sandboxes", test_sandbox_controllers);
         GLib.Test.add_func ("/sandbox/export_rstudio_jupyter", test_sandbox_exports);
+        GLib.Test.add_func ("/sandbox/restore_environment", test_sandbox_restore);
+        GLib.Test.add_func ("/sessions/persistent_session_and_pwd_sync", test_persistent_session_and_pwd_sync);
         GLib.Test.add_func ("/export/odt_and_odp_pipeline", test_export_pipeline_odt_odp);
+        GLib.Test.add_func ("/chunks/chunk_parser", test_chunk_parser);
 
         return GLib.Test.run ();
     }
@@ -202,5 +205,89 @@ namespace Imladris.Tests {
         } catch (GLib.Error e) {
             GLib.error ("ODT/ODP Export test failed: %s", e.message);
         }
+    }
+
+    private static void test_sandbox_restore () {
+        string tmp_dir = Path.build_filename (Environment.get_tmp_dir (), "imladris_test_restore_" + Random.next_int ().to_string ());
+        DirUtils.create_with_parents (tmp_dir, 0755);
+
+        try {
+            Services.SandboxController.init_r_sandbox (tmp_dir);
+            Services.SandboxController.init_py_sandbox (tmp_dir);
+
+            // Execute restore_environment and ensure it executes without crashing
+            Services.SandboxController.restore_environment (tmp_dir);
+
+            // Verify .Rprofile and requirements.txt still intact
+            assert (FileUtils.test (Path.build_filename (tmp_dir, ".Rprofile"), FileTest.EXISTS));
+            assert (FileUtils.test (Path.build_filename (tmp_dir, "requirements.txt"), FileTest.EXISTS));
+        } catch (GLib.Error e) {
+            GLib.error ("Sandbox restore test failed: %s", e.message);
+        }
+    }
+
+    private static void test_persistent_session_and_pwd_sync () {
+        var sm = Services.PersistentSessionManager.get_default ();
+        assert (sm != null);
+
+        string target_dir = Environment.get_tmp_dir ();
+        bool signal_received = false;
+        string received_dir = "";
+
+        ulong handler_id = sm.working_directory_changed.connect ((new_dir) => {
+            signal_received = true;
+            received_dir = new_dir;
+        });
+
+        sm.set_working_directory (target_dir, ProjectType.SANDBOXED);
+
+        assert (signal_received);
+        assert (received_dir == target_dir);
+        assert (sm.current_working_dir == target_dir);
+        assert (sm.active_project_type == ProjectType.SANDBOXED);
+
+        sm.disconnect (handler_id);
+    }
+
+    private static void test_chunk_parser () {
+        string doc = """# Sample Document
+
+Here is an intro paragraph.
+
+```{r}
+#| label: setup
+x <- 1:10
+plot(x)
+```
+
+And some text in between.
+
+```python
+import numpy as np
+print(np.mean([1, 2, 3]))
+```
+""";
+        var chunks = Core.ChunkParser.parse_chunks (doc);
+        assert (chunks.size == 2);
+        assert (chunks[0].language == "r");
+        assert (chunks[0].code.contains ("x <- 1:10"));
+        assert (chunks[0].start_line == 4);
+        assert (chunks[0].end_line == 8);
+
+        assert (chunks[1].language == "python");
+        assert (chunks[1].code.contains ("import numpy as np"));
+        assert (chunks[1].start_line == 12);
+        assert (chunks[1].end_line == 15);
+
+        var ch_at_line_6 = Core.ChunkParser.find_chunk_at_line (doc, 6);
+        assert (ch_at_line_6 != null);
+        assert (ch_at_line_6.language == "r");
+
+        var ch_at_line_13 = Core.ChunkParser.find_chunk_at_line (doc, 13);
+        assert (ch_at_line_13 != null);
+        assert (ch_at_line_13.language == "python");
+
+        var ch_outside = Core.ChunkParser.find_chunk_at_line (doc, 2);
+        assert (ch_outside == null);
     }
 }

@@ -30,7 +30,38 @@ namespace Imladris {
         public RStudioDockLayoutState dock_layout_state { get; private set; }
         public PersistentPanelRegistry panel_registry { get; private set; }
         public RStudioDockGrid rstudio_dock_grid { get; private set; }
+        public ProjectType project_type { get; set; default = ProjectType.STANDARD; }
         private Services.LayoutMode current_layout_mode = Services.LayoutMode.APOSTROPHE;
+
+        public DocumentFormat get_document_format () {
+            if (file_location != null) {
+                return DocumentFormat.from_filename (file_location.get_basename ());
+            }
+            return DocumentFormat.from_short_code (doc_type);
+        }
+
+        private Gee.HashMap<int, UI.InlineChunkOutputWidget> inline_chunk_widgets = new Gee.HashMap<int, UI.InlineChunkOutputWidget> ();
+
+        /**
+         * Pillar 11: Embeds an inline output card directly below the executed chunk
+         */
+        public void display_inline_chunk_output (int end_line, string text_output, string? plot_path, int count) {
+            UI.InlineChunkOutputWidget? widget = inline_chunk_widgets.get (end_line);
+            if (widget == null) {
+                Gtk.TextIter iter;
+                source_buffer.get_iter_at_line (out iter, end_line);
+                iter.forward_to_line_end ();
+
+                // Insert newline and child anchor
+                source_buffer.insert (ref iter, "\n", 1);
+                var anchor = source_buffer.create_child_anchor (iter);
+                widget = new UI.InlineChunkOutputWidget (end_line);
+                source_view.add_child_at_anchor (widget, anchor);
+                inline_chunk_widgets.set (end_line, widget);
+            }
+
+            widget.set_output (text_output, plot_path, count);
+        }
 
         public signal void stats_changed (int words, int lines, string lang_badge);
 
@@ -216,7 +247,11 @@ namespace Imladris {
             key_ctrl.key_pressed.connect ((keyval, keycode, state) => {
                 if ((state & Gdk.ModifierType.CONTROL_MASK) != 0 &&
                     (keyval == Gdk.Key.Return || keyval == Gdk.Key.KP_Enter)) {
-                    panel_registry.execute_active_cell ();
+                    if ((state & Gdk.ModifierType.SHIFT_MASK) != 0) {
+                        panel_registry.execute_active_cell ();
+                    } else {
+                        panel_registry.execute_current_line_or_selection ();
+                    }
                     return true;
                 }
                 return false;
