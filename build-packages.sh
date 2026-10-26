@@ -81,6 +81,11 @@ with gzip.open(xml_gz, "wt", encoding="utf-8") as f:
     f.write(composed)
 PYEOF
 
+  # Compile GSettings schemas for Flatpak
+  if [ -d "build-flatpak-app/files/share/glib-2.0/schemas" ]; then
+    glib-compile-schemas "build-flatpak-app/files/share/glib-2.0/schemas"
+  fi
+
   flatpak build-finish build-flatpak-app \
     --command=imladris \
     --share=ipc \
@@ -89,7 +94,8 @@ PYEOF
     --socket=wayland \
     --device=dri \
     --filesystem=home \
-    --talk-name=org.freedesktop.Flatpak
+    --talk-name=org.freedesktop.Flatpak \
+    --metadata=X-DConf=default-settings
 
   flatpak build-export repo build-flatpak-app master
   flatpak build-update-repo repo || true
@@ -134,6 +140,9 @@ if [ "$1" = "configure" ]; then
     if which gtk-update-icon-cache >/dev/null 2>&1; then
         gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
     fi
+    if which glib-compile-schemas >/dev/null 2>&1; then
+        glib-compile-schemas /usr/share/glib-2.0/schemas || true
+    fi
 fi
 exit 0
 EOF
@@ -147,6 +156,9 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     fi
     if which gtk-update-icon-cache >/dev/null 2>&1; then
         gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+    fi
+    if which glib-compile-schemas >/dev/null 2>&1; then
+        glib-compile-schemas /usr/share/glib-2.0/schemas || true
     fi
 fi
 exit 0
