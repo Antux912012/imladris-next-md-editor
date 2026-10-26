@@ -49,7 +49,7 @@ sdk=org.gnome.Sdk/x86_64/50
 command=imladris
 
 [Context]
-shared=ipc;
+shared=ipc;network;
 sockets=fallback-x11;wayland;
 devices=dri;
 filesystems=home;
@@ -84,6 +84,7 @@ PYEOF
   flatpak build-finish build-flatpak-app \
     --command=imladris \
     --share=ipc \
+    --share=network \
     --socket=fallback-x11 \
     --socket=wayland \
     --device=dri \
