@@ -11,5 +11,10 @@
       <summary>Application theme</summary>
       <description>Color scheme and appearance theme: 'system', 'light', 'dark', or 'eye-friendly'.</description>
     </key>
+    <key name="accent-color" type="s">
+      <default>'blue'</default>
+      <summary>GNOME Accent Color</summary>
+      <description>Preferred GNOME accent color: 'blue', 'teal', 'green', 'yellow', 'orange', 'red', 'pink', 'purple', or 'slate'.</description>
+    </key>
   </schema>
 </schemalist>

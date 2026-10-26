@@ -17,6 +17,7 @@ namespace Imladris.Tests {
         GLib.Test.add_func ("/ai/think_tag_extraction", test_think_tag_extraction);
         GLib.Test.add_func ("/ai/env_var_fallback", test_env_var_fallback);
         GLib.Test.add_func ("/theming/app_theme_metadata", test_app_theme);
+        GLib.Test.add_func ("/theming/gnome_accent_metadata", test_gnome_accent_metadata);
 
         return GLib.Test.run ();
     }
@@ -338,5 +339,55 @@ namespace Imladris.Tests {
 
         settings.app_theme = AppTheme.SYSTEM;
         assert (settings.app_theme == AppTheme.SYSTEM);
+    }
+
+    private static void test_gnome_accent_metadata () {
+        // Test all 9 GNOME standard accent colors
+        assert (GnomeAccent.BLUE.to_string_id () == "blue");
+        assert (GnomeAccent.TEAL.to_string_id () == "teal");
+        assert (GnomeAccent.GREEN.to_string_id () == "green");
+        assert (GnomeAccent.YELLOW.to_string_id () == "yellow");
+        assert (GnomeAccent.ORANGE.to_string_id () == "orange");
+        assert (GnomeAccent.RED.to_string_id () == "red");
+        assert (GnomeAccent.PINK.to_string_id () == "pink");
+        assert (GnomeAccent.PURPLE.to_string_id () == "purple");
+        assert (GnomeAccent.SLATE.to_string_id () == "slate");
+
+        assert (GnomeAccent.from_string_id ("blue") == GnomeAccent.BLUE);
+        assert (GnomeAccent.from_string_id ("teal") == GnomeAccent.TEAL);
+        assert (GnomeAccent.from_string_id ("green") == GnomeAccent.GREEN);
+        assert (GnomeAccent.from_string_id ("yellow") == GnomeAccent.YELLOW);
+        assert (GnomeAccent.from_string_id ("orange") == GnomeAccent.ORANGE);
+        assert (GnomeAccent.from_string_id ("red") == GnomeAccent.RED);
+        assert (GnomeAccent.from_string_id ("pink") == GnomeAccent.PINK);
+        assert (GnomeAccent.from_string_id ("purple") == GnomeAccent.PURPLE);
+        assert (GnomeAccent.from_string_id ("slate") == GnomeAccent.SLATE);
+
+        assert (GnomeAccent.BLUE.get_display_name () == "Blue");
+        assert (GnomeAccent.TEAL.get_display_name () == "Teal");
+        assert (GnomeAccent.GREEN.get_display_name () == "Green");
+        assert (GnomeAccent.YELLOW.get_display_name () == "Yellow");
+        assert (GnomeAccent.ORANGE.get_display_name () == "Orange");
+        assert (GnomeAccent.RED.get_display_name () == "Red");
+        assert (GnomeAccent.PINK.get_display_name () == "Pink");
+        assert (GnomeAccent.PURPLE.get_display_name () == "Purple");
+        assert (GnomeAccent.SLATE.get_display_name () == "Slate");
+
+        assert (GnomeAccent.BLUE.get_hex_color () == "#3584e4");
+        assert (GnomeAccent.TEAL.get_hex_color () == "#2190a4");
+        assert (GnomeAccent.GREEN.get_hex_color () == "#3a944a");
+        assert (GnomeAccent.YELLOW.get_hex_color () == "#c88800");
+        assert (GnomeAccent.ORANGE.get_hex_color () == "#ed5b00");
+        assert (GnomeAccent.RED.get_hex_color () == "#e62d42");
+        assert (GnomeAccent.PINK.get_hex_color () == "#d56199");
+        assert (GnomeAccent.PURPLE.get_hex_color () == "#9141ac");
+        assert (GnomeAccent.SLATE.get_hex_color () == "#6f8396");
+
+        var settings = SettingsManager.get_default ();
+        settings.accent_color = GnomeAccent.PURPLE;
+        assert (settings.accent_color == GnomeAccent.PURPLE);
+
+        settings.accent_color = GnomeAccent.BLUE;
+        assert (settings.accent_color == GnomeAccent.BLUE);
     }
 }

@@ -30,6 +30,22 @@ namespace Imladris.UI {
             var theme_selector = new ThemeSelectorWidget ();
             theme_row.add_suffix (theme_selector);
             appearance_group.add (theme_row);
+
+            var accent_row = new Adw.ActionRow () {
+                title = "Accent Color",
+                subtitle = Core.SettingsManager.get_default ().accent_color.get_display_name ()
+            };
+
+            var accent_selector = new AccentColorSelectorWidget ();
+            accent_selector.accent_selected.connect ((accent) => {
+                accent_row.subtitle = accent.get_display_name ();
+            });
+            Core.SettingsManager.get_default ().accent_color_changed.connect ((accent) => {
+                accent_row.subtitle = accent.get_display_name ();
+            });
+            accent_row.add_suffix (accent_selector);
+            appearance_group.add (accent_row);
+
             gen_page.add (appearance_group);
 
             var hw_group = new Adw.PreferencesGroup () {

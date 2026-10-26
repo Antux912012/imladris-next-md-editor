@@ -64,6 +64,7 @@ namespace Imladris {
             }
 
             Core.SettingsManager.get_default ().apply_theme (Core.SettingsManager.get_default ().app_theme);
+            Core.SettingsManager.get_default ().apply_accent_color (Core.SettingsManager.get_default ().accent_color);
         }
 
         protected override void activate () {

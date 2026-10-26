@@ -58,6 +58,7 @@ sources = files(
   'src/ui/WebViewFactory.vala',
   'src/ui/PreferencesDialog.vala',
   'src/ui/ThemeSelectorWidget.vala',
+  'src/ui/AccentColorSelectorWidget.vala',
   'src/ui/AiSettingsDialog.vala',
   'src/core/SettingsManager.vala',
   'src/core/AiConfigManager.vala',
