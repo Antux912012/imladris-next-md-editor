@@ -6,9 +6,13 @@ namespace Imladris.Core {
 
     public enum AiProvider {
         GEMINI,
+        CLAUDE,
+        OPENAI,
         DEEPSEEK,
         KIMI,
         QWEN,
+        CURSOR,
+        NVIDIA_NIM,
         OLLAMA,
         LM_STUDIO,
         CUSTOM;
@@ -16,9 +20,13 @@ namespace Imladris.Core {
         public string to_string_id () {
             switch (this) {
                 case GEMINI: return "gemini";
+                case CLAUDE: return "claude";
+                case OPENAI: return "openai";
                 case DEEPSEEK: return "deepseek";
                 case KIMI: return "kimi";
                 case QWEN: return "qwen";
+                case CURSOR: return "cursor";
+                case NVIDIA_NIM: return "nvidia_nim";
                 case OLLAMA: return "ollama";
                 case LM_STUDIO: return "lm_studio";
                 case CUSTOM: return "custom";
@@ -29,9 +37,17 @@ namespace Imladris.Core {
         public static AiProvider from_string_id (string id) {
             switch (id.down ()) {
                 case "gemini": return GEMINI;
+                case "claude":
+                case "anthropic": return CLAUDE;
+                case "openai":
+                case "chatgpt": return OPENAI;
                 case "deepseek": return DEEPSEEK;
                 case "kimi": return KIMI;
                 case "qwen": return QWEN;
+                case "cursor": return CURSOR;
+                case "nvidia":
+                case "nvidia_nim":
+                case "nim": return NVIDIA_NIM;
                 case "ollama": return OLLAMA;
                 case "lm_studio":
                 case "local_llama": return LM_STUDIO;
@@ -43,9 +59,13 @@ namespace Imladris.Core {
         public string get_display_name () {
             switch (this) {
                 case GEMINI: return "Google Gemini (Google AI Studio)";
+                case CLAUDE: return "Claude (Anthropic API)";
+                case OPENAI: return "OpenAI (GPT-4o / o1 / o3)";
                 case DEEPSEEK: return "DeepSeek (deepseek-chat / R1)";
                 case KIMI: return "Kimi (Moonshot AI)";
                 case QWEN: return "Qwen (Alibaba DashScope)";
+                case CURSOR: return "Cursor API (Cursor Compatibility)";
+                case NVIDIA_NIM: return "NVIDIA NIM (integrate.api.nvidia.com)";
                 case OLLAMA: return "Ollama (localhost:11434)";
                 case LM_STUDIO: return "LM Studio (localhost:1234)";
                 case CUSTOM: return "Custom OpenAI-Compatible API";
@@ -56,9 +76,13 @@ namespace Imladris.Core {
         public string get_short_name () {
             switch (this) {
                 case GEMINI: return "Gemini";
+                case CLAUDE: return "Claude";
+                case OPENAI: return "OpenAI";
                 case DEEPSEEK: return "DeepSeek";
                 case KIMI: return "Kimi";
                 case QWEN: return "Qwen";
+                case CURSOR: return "Cursor";
+                case NVIDIA_NIM: return "NVIDIA NIM";
                 case OLLAMA: return "Ollama";
                 case LM_STUDIO: return "LM Studio";
                 case CUSTOM: return "Custom";
@@ -69,9 +93,13 @@ namespace Imladris.Core {
         public string get_default_endpoint () {
             switch (this) {
                 case GEMINI: return "https://generativelanguage.googleapis.com/v1beta/openai";
+                case CLAUDE: return "https://api.anthropic.com/v1";
+                case OPENAI: return "https://api.openai.com/v1";
                 case DEEPSEEK: return "https://api.deepseek.com/v1";
                 case KIMI: return "https://api.moonshot.cn/v1";
                 case QWEN: return "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
+                case CURSOR: return "https://api.cursor.sh/v1";
+                case NVIDIA_NIM: return "https://integrate.api.nvidia.com/v1";
                 case OLLAMA: return "http://localhost:11434/v1";
                 case LM_STUDIO: return "http://localhost:1234/v1";
                 case CUSTOM: return "https://api.openai.com/v1";
@@ -82,9 +110,13 @@ namespace Imladris.Core {
         public string get_default_model () {
             switch (this) {
                 case GEMINI: return "gemini-2.0-flash";
+                case CLAUDE: return "claude-3-5-sonnet-20241022";
+                case OPENAI: return "gpt-4o";
                 case DEEPSEEK: return "deepseek-chat";
                 case KIMI: return "moonshot-v1-8k";
                 case QWEN: return "qwen2.5-coder-32b-instruct";
+                case CURSOR: return "cursor-small";
+                case NVIDIA_NIM: return "meta/llama-3.3-70b-instruct";
                 case OLLAMA: return "qwen2.5-coder:latest";
                 case LM_STUDIO: return "default";
                 case CUSTOM: return "gpt-4o";
@@ -96,12 +128,20 @@ namespace Imladris.Core {
             switch (this) {
                 case GEMINI:
                     return { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-thinking-exp-01-21" };
+                case CLAUDE:
+                    return { "claude-3-5-sonnet-20241022", "claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022", "claude-3-opus-20240229" };
+                case OPENAI:
+                    return { "gpt-4o", "gpt-4o-mini", "o1", "o3-mini", "gpt-4-turbo" };
                 case DEEPSEEK:
                     return { "deepseek-chat", "deepseek-reasoner" };
                 case KIMI:
                     return { "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k", "kimi-latest" };
                 case QWEN:
                     return { "qwen2.5-coder-32b-instruct", "qwen2.5-coder-7b-instruct", "qwen-plus", "qwen-turbo", "qwen-max" };
+                case CURSOR:
+                    return { "cursor-small", "claude-3-5-sonnet", "gpt-4o", "cursor-fast" };
+                case NVIDIA_NIM:
+                    return { "meta/llama-3.3-70b-instruct", "deepseek-ai/deepseek-r1", "nvidia/llama-3.1-nemotron-70b-instruct", "qwen/qwen2.5-coder-32b-instruct" };
                 case OLLAMA:
                     return { "qwen2.5-coder:latest", "deepseek-r1:latest", "llama3.2:latest", "codellama:latest" };
                 case LM_STUDIO:
@@ -116,9 +156,13 @@ namespace Imladris.Core {
         public string? get_api_key_help_url () {
             switch (this) {
                 case GEMINI: return "https://aistudio.google.com/app/apikey";
+                case CLAUDE: return "https://console.anthropic.com/settings/keys";
+                case OPENAI: return "https://platform.openai.com/api-keys";
                 case DEEPSEEK: return "https://platform.deepseek.com/api_keys";
                 case KIMI: return "https://platform.moonshot.cn/console/api-keys";
                 case QWEN: return "https://dashscope.console.aliyun.com/apiKey";
+                case CURSOR: return "https://cursor.com";
+                case NVIDIA_NIM: return "https://build.nvidia.com";
                 case LM_STUDIO: return "https://lmstudio.ai";
                 case CUSTOM: return "https://platform.openai.com/api-keys";
                 default: return null;
@@ -128,9 +172,13 @@ namespace Imladris.Core {
         public string? get_env_var_name () {
             switch (this) {
                 case GEMINI: return "GEMINI_API_KEY";
+                case CLAUDE: return "ANTHROPIC_API_KEY";
+                case OPENAI: return "OPENAI_API_KEY";
                 case DEEPSEEK: return "DEEPSEEK_API_KEY";
                 case KIMI: return "MOONSHOT_API_KEY";
                 case QWEN: return "DASHSCOPE_API_KEY";
+                case CURSOR: return "CURSOR_API_KEY";
+                case NVIDIA_NIM: return "NVIDIA_API_KEY";
                 case CUSTOM: return "OPENAI_API_KEY";
                 default: return null;
             }
@@ -213,9 +261,13 @@ namespace Imladris.Core {
         private void init_defaults () {
             AiProvider[] all = {
                 AiProvider.GEMINI,
+                AiProvider.CLAUDE,
+                AiProvider.OPENAI,
                 AiProvider.DEEPSEEK,
                 AiProvider.KIMI,
                 AiProvider.QWEN,
+                AiProvider.CURSOR,
+                AiProvider.NVIDIA_NIM,
                 AiProvider.OLLAMA,
                 AiProvider.LM_STUDIO,
                 AiProvider.CUSTOM
@@ -238,9 +290,13 @@ namespace Imladris.Core {
             // Check if user has environment variables set and use them if config has no key
             AiProvider[] check_order = {
                 AiProvider.GEMINI,
+                AiProvider.CLAUDE,
+                AiProvider.OPENAI,
                 AiProvider.DEEPSEEK,
                 AiProvider.KIMI,
                 AiProvider.QWEN,
+                AiProvider.CURSOR,
+                AiProvider.NVIDIA_NIM,
                 AiProvider.CUSTOM
             };
 
@@ -255,11 +311,17 @@ namespace Imladris.Core {
                 if (prov == AiProvider.GEMINI && (env_val == null || env_val == "")) {
                     env_val = GLib.Environment.get_variable ("GOOGLE_API_KEY");
                 }
+                if (prov == AiProvider.CLAUDE && (env_val == null || env_val == "")) {
+                    env_val = GLib.Environment.get_variable ("CLAUDE_API_KEY");
+                }
                 if (prov == AiProvider.KIMI && (env_val == null || env_val == "")) {
                     env_val = GLib.Environment.get_variable ("KIMI_API_KEY");
                 }
                 if (prov == AiProvider.QWEN && (env_val == null || env_val == "")) {
                     env_val = GLib.Environment.get_variable ("QWEN_API_KEY");
+                }
+                if (prov == AiProvider.NVIDIA_NIM && (env_val == null || env_val == "")) {
+                    env_val = GLib.Environment.get_variable ("NIM_API_KEY");
                 }
 
                 if (env_val != null && env_val.strip ().length > 0) {
@@ -316,6 +378,11 @@ namespace Imladris.Core {
                 if (g_key != null && g_key.strip ().length > 0) {
                     return g_key.strip ();
                 }
+            } else if (provider == AiProvider.CLAUDE) {
+                string? c_key = GLib.Environment.get_variable ("CLAUDE_API_KEY");
+                if (c_key != null && c_key.strip ().length > 0) {
+                    return c_key.strip ();
+                }
             } else if (provider == AiProvider.KIMI) {
                 string? k_key = GLib.Environment.get_variable ("KIMI_API_KEY");
                 if (k_key != null && k_key.strip ().length > 0) {
@@ -325,6 +392,11 @@ namespace Imladris.Core {
                 string? q_key = GLib.Environment.get_variable ("QWEN_API_KEY");
                 if (q_key != null && q_key.strip ().length > 0) {
                     return q_key.strip ();
+                }
+            } else if (provider == AiProvider.NVIDIA_NIM) {
+                string? n_key = GLib.Environment.get_variable ("NIM_API_KEY");
+                if (n_key != null && n_key.strip ().length > 0) {
+                    return n_key.strip ();
                 }
             }
 

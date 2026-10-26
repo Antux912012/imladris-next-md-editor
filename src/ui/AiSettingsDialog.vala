@@ -18,10 +18,10 @@ namespace Imladris.UI {
 
         private void setup_pages () {
             // ==========================================
-            // Page 1: Cloud Providers (Gemini, DeepSeek, Kimi, Qwen)
+            // Page 1: Frontier Cloud AI (Gemini, Claude, OpenAI, Cursor)
             // ==========================================
-            var cloud_page = new Adw.PreferencesPage () {
-                title = "Cloud AI Providers",
+            var frontier_page = new Adw.PreferencesPage () {
+                title = "Frontier AI",
                 icon_name = "network-server-symbolic"
             };
 
@@ -67,9 +67,7 @@ namespace Imladris.UI {
                 title = "Get Google AI Studio API Key",
                 subtitle = "Free tier available at Google AI Studio (login with your Google Account)"
             };
-            var gemini_btn = new Gtk.Button.with_label ("Get API Key ↗") {
-                valign = Gtk.Align.CENTER
-            };
+            var gemini_btn = new Gtk.Button.with_label ("Get API Key ↗") { valign = Gtk.Align.CENTER };
             gemini_btn.add_css_class ("suggested-action");
             gemini_btn.clicked.connect (() => {
                 AiConfigManager.open_url ("https://aistudio.google.com/app/apikey");
@@ -81,9 +79,7 @@ namespace Imladris.UI {
                 title = "Google Account / OAuth Access Token",
                 subtitle = "Authenticate via gcloud auth print-access-token or Google Cloud OAuth2"
             };
-            var oauth_btn = new Gtk.Button.with_label ("OAuth Info ↗") {
-                valign = Gtk.Align.CENTER
-            };
+            var oauth_btn = new Gtk.Button.with_label ("OAuth Info ↗") { valign = Gtk.Align.CENTER };
             oauth_btn.add_css_class ("flat");
             oauth_btn.clicked.connect (() => {
                 AiConfigManager.open_url ("https://cloud.google.com/docs/authentication/token-types#access-contents");
@@ -91,7 +87,173 @@ namespace Imladris.UI {
             gemini_oauth_row.add_suffix (oauth_btn);
             gemini_group.add (gemini_oauth_row);
 
-            cloud_page.add (gemini_group);
+            frontier_page.add (gemini_group);
+
+            // --- Claude / Anthropic Group ---
+            var claude_group = new Adw.PreferencesGroup () {
+                title = "Claude (Anthropic)",
+                description = "Anthropic's Claude 3.5 Sonnet, 3.7 Sonnet, Haiku, and Opus via native Messages API"
+            };
+
+            var claude_settings = config_mgr.get_settings_for (AiProvider.CLAUDE);
+
+            var claude_key_row = new Adw.PasswordEntryRow () {
+                title = "Anthropic API Key",
+                text = claude_settings.api_key
+            };
+            claude_key_row.notify["text"].connect (() => {
+                claude_settings.api_key = claude_key_row.text;
+                config_mgr.save ();
+            });
+            claude_group.add (claude_key_row);
+
+            var claude_endpoint_row = new Adw.EntryRow () {
+                title = "Base Endpoint",
+                text = claude_settings.endpoint
+            };
+            claude_endpoint_row.notify["text"].connect (() => {
+                claude_settings.endpoint = claude_endpoint_row.text;
+                config_mgr.save ();
+            });
+            claude_group.add (claude_endpoint_row);
+
+            var claude_model_row = new Adw.EntryRow () {
+                title = "Model Name",
+                text = claude_settings.model
+            };
+            claude_model_row.notify["text"].connect (() => {
+                claude_settings.model = claude_model_row.text;
+                config_mgr.save ();
+            });
+            claude_group.add (claude_model_row);
+
+            var claude_action_row = new Adw.ActionRow () {
+                title = "Get Anthropic API Key",
+                subtitle = "Manage API keys in the Anthropic Console"
+            };
+            var claude_btn = new Gtk.Button.with_label ("Get API Key ↗") { valign = Gtk.Align.CENTER };
+            claude_btn.add_css_class ("suggested-action");
+            claude_btn.clicked.connect (() => {
+                AiConfigManager.open_url ("https://console.anthropic.com/settings/keys");
+            });
+            claude_action_row.add_suffix (claude_btn);
+            claude_group.add (claude_action_row);
+
+            frontier_page.add (claude_group);
+
+            // --- OpenAI Group ---
+            var openai_group = new Adw.PreferencesGroup () {
+                title = "OpenAI",
+                description = "OpenAI GPT-4o, GPT-4o-mini, o1, and o3-mini models"
+            };
+
+            var openai_settings = config_mgr.get_settings_for (AiProvider.OPENAI);
+
+            var openai_key_row = new Adw.PasswordEntryRow () {
+                title = "OpenAI API Key",
+                text = openai_settings.api_key
+            };
+            openai_key_row.notify["text"].connect (() => {
+                openai_settings.api_key = openai_key_row.text;
+                config_mgr.save ();
+            });
+            openai_group.add (openai_key_row);
+
+            var openai_endpoint_row = new Adw.EntryRow () {
+                title = "Base Endpoint",
+                text = openai_settings.endpoint
+            };
+            openai_endpoint_row.notify["text"].connect (() => {
+                openai_settings.endpoint = openai_endpoint_row.text;
+                config_mgr.save ();
+            });
+            openai_group.add (openai_endpoint_row);
+
+            var openai_model_row = new Adw.EntryRow () {
+                title = "Model Name",
+                text = openai_settings.model
+            };
+            openai_model_row.notify["text"].connect (() => {
+                openai_settings.model = openai_model_row.text;
+                config_mgr.save ();
+            });
+            openai_group.add (openai_model_row);
+
+            var openai_action_row = new Adw.ActionRow () {
+                title = "Get OpenAI API Key",
+                subtitle = "Manage API keys on the OpenAI Developer Platform"
+            };
+            var openai_btn = new Gtk.Button.with_label ("Get API Key ↗") { valign = Gtk.Align.CENTER };
+            openai_btn.add_css_class ("suggested-action");
+            openai_btn.clicked.connect (() => {
+                AiConfigManager.open_url ("https://platform.openai.com/api-keys");
+            });
+            openai_action_row.add_suffix (openai_btn);
+            openai_group.add (openai_action_row);
+
+            frontier_page.add (openai_group);
+
+            // --- Cursor API Compatibility Group ---
+            var cursor_group = new Adw.PreferencesGroup () {
+                title = "Cursor API Compatibility",
+                description = "Connect using Cursor API or OpenAI-compatible Cursor proxies"
+            };
+
+            var cursor_settings = config_mgr.get_settings_for (AiProvider.CURSOR);
+
+            var cursor_endpoint_row = new Adw.EntryRow () {
+                title = "Base Endpoint",
+                text = cursor_settings.endpoint
+            };
+            cursor_endpoint_row.notify["text"].connect (() => {
+                cursor_settings.endpoint = cursor_endpoint_row.text;
+                config_mgr.save ();
+            });
+            cursor_group.add (cursor_endpoint_row);
+
+            var cursor_key_row = new Adw.PasswordEntryRow () {
+                title = "Cursor API Key",
+                text = cursor_settings.api_key
+            };
+            cursor_key_row.notify["text"].connect (() => {
+                cursor_settings.api_key = cursor_key_row.text;
+                config_mgr.save ();
+            });
+            cursor_group.add (cursor_key_row);
+
+            var cursor_model_row = new Adw.EntryRow () {
+                title = "Model Name",
+                text = cursor_settings.model
+            };
+            cursor_model_row.notify["text"].connect (() => {
+                cursor_settings.model = cursor_model_row.text;
+                config_mgr.save ();
+            });
+            cursor_group.add (cursor_model_row);
+
+            var cursor_action_row = new Adw.ActionRow () {
+                title = "Cursor Information",
+                subtitle = "Learn more about Cursor AI and developer API compatibility"
+            };
+            var cursor_btn = new Gtk.Button.with_label ("Visit cursor.com ↗") { valign = Gtk.Align.CENTER };
+            cursor_btn.add_css_class ("suggested-action");
+            cursor_btn.clicked.connect (() => {
+                AiConfigManager.open_url ("https://cursor.com");
+            });
+            cursor_action_row.add_suffix (cursor_btn);
+            cursor_group.add (cursor_action_row);
+
+            frontier_page.add (cursor_group);
+
+            this.add (frontier_page);
+
+            // ==========================================
+            // Page 2: Open Weights & Enterprise (DeepSeek, Kimi, Qwen, NVIDIA NIM)
+            // ==========================================
+            var enterprise_page = new Adw.PreferencesPage () {
+                title = "Open & Enterprise",
+                icon_name = "system-run-symbolic"
+            };
 
             // --- DeepSeek Group ---
             var deepseek_group = new Adw.PreferencesGroup () {
@@ -135,9 +297,7 @@ namespace Imladris.UI {
                 title = "Get DeepSeek API Key",
                 subtitle = "Manage API keys on the DeepSeek Open Platform"
             };
-            var ds_btn = new Gtk.Button.with_label ("Get API Key ↗") {
-                valign = Gtk.Align.CENTER
-            };
+            var ds_btn = new Gtk.Button.with_label ("Get API Key ↗") { valign = Gtk.Align.CENTER };
             ds_btn.add_css_class ("suggested-action");
             ds_btn.clicked.connect (() => {
                 AiConfigManager.open_url ("https://platform.deepseek.com/api_keys");
@@ -145,7 +305,59 @@ namespace Imladris.UI {
             ds_action_row.add_suffix (ds_btn);
             deepseek_group.add (ds_action_row);
 
-            cloud_page.add (deepseek_group);
+            enterprise_page.add (deepseek_group);
+
+            // --- NVIDIA NIM Group ---
+            var nvidia_group = new Adw.PreferencesGroup () {
+                title = "NVIDIA NIM",
+                description = "NVIDIA Inference Microservices with GPU-accelerated Llama 3.3, Nemotron, and DeepSeek R1"
+            };
+
+            var nvidia_settings = config_mgr.get_settings_for (AiProvider.NVIDIA_NIM);
+
+            var nvidia_key_row = new Adw.PasswordEntryRow () {
+                title = "NVIDIA API Key (nvapi-...)",
+                text = nvidia_settings.api_key
+            };
+            nvidia_key_row.notify["text"].connect (() => {
+                nvidia_settings.api_key = nvidia_key_row.text;
+                config_mgr.save ();
+            });
+            nvidia_group.add (nvidia_key_row);
+
+            var nvidia_endpoint_row = new Adw.EntryRow () {
+                title = "Base Endpoint",
+                text = nvidia_settings.endpoint
+            };
+            nvidia_endpoint_row.notify["text"].connect (() => {
+                nvidia_settings.endpoint = nvidia_endpoint_row.text;
+                config_mgr.save ();
+            });
+            nvidia_group.add (nvidia_endpoint_row);
+
+            var nvidia_model_row = new Adw.EntryRow () {
+                title = "Model Name",
+                text = nvidia_settings.model
+            };
+            nvidia_model_row.notify["text"].connect (() => {
+                nvidia_settings.model = nvidia_model_row.text;
+                config_mgr.save ();
+            });
+            nvidia_group.add (nvidia_model_row);
+
+            var nvidia_action_row = new Adw.ActionRow () {
+                title = "Get NVIDIA NIM API Key",
+                subtitle = "Obtain free inference credits and keys at build.nvidia.com"
+            };
+            var nvidia_btn = new Gtk.Button.with_label ("Get API Key ↗") { valign = Gtk.Align.CENTER };
+            nvidia_btn.add_css_class ("suggested-action");
+            nvidia_btn.clicked.connect (() => {
+                AiConfigManager.open_url ("https://build.nvidia.com");
+            });
+            nvidia_action_row.add_suffix (nvidia_btn);
+            nvidia_group.add (nvidia_action_row);
+
+            enterprise_page.add (nvidia_group);
 
             // --- Kimi (Moonshot AI) Group ---
             var kimi_group = new Adw.PreferencesGroup () {
@@ -189,9 +401,7 @@ namespace Imladris.UI {
                 title = "Get Kimi / Moonshot API Key",
                 subtitle = "Manage API keys in the Moonshot developer console"
             };
-            var kimi_btn = new Gtk.Button.with_label ("Get API Key ↗") {
-                valign = Gtk.Align.CENTER
-            };
+            var kimi_btn = new Gtk.Button.with_label ("Get API Key ↗") { valign = Gtk.Align.CENTER };
             kimi_btn.add_css_class ("suggested-action");
             kimi_btn.clicked.connect (() => {
                 AiConfigManager.open_url ("https://platform.moonshot.cn/console/api-keys");
@@ -199,7 +409,7 @@ namespace Imladris.UI {
             kimi_action_row.add_suffix (kimi_btn);
             kimi_group.add (kimi_action_row);
 
-            cloud_page.add (kimi_group);
+            enterprise_page.add (kimi_group);
 
             // --- Qwen (Alibaba DashScope) Group ---
             var qwen_group = new Adw.PreferencesGroup () {
@@ -243,9 +453,7 @@ namespace Imladris.UI {
                 title = "Get DashScope API Key",
                 subtitle = "Manage API keys on Alibaba Cloud DashScope Console"
             };
-            var qwen_btn = new Gtk.Button.with_label ("Get API Key ↗") {
-                valign = Gtk.Align.CENTER
-            };
+            var qwen_btn = new Gtk.Button.with_label ("Get API Key ↗") { valign = Gtk.Align.CENTER };
             qwen_btn.add_css_class ("suggested-action");
             qwen_btn.clicked.connect (() => {
                 AiConfigManager.open_url ("https://dashscope.console.aliyun.com/apiKey");
@@ -253,12 +461,12 @@ namespace Imladris.UI {
             qwen_action_row.add_suffix (qwen_btn);
             qwen_group.add (qwen_action_row);
 
-            cloud_page.add (qwen_group);
+            enterprise_page.add (qwen_group);
 
-            this.add (cloud_page);
+            this.add (enterprise_page);
 
             // ==========================================
-            // Page 2: Local & Custom AI (Ollama, llama.cpp, Custom)
+            // Page 3: Local & Custom AI (Ollama, LM Studio, Custom)
             // ==========================================
             var local_page = new Adw.PreferencesPage () {
                 title = "Local & Custom",
@@ -327,9 +535,7 @@ namespace Imladris.UI {
                 title = "LM Studio Website",
                 subtitle = "Discover, download, and run any open-weights GGUF model locally with GPU acceleration"
             };
-            var lm_btn = new Gtk.Button.with_label ("Visit lmstudio.ai ↗") {
-                valign = Gtk.Align.CENTER
-            };
+            var lm_btn = new Gtk.Button.with_label ("Visit lmstudio.ai ↗") { valign = Gtk.Align.CENTER };
             lm_btn.add_css_class ("suggested-action");
             lm_btn.clicked.connect (() => {
                 AiConfigManager.open_url ("https://lmstudio.ai");

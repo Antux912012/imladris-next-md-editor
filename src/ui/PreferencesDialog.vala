@@ -65,14 +65,18 @@ namespace Imladris.UI {
 
             var provider_dropdown_row = new Adw.ComboRow () {
                 title = "Active Provider",
-                subtitle = "Choose from Google Gemini, DeepSeek, Kimi, Qwen, Ollama, or local inference"
+                subtitle = "Choose from Google Gemini, Claude, OpenAI, DeepSeek, Kimi, Qwen, Cursor, NVIDIA NIM, Ollama, LM Studio, or Custom"
             };
 
             var provider_list = new Gtk.StringList (null);
             provider_list.append ("🌟 Google Gemini (Google AI Studio)");
+            provider_list.append ("🎭 Claude (Anthropic API)");
+            provider_list.append ("🟢 OpenAI (GPT-4o / o1 / o3)");
             provider_list.append ("🧠 DeepSeek (Chat & R1 Reasoner)");
             provider_list.append ("🌙 Kimi (Moonshot AI)");
             provider_list.append ("⚡ Qwen (Alibaba DashScope)");
+            provider_list.append ("🖱️ Cursor API Compatibility");
+            provider_list.append ("🟩 NVIDIA NIM (integrate.api.nvidia.com)");
             provider_list.append ("🦙 Ollama (localhost:11434)");
             provider_list.append ("🔮 LM Studio (localhost:1234)");
             provider_list.append ("⚙️ Custom OpenAI-Compatible");
@@ -118,6 +122,30 @@ namespace Imladris.UI {
             gemini_key_row.add_suffix (btn_gemini_link);
             keys_group.add (gemini_key_row);
 
+            // Claude Quick Row
+            var claude_key_row = new Adw.ActionRow () {
+                title = "Claude (Anthropic Console)",
+                subtitle = "Access Claude 3.5 Sonnet, Haiku, and Opus models"
+            };
+            var btn_claude_link = new Gtk.Button.with_label ("Get Key ↗") { valign = Gtk.Align.CENTER };
+            btn_claude_link.clicked.connect (() => {
+                AiConfigManager.open_url ("https://console.anthropic.com/settings/keys");
+            });
+            claude_key_row.add_suffix (btn_claude_link);
+            keys_group.add (claude_key_row);
+
+            // OpenAI Quick Row
+            var openai_key_row = new Adw.ActionRow () {
+                title = "OpenAI Platform",
+                subtitle = "Access GPT-4o, GPT-4o-mini, o1, and o3-mini models"
+            };
+            var btn_openai_link = new Gtk.Button.with_label ("Get Key ↗") { valign = Gtk.Align.CENTER };
+            btn_openai_link.clicked.connect (() => {
+                AiConfigManager.open_url ("https://platform.openai.com/api-keys");
+            });
+            openai_key_row.add_suffix (btn_openai_link);
+            keys_group.add (openai_key_row);
+
             // DeepSeek Quick Row
             var deepseek_key_row = new Adw.ActionRow () {
                 title = "DeepSeek API",
@@ -153,6 +181,30 @@ namespace Imladris.UI {
             });
             qwen_key_row.add_suffix (btn_qwen_link);
             keys_group.add (qwen_key_row);
+
+            // Cursor Quick Row
+            var cursor_key_row = new Adw.ActionRow () {
+                title = "Cursor API Compatibility",
+                subtitle = "Use Cursor account keys or Cursor-compatible proxy endpoints"
+            };
+            var btn_cursor_link = new Gtk.Button.with_label ("Portal ↗") { valign = Gtk.Align.CENTER };
+            btn_cursor_link.clicked.connect (() => {
+                AiConfigManager.open_url ("https://cursor.com");
+            });
+            cursor_key_row.add_suffix (btn_cursor_link);
+            keys_group.add (cursor_key_row);
+
+            // NVIDIA NIM Quick Row
+            var nvidia_key_row = new Adw.ActionRow () {
+                title = "NVIDIA NIM (build.nvidia.com)",
+                subtitle = "High-throughput cloud endpoints for Llama 3.3, Nemotron, and DeepSeek R1"
+            };
+            var btn_nvidia_link = new Gtk.Button.with_label ("Get Key ↗") { valign = Gtk.Align.CENTER };
+            btn_nvidia_link.clicked.connect (() => {
+                AiConfigManager.open_url ("https://build.nvidia.com");
+            });
+            nvidia_key_row.add_suffix (btn_nvidia_link);
+            keys_group.add (nvidia_key_row);
 
             ai_page.add (keys_group);
             this.add (ai_page);

@@ -92,6 +92,13 @@ namespace Imladris {
                 );
             }
 
+            var req_cancellable = cancellable ?? new Cancellable ();
+
+            // Claude / Anthropic uses /v1/messages API with custom headers and body format
+            if (provider == AiProvider.CLAUDE) {
+                return yield send_anthropic_message_async (base_endpoint, key, model, system_prompt, user_prompt, req_cancellable);
+            }
+
             // 2. Prepare JSON Payload
             var builder = new Json.Builder ();
             builder.begin_object ();
@@ -149,7 +156,6 @@ namespace Imladris {
             }
 
             // Manage Cancellable
-            var req_cancellable = cancellable ?? new Cancellable ();
             active_cancellable = req_cancellable;
 
             GLib.Bytes? bytes = null;
@@ -217,12 +223,124 @@ namespace Imladris {
                 if (reasoning.strip ().length > 0) {
                     return @"💭 *Reasoning Process:*\n$reasoning\n\n$content";
                 }
+
+                if (content.contains ("<think>") && content.contains ("</think>")) {
+                    int start_idx = content.index_of ("<think>");
+                    int end_idx = content.index_of ("</think>");
+                    string thought = content.substring (start_idx + 7, end_idx - (start_idx + 7)).strip ();
+                    string ans = content.substring (end_idx + 8).strip ();
+                    if (thought.length > 0) {
+                        return @"💭 *Reasoning Process:*\n$thought\n\n$ans";
+                    }
+                }
+
                 return content;
             } else if (first_choice.has_member ("text")) {
                 return first_choice.get_string_member ("text");
             }
 
             return "";
+        }
+
+        private async string send_anthropic_message_async (string base_endpoint, string key, string model, string system_prompt, string user_prompt, Cancellable cancellable) throws GLib.Error {
+            var builder = new Json.Builder ();
+            builder.begin_object ();
+            builder.set_member_name ("model");
+            builder.add_string_value (model);
+
+            builder.set_member_name ("max_tokens");
+            builder.add_int_value (4096);
+
+            builder.set_member_name ("temperature");
+            builder.add_double_value (config_mgr.temperature);
+
+            if (system_prompt.length > 0) {
+                builder.set_member_name ("system");
+                builder.add_string_value (system_prompt);
+            }
+
+            builder.set_member_name ("messages");
+            builder.begin_array ();
+            builder.begin_object ();
+            builder.set_member_name ("role");
+            builder.add_string_value ("user");
+            builder.set_member_name ("content");
+            builder.add_string_value (user_prompt);
+            builder.end_object ();
+            builder.end_array ();
+
+            builder.end_object ();
+
+            var generator = new Json.Generator ();
+            generator.set_root (builder.get_root ());
+            string json_payload = generator.to_data (null);
+
+            string target_url = AiConfigManager.normalize_endpoint (base_endpoint, "/messages");
+            var msg = new Soup.Message ("POST", target_url);
+            msg.set_request_body_from_bytes ("application/json", new GLib.Bytes (json_payload.data));
+            msg.request_headers.append ("x-api-key", key);
+            msg.request_headers.append ("anthropic-version", "2023-06-01");
+
+            active_cancellable = cancellable;
+            GLib.Bytes? bytes = null;
+            try {
+                bytes = yield session.send_and_read_async (msg, GLib.Priority.DEFAULT, cancellable);
+            } finally {
+                if (active_cancellable == cancellable) {
+                    active_cancellable = null;
+                }
+            }
+
+            if (bytes == null) {
+                throw new GLib.IOError.FAILED ("No response received from Anthropic API.");
+            }
+
+            string response_str = AiConfigManager.bytes_to_string (bytes);
+
+            if (msg.status_code < 200 || msg.status_code >= 300) {
+                string friendly_err = parse_error_response (response_str, msg.status_code, msg.reason_phrase, AiProvider.CLAUDE);
+                throw new GLib.IOError.FAILED (friendly_err);
+            }
+
+            var parser = new Json.Parser ();
+            try {
+                parser.load_from_data (response_str, -1);
+            } catch (GLib.Error e) {
+                throw new GLib.IOError.INVALID_DATA (@"Invalid JSON response from Claude: $(e.message)");
+            }
+
+            var root = parser.get_root ();
+            if (root == null || root.get_node_type () != Json.NodeType.OBJECT) {
+                throw new GLib.IOError.INVALID_DATA ("Invalid response structure from Claude.");
+            }
+
+            var root_obj = root.get_object ();
+            if (!root_obj.has_member ("content")) {
+                if (root_obj.has_member ("error")) {
+                    string err_msg = extract_json_error_message (root_obj.get_object_member ("error"));
+                    throw new GLib.IOError.FAILED (@"Claude Error: $err_msg");
+                }
+                throw new GLib.IOError.INVALID_DATA ("No 'content' returned in Claude response.");
+            }
+
+            var content_arr = root_obj.get_array_member ("content");
+            string full_text = "";
+            string full_thinking = "";
+
+            for (uint i = 0; i < content_arr.get_length (); i++) {
+                var block = content_arr.get_object_element (i);
+                string type_str = block.has_member ("type") ? block.get_string_member ("type") : "";
+                if (type_str == "text" && block.has_member ("text")) {
+                    full_text += block.get_string_member ("text");
+                } else if (type_str == "thinking" && block.has_member ("thinking")) {
+                    full_thinking += block.get_string_member ("thinking");
+                }
+            }
+
+            if (full_thinking.strip ().length > 0) {
+                return @"💭 *Reasoning Process:*\n$full_thinking\n\n$full_text";
+            }
+            return full_text;
         }
 
         private string parse_error_response (string body, uint status_code, string reason, AiProvider provider) {

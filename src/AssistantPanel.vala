@@ -46,9 +46,13 @@ namespace Imladris {
 
             engine_dropdown = new Gtk.DropDown.from_strings ({
                 "🌟 Google Gemini",
-                "🧠 DeepSeek",
+                "🎭 Claude (Anthropic)",
+                "🟢 OpenAI (GPT-4o / o1)",
+                "🧠 DeepSeek (Chat & R1)",
                 "🌙 Kimi (Moonshot)",
                 "⚡ Qwen (DashScope)",
+                "🖱️ Cursor API Compatibility",
+                "🟩 NVIDIA NIM",
                 "🦙 Ollama (Local)",
                 "🔮 LM Studio (Local: 1234)",
                 "⚙️ Custom Provider"
