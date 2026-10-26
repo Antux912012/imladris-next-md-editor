@@ -10,7 +10,7 @@ namespace Imladris.Core {
         KIMI,
         QWEN,
         OLLAMA,
-        LOCAL_LLAMA,
+        LM_STUDIO,
         CUSTOM;
 
         public string to_string_id () {
@@ -20,7 +20,7 @@ namespace Imladris.Core {
                 case KIMI: return "kimi";
                 case QWEN: return "qwen";
                 case OLLAMA: return "ollama";
-                case LOCAL_LLAMA: return "local_llama";
+                case LM_STUDIO: return "lm_studio";
                 case CUSTOM: return "custom";
                 default: return "gemini";
             }
@@ -33,7 +33,8 @@ namespace Imladris.Core {
                 case "kimi": return KIMI;
                 case "qwen": return QWEN;
                 case "ollama": return OLLAMA;
-                case "local_llama": return LOCAL_LLAMA;
+                case "lm_studio":
+                case "local_llama": return LM_STUDIO;
                 case "custom": return CUSTOM;
                 default: return GEMINI;
             }
@@ -46,7 +47,7 @@ namespace Imladris.Core {
                 case KIMI: return "Kimi (Moonshot AI)";
                 case QWEN: return "Qwen (Alibaba DashScope)";
                 case OLLAMA: return "Ollama (localhost:11434)";
-                case LOCAL_LLAMA: return "Offline llama-server (localhost:8080)";
+                case LM_STUDIO: return "LM Studio (localhost:1234)";
                 case CUSTOM: return "Custom OpenAI-Compatible API";
                 default: return "Unknown";
             }
@@ -59,7 +60,7 @@ namespace Imladris.Core {
                 case KIMI: return "Kimi";
                 case QWEN: return "Qwen";
                 case OLLAMA: return "Ollama";
-                case LOCAL_LLAMA: return "Local llama";
+                case LM_STUDIO: return "LM Studio";
                 case CUSTOM: return "Custom";
                 default: return "AI";
             }
@@ -72,7 +73,7 @@ namespace Imladris.Core {
                 case KIMI: return "https://api.moonshot.cn/v1";
                 case QWEN: return "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
                 case OLLAMA: return "http://localhost:11434/v1";
-                case LOCAL_LLAMA: return "http://127.0.0.1:8080/v1";
+                case LM_STUDIO: return "http://localhost:1234/v1";
                 case CUSTOM: return "https://api.openai.com/v1";
                 default: return "";
             }
@@ -85,7 +86,7 @@ namespace Imladris.Core {
                 case KIMI: return "moonshot-v1-8k";
                 case QWEN: return "qwen2.5-coder-32b-instruct";
                 case OLLAMA: return "qwen2.5-coder:latest";
-                case LOCAL_LLAMA: return "qwen2.5-coder";
+                case LM_STUDIO: return "default";
                 case CUSTOM: return "gpt-4o";
                 default: return "";
             }
@@ -103,8 +104,8 @@ namespace Imladris.Core {
                     return { "qwen2.5-coder-32b-instruct", "qwen2.5-coder-7b-instruct", "qwen-plus", "qwen-turbo", "qwen-max" };
                 case OLLAMA:
                     return { "qwen2.5-coder:latest", "deepseek-r1:latest", "llama3.2:latest", "codellama:latest" };
-                case LOCAL_LLAMA:
-                    return { "qwen2.5-coder-1.5b", "qwen2.5-coder-7b" };
+                case LM_STUDIO:
+                    return { "default", "loaded-model", "qwen2.5-coder-7b", "deepseek-r1-distill-qwen-7b", "llama-3.2-3b" };
                 case CUSTOM:
                     return { "gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet", "deepseek-chat" };
                 default:
@@ -118,6 +119,7 @@ namespace Imladris.Core {
                 case DEEPSEEK: return "https://platform.deepseek.com/api_keys";
                 case KIMI: return "https://platform.moonshot.cn/console/api-keys";
                 case QWEN: return "https://dashscope.console.aliyun.com/apiKey";
+                case LM_STUDIO: return "https://lmstudio.ai";
                 case CUSTOM: return "https://platform.openai.com/api-keys";
                 default: return null;
             }
@@ -137,7 +139,7 @@ namespace Imladris.Core {
         public bool requires_api_key () {
             switch (this) {
                 case OLLAMA:
-                case LOCAL_LLAMA:
+                case LM_STUDIO:
                     return false;
                 default:
                     return true;
@@ -215,7 +217,7 @@ namespace Imladris.Core {
                 AiProvider.KIMI,
                 AiProvider.QWEN,
                 AiProvider.OLLAMA,
-                AiProvider.LOCAL_LLAMA,
+                AiProvider.LM_STUDIO,
                 AiProvider.CUSTOM
             };
 

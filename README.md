@@ -66,7 +66,7 @@ Imladris includes a dedicated AI writing and coding panel with out-of-the-box su
 - **DeepSeek API**: Access `deepseek-chat` and `deepseek-reasoner` (DeepSeek-R1) with native extraction and display of the reasoning/thought chain.
 - **Kimi API (Moonshot AI)**: `moonshot-v1-8k`, `moonshot-v1-32k`, and `kimi-latest` for ultra-long context documents.
 - **Qwen API (Alibaba Cloud DashScope)**: Direct integration with `qwen2.5-coder-32b-instruct` and `qwen-plus`.
-- **Local Ollama & llama.cpp**: Zero-cloud offline privacy via Ollama (`localhost:11434`) or the built-in offline GGUF downloader (`localhost:8080`).
+- **Local Ollama & LM Studio**: Zero-cloud offline privacy via Ollama (`localhost:11434`) or LM Studio Local Server (`localhost:1234`).
 - **Custom OpenAI-Compatible**: Connect to any endpoint (OpenAI, Groq, Mistral, Together, vLLM).
 
 Credentials and model choices are persisted locally in `~/.config/imladris/ai_config.json` (restricted to user read-write mode `0600`) and automatically detect standard environment variables (`GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `MOONSHOT_API_KEY`, `DASHSCOPE_API_KEY`, `OPENAI_API_KEY`).

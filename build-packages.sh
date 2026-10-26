@@ -124,7 +124,7 @@ Homepage: https://github.com/Antux912012/imladris-next-md-editor
 Description: Native Polyglot Studio with AI Assistance, Auto-Completion and MCP Server
  Imladris is a native Linux Markdown and Polyglot Studio built with
  Vala, GTK4, Libadwaita, GtkSourceView 5, and WebKitGTK 6.0.
- Features Dual AI Assistance (Online OpenAI-compatible + Offline llama.cpp),
+ Features Multi-Provider AI Assistance (Google Gemini, DeepSeek, Kimi, Qwen, Ollama, and LM Studio),
  Model Context Protocol (MCP) server, and 4-Quadrant RStudio Docking.
  Supports Quarto (.qmd), R Markdown (.Rmd), Jupyter (.ipynb),
  TypeScript (.ts), HTML5 (.html), and Markdown (.md).

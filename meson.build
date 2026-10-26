@@ -33,7 +33,6 @@ sources = files(
   'src/DocumentPage.vala',
   'src/ExecutionEngine.vala',
   'src/AiClient.vala',
-  'src/LlamaServerManager.vala',
   'src/McpServer.vala',
   'src/AssistantPanel.vala',
   'src/Window.vala',

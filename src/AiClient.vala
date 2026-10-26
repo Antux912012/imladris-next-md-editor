@@ -13,11 +13,11 @@ namespace Imladris {
 
         public bool is_online {
             get {
-                return config_mgr.active_provider != AiProvider.LOCAL_LLAMA;
+                return config_mgr.active_provider != AiProvider.LM_STUDIO && config_mgr.active_provider != AiProvider.OLLAMA;
             }
             set {
                 if (!value) {
-                    config_mgr.active_provider = AiProvider.LOCAL_LLAMA;
+                    config_mgr.active_provider = AiProvider.LM_STUDIO;
                 }
             }
         }
@@ -72,9 +72,9 @@ namespace Imladris {
             config_mgr.set_provider_config (config_mgr.active_provider, endpoint, key, model);
         }
 
-        public void configure_offline (string local_endpoint = "http://127.0.0.1:8080/v1", string model = "qwen2.5-coder") {
-            config_mgr.active_provider = AiProvider.LOCAL_LLAMA;
-            config_mgr.set_provider_config (AiProvider.LOCAL_LLAMA, local_endpoint, "", model);
+        public void configure_offline (string local_endpoint = "http://localhost:1234/v1", string model = "default") {
+            config_mgr.active_provider = AiProvider.LM_STUDIO;
+            config_mgr.set_provider_config (AiProvider.LM_STUDIO, local_endpoint, "", model);
         }
 
         public async string send_chat_completion_async (string system_prompt, string user_prompt, Cancellable? cancellable = null) throws GLib.Error {

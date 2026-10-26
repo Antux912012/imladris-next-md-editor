@@ -8,12 +8,10 @@ namespace Imladris.UI {
     public class AiSettingsDialog : Adw.PreferencesDialog {
 
         private AiConfigManager config_mgr;
-        private LlamaServerManager server_manager;
 
-        public AiSettingsDialog (LlamaServerManager server_mgr) {
+        public AiSettingsDialog () {
             Object (title: "AI Engine & Model Configuration");
             this.config_mgr = AiConfigManager.get_default ();
-            this.server_manager = server_mgr;
 
             setup_pages ();
         }
@@ -297,59 +295,55 @@ namespace Imladris.UI {
 
             local_page.add (ollama_group);
 
-            // --- Offline llama-server Group ---
-            var llama_group = new Adw.PreferencesGroup () {
-                title = "Offline llama.cpp Server",
-                description = "Built-in local inference using downloaded GGUF models"
+            // --- LM Studio (Local Server) Group ---
+            var lm_studio_group = new Adw.PreferencesGroup () {
+                title = "LM Studio (Local Server)",
+                description = "Connect to LM Studio's OpenAI-compatible local inference server (port 1234)"
             };
 
-            var btn_download_1_5b = new Gtk.Button.with_label ("Download Qwen 2.5 Coder 1.5B (GGUF ~1.0 GB)") {
+            var lm_settings = config_mgr.get_settings_for (AiProvider.LM_STUDIO);
+
+            var lm_endpoint_row = new Adw.EntryRow () {
+                title = "Base Endpoint",
+                text = lm_settings.endpoint
+            };
+            lm_endpoint_row.notify["text"].connect (() => {
+                lm_settings.endpoint = lm_endpoint_row.text;
+                config_mgr.save ();
+            });
+            lm_studio_group.add (lm_endpoint_row);
+
+            var lm_model_row = new Adw.EntryRow () {
+                title = "Model Name",
+                text = lm_settings.model
+            };
+            lm_model_row.notify["text"].connect (() => {
+                lm_settings.model = lm_model_row.text;
+                config_mgr.save ();
+            });
+            lm_studio_group.add (lm_model_row);
+
+            var lm_action_row = new Adw.ActionRow () {
+                title = "LM Studio Website",
+                subtitle = "Discover, download, and run any open-weights GGUF model locally with GPU acceleration"
+            };
+            var lm_btn = new Gtk.Button.with_label ("Visit lmstudio.ai ↗") {
                 valign = Gtk.Align.CENTER
             };
-            btn_download_1_5b.clicked.connect (() => {
-                server_manager.download_model_async.begin (
-                    LlamaServerManager.DEFAULT_QWEN_1_5B_URL,
-                    LlamaServerManager.DEFAULT_QWEN_1_5B_NAME,
-                    (obj, res) => {
-                        try {
-                            server_manager.download_model_async.end (res);
-                        } catch (GLib.Error e) {
-                            GLib.warning ("Download error: %s", e.message);
-                        }
-                    }
-                );
+            lm_btn.add_css_class ("suggested-action");
+            lm_btn.clicked.connect (() => {
+                AiConfigManager.open_url ("https://lmstudio.ai");
             });
-            var row_1_5b = new Adw.ActionRow () {
-                title = "Qwen 2.5 Coder 1.5B Instruct",
-                subtitle = "Lightweight, fast CPU inference"
-            };
-            row_1_5b.add_suffix (btn_download_1_5b);
-            llama_group.add (row_1_5b);
+            lm_action_row.add_suffix (lm_btn);
+            lm_studio_group.add (lm_action_row);
 
-            var btn_download_7b = new Gtk.Button.with_label ("Download Qwen 2.5 Coder 7B (GGUF ~4.7 GB)") {
-                valign = Gtk.Align.CENTER
+            var lm_help_row = new Adw.ActionRow () {
+                title = "Local Server Instructions",
+                subtitle = "In LM Studio: click Developer tab (<->) on the left sidebar, load a model, and toggle 'Start Server'."
             };
-            btn_download_7b.clicked.connect (() => {
-                server_manager.download_model_async.begin (
-                    LlamaServerManager.DEFAULT_QWEN_7B_URL,
-                    LlamaServerManager.DEFAULT_QWEN_7B_NAME,
-                    (obj, res) => {
-                        try {
-                            server_manager.download_model_async.end (res);
-                        } catch (GLib.Error e) {
-                            GLib.warning ("Download error: %s", e.message);
-                        }
-                    }
-                );
-            });
-            var row_7b = new Adw.ActionRow () {
-                title = "Qwen 2.5 Coder 7B Instruct",
-                subtitle = "High capability coding model (requires 8GB+ RAM)"
-            };
-            row_7b.add_suffix (btn_download_7b);
-            llama_group.add (row_7b);
+            lm_studio_group.add (lm_help_row);
 
-            local_page.add (llama_group);
+            local_page.add (lm_studio_group);
 
             // --- Custom OpenAI Compatible Group ---
             var custom_group = new Adw.PreferencesGroup () {

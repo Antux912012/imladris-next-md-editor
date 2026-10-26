@@ -50,7 +50,7 @@
   <releases>
     <release version="0.7.0" date="2026-10-26">
       <description>
-        <p>Release v0.7.0 brings the complete 11-pillar expansion and a revamped AI Assistant subsystem: First-class support for Google Gemini (Google AI Studio and Google OAuth token), DeepSeek (including DeepSeek-R1 reasoning stream extraction), Kimi (Moonshot AI), Qwen (Alibaba DashScope), Ollama, and offline llama.cpp with persistent user credentials; clean launch modal with clean UI labels, context-aware ribbon state machine, RStudio-style package installer for CRAN and PyPI, interactive R and Python persistent consoles with inline chunk output cards and plot rendering, automatic pwd synchronization, sandboxed project engine with RStudio and Jupyter export, 1:1 DCF parity for .mallorn bundles, and headless ODT/ODP pipeline.</p>
+        <p>Release v0.7.0 brings the complete 11-pillar expansion and a revamped AI Assistant subsystem: First-class support for Google Gemini (Google AI Studio and Google OAuth token), DeepSeek (including DeepSeek-R1 reasoning stream extraction), Kimi (Moonshot AI), Qwen (Alibaba DashScope), Ollama, and LM Studio local server with persistent user credentials; clean launch modal with clean UI labels, context-aware ribbon state machine, RStudio-style package installer for CRAN and PyPI, interactive R and Python persistent consoles with inline chunk output cards and plot rendering, automatic pwd synchronization, sandboxed project engine with RStudio and Jupyter export, 1:1 DCF parity for .mallorn bundles, and headless ODT/ODP pipeline.</p>
       </description>
     </release>
     <release version="0.6.0" date="2026-10-26">

@@ -58,7 +58,7 @@ namespace Imladris.UI {
             provider_list.append ("🌙 Kimi (Moonshot AI)");
             provider_list.append ("⚡ Qwen (Alibaba DashScope)");
             provider_list.append ("🦙 Ollama (localhost:11434)");
-            provider_list.append ("💻 Offline llama-server (localhost:8080)");
+            provider_list.append ("🔮 LM Studio (localhost:1234)");
             provider_list.append ("⚙️ Custom OpenAI-Compatible");
             provider_dropdown_row.model = provider_list;
             provider_dropdown_row.selected = (uint) ai_config_mgr.active_provider;

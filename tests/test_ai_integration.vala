@@ -64,9 +64,13 @@ namespace Imladris.Tests {
         assert (ollama.requires_api_key () == false);
         assert (ollama.get_default_endpoint () == "http://localhost:11434/v1");
 
-        var llama = AiProvider.LOCAL_LLAMA;
-        assert (llama.requires_api_key () == false);
-        assert (llama.get_default_endpoint () == "http://127.0.0.1:8080/v1");
+        var lm_studio = AiProvider.LM_STUDIO;
+        assert (lm_studio.to_string_id () == "lm_studio");
+        assert (AiProvider.from_string_id ("lm_studio") == AiProvider.LM_STUDIO);
+        assert (AiProvider.from_string_id ("local_llama") == AiProvider.LM_STUDIO);
+        assert (lm_studio.requires_api_key () == false);
+        assert (lm_studio.get_default_endpoint () == "http://localhost:1234/v1");
+        assert (lm_studio.get_default_model () == "default");
     }
 
     private static void test_url_normalization () {
@@ -117,8 +121,8 @@ namespace Imladris.Tests {
         assert (mgr.get_api_key_for (AiProvider.QWEN) == "test_qwen_key");
         assert (mgr.get_model_for (AiProvider.QWEN) == "qwen2.5-coder-32b-instruct");
 
-        // Local llama server needs no key
-        assert (mgr.has_valid_key (AiProvider.LOCAL_LLAMA) == true);
+        // Local LM Studio and Ollama servers need no key
+        assert (mgr.has_valid_key (AiProvider.LM_STUDIO) == true);
         assert (mgr.has_valid_key (AiProvider.OLLAMA) == true);
     }
 

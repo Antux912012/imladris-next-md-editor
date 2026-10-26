@@ -8,7 +8,6 @@ namespace Imladris {
     public class AssistantPanel : Gtk.Box {
 
         public AiClient ai_client { get; private set; }
-        public LlamaServerManager server_manager { get; private set; }
 
         private AiConfigManager config_mgr;
         private Gtk.TextView chat_view;
@@ -19,7 +18,6 @@ namespace Imladris {
         private Gtk.DropDown model_dropdown;
         private Gtk.StringList model_string_list;
         private Adw.Banner api_key_banner;
-        private Gtk.ProgressBar download_bar;
         private Gtk.Label status_lbl;
         private Window parent_window;
         private bool is_generating = false;
@@ -31,7 +29,6 @@ namespace Imladris {
             this.config_mgr = AiConfigManager.get_default ();
 
             ai_client = new AiClient ();
-            server_manager = new LlamaServerManager ();
 
             setup_ui ();
             connect_signals ();
@@ -53,7 +50,7 @@ namespace Imladris {
                 "🌙 Kimi (Moonshot)",
                 "⚡ Qwen (DashScope)",
                 "🦙 Ollama (Local)",
-                "💻 Offline llama-server",
+                "🔮 LM Studio (Local: 1234)",
                 "⚙️ Custom Provider"
             });
             engine_dropdown.hexpand = true;
@@ -83,15 +80,7 @@ namespace Imladris {
             api_key_banner.button_clicked.connect (open_settings_dialog);
             this.append (api_key_banner);
 
-            // 3. Download progress bar (for local GGUF models)
-            download_bar = new Gtk.ProgressBar () {
-                visible = false,
-                margin_top = 2,
-                margin_bottom = 2
-            };
-            this.append (download_bar);
-
-            // 4. Quick Action Buttons Pill Strip
+            // 3. Quick Action Buttons Pill Strip
             var quick_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4);
 
             var btn_explain = new Gtk.Button.with_label ("Explain");
@@ -247,16 +236,6 @@ namespace Imladris {
             config_mgr.provider_changed.connect ((prov) => {
                 sync_with_config ();
             });
-
-            server_manager.download_progress.connect ((progress, text) => {
-                download_bar.visible = progress < 1.0;
-                download_bar.set_fraction (progress);
-                status_lbl.label = text;
-            });
-
-            server_manager.server_state_changed.connect ((running, msg) => {
-                status_lbl.label = msg;
-            });
         }
 
         private void sync_with_config () {
@@ -370,7 +349,7 @@ namespace Imladris {
         }
 
         private void open_settings_dialog () {
-            var dialog = new UI.AiSettingsDialog (server_manager);
+            var dialog = new UI.AiSettingsDialog ();
             dialog.present (parent_window);
         }
     }
