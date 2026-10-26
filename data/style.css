@@ -379,6 +379,25 @@ window.eye-friendly,
     background-color: #ebe2d8;
 }
 
+/* Package installer quick-add chip buttons */
+.chip-button {
+    border-radius: 9999px;
+    padding: 3px 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 2px;
+    background-color: alpha(@window_fg_color, 0.08);
+    color: @window_fg_color;
+    border: 1px solid alpha(@window_fg_color, 0.16);
+    transition: all 120ms ease;
+}
+
+.chip-button:hover {
+    background-color: alpha(@accent_color, 0.2);
+    color: @accent_color;
+    border-color: alpha(@accent_color, 0.45);
+}
+
 .eye-friendly .imladris-statusbar {
     background-color: #ebe2d8;
 }

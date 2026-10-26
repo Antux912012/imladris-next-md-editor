@@ -57,8 +57,13 @@ Exporting a Standard project asks for confirmation first, because it may not run
 ### The `.mallorn` format
 A `.mallorn` file is RStudio's `.Rproj` DCF syntax with a few namespaced `Imladris*` keys added. Imladris keeps `<name>.mallorn` and `<name>.Rproj` in sync, so a project opens in both tools. A whole project can also be packed into a single portable archive (`.tar.zst`, with a `.zip` fallback) that leaves out heavy library folders and keeps the lockfiles.
 
-### Package installer
-An RStudio-style dialog for CRAN and PyPI. It fetches both indices with libsoup, parses them with json-glib, and autocompletes comma- or space-separated package lists. Installs go to the right place automatically (system library, or the project's `renv` / `.venv`, followed by a lockfile snapshot).
+### Easy Package Installer
+An intuitive, Libadwaita-native dialog (`Ctrl+Shift+P` or from the Packages pane) supporting both R and Python ecosystems:
+- **R Packages**: Install from CRAN mirrors (Cloud R-Project, Posit Public Package Manager) with live search and autocompletion, or install manually from local source archives (`.tar.gz`, `.tgz`, `.zip`) or GitHub/GitLab repositories (`remotes::install_github`).
+- **Python Packages**: Install from PyPI, local wheels (`.whl`), source archives, or git repositories with support for editable (`-e`) installs.
+- **Ultra-Fast `uv` & `pip` Support**: Automatically detects and leverages `uv` for lightning-fast package installs, falling back seamlessly to `python -m pip`.
+- **Environment Aware**: Automatically routes installations to your project's sandboxed environment (`renv` / `.venv`) or system libraries, automatically triggering lockfile snapshots (`renv.lock`, `requirements.txt`).
+- **Quick-Add Curated Chips**: 1-click popular package buttons for data science, statistics, machine learning, and visualization libraries.
 
 ### Export
 Documents go to HTML, PDF, **ODT** and **ODP**. Imladris uses Quarto, rmarkdown or Pandoc when they're installed, goes through LibreOffice for slides, and falls back to a built-in OpenDocument writer when none of that is available.

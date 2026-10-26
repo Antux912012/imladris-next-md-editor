@@ -1353,6 +1353,7 @@ namespace Imladris {
             modal.execute_r_command.connect ((r_code) => {
                 var d = get_active_document ();
                 if (d != null) {
+                    d.append_console_log (@"▶ [R] Executing: $r_code");
                     d.panel_registry.run_code_snippet_in_console ("r", r_code);
                 }
             });
@@ -1368,7 +1369,8 @@ namespace Imladris {
             var doc = get_active_document ();
             if (doc != null) {
                 string cmd_disp = string.joinv (" ", args);
-                doc.append_console_log (@"▶ [Python/pip] Executing: $cmd_disp");
+                string tag = args.length > 0 && args[0].contains ("uv") ? "Python/uv" : "Python/pip";
+                doc.append_console_log (@"▶ [$tag] Executing: $cmd_disp");
             }
 
             try {
