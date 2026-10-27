@@ -57,13 +57,25 @@ Exporting a Standard project asks for confirmation first, because it may not run
 ### The `.mallorn` format
 A `.mallorn` file is RStudio's `.Rproj` DCF syntax with a few namespaced `Imladris*` keys added. Imladris keeps `<name>.mallorn` and `<name>.Rproj` in sync, so a project opens in both tools. A whole project can also be packed into a single portable archive (`.tar.zst`, with a `.zip` fallback) that leaves out heavy library folders and keeps the lockfiles.
 
-### Easy Package Installer
-An intuitive, Libadwaita-native dialog (`Ctrl+Shift+P` or from the Packages pane) supporting both R and Python ecosystems:
-- **R Packages**: Install from CRAN mirrors (Cloud R-Project, Posit Public Package Manager) with live search and autocompletion, or install manually from local source archives (`.tar.gz`, `.tgz`, `.zip`) or GitHub/GitLab repositories (`remotes::install_github`).
-- **Python Packages**: Install from PyPI, local wheels (`.whl`), source archives, or git repositories with support for editable (`-e`) installs.
-- **Ultra-Fast `uv` & `pip` Support**: Automatically detects and leverages `uv` for lightning-fast package installs, falling back seamlessly to `python -m pip`.
-- **Environment Aware**: Automatically routes installations to your project's sandboxed environment (`renv` / `.venv`) or system libraries, automatically triggering lockfile snapshots (`renv.lock`, `requirements.txt`).
-- **Quick-Add Curated Chips**: 1-click popular package buttons for data science, statistics, machine learning, and visualization libraries.
+### "Write with Elrond Assistance (AI)" — Zero-Config Local Copilot
+Imladris features a built-in, zero-configuration local AI coding and data science copilot branded as **Elrond Assistance (AI)**, specialized in **R (tidyverse, ggplot2), Python (pandas, numpy, matplotlib), SQL, HTML, and Quarto/RMarkdown data analysis**:
+- **Zero-Setup "Click-and-Run"**: Enable Elrond with a single switch in **Preferences → AI & Elrond**. If missing, the optimal vertical coding model (`Qwen2.5-Coder-3B`) is automatically bootstrapped in the background with live download progress.
+- **Vulkan GPU Acceleration with CPU Fallback**: Automatically leverages Vulkan GPU compute (`--n-gpu-layers 99`) for lightning-fast token generation, falling back cleanly to multi-threaded CPU execution if no dedicated GPU is detected.
+- **Live Status Bar Telemetry Monitor**: Positioned directly next to the word/line counter in the bottom status bar, continuously displaying live memory metrics every 2 seconds:
+  > `Elrond running on Qwen2.5-Coder-3B - 0.24 GB RAM / 2.08 GB VRAM used`
+- **Three Assistance Levels**:
+  - **Low** *(On-Demand Only)*: Activated strictly via *"Write with Elrond Assistance"* button or `Ctrl+Shift+E` / `Ctrl+Space`.
+  - **Medium** *(Smart Autocomplete)*: Debounced inline code completions with active dataframe column awareness (`mtcars`, `df.dtypes`).
+  - **High** *(Full Elrond Copilot)*: Report narrative awareness, proactive `ggplot2`/`matplotlib` graph suggestions, and statistical test generation.
+- **Editor Context Menu & Shortcut**: Right-click anywhere in the editor or press `Ctrl+Shift+E` to trigger **"Write with Elrond Assistance (AI)"**.
+
+### Packages Ribbon Tab
+An always-accessible top window menu tab (`Ctrl+Shift+P` or top menu switcher) replacing modal dialogs with an integrated dual-group toolbar:
+- **R Packages Section**: CRAN package search with live autocomplete, one-click install, and a `...` menu for GitHub repositories (`user/repo`) and local source archives (`.tar.gz`, `.zip`).
+- **Python Packages Section**: PyPI search with live autocomplete, and a `...` menu for GitHub repositories (`git+https://`) and local wheels (`.whl`).
+- **ETag Disk Caching & $O(\log N)$ Binary Search**: Cached sorted package registries in `~/.cache/imladris/indices/` with HTTP ETag validation and instant binary search prefix lookup (under 0.1ms).
+- **`pak` & `uv` Fast-Path Acceleration**: Leverages `pak::pkg_install` for R and `uv pip install` for Python when available, cutting installation times by up to 10x.
+- **Automatic Lockfile Synchronization**: Automatically updates `renv.lock` or `requirements.txt` upon successful installation in sandboxed projects.
 
 ### Automated `micromamba` Toolchain & 4-Tier Runtime Resolution
 Imladris v0.9.0 introduces a built-in automated Data Science Toolchain Manager powered by **`micromamba`** (a single, statically-linked ~18MB C++ executable with zero host dependencies):
@@ -136,14 +148,24 @@ flatpak run io.github.Antux912012.Imladris
 ```
 The Flatpak requests network access (package downloads and optional AI endpoints), home-folder access (your projects), and the `org.freedesktop.Flatpak` portal. The Flatpak supports both transparent host toolchain discovery (`flatpak-spawn --host`) AND fully self-contained zero-root execution via the built-in automated `micromamba` toolchain manager.
 
+**Arch Linux (AUR)**
+```bash
+# Using yay
+yay -S imladris
+
+# Or using paru
+paru -S imladris
+```
+PKGBUILD and `.SRCINFO` are located in the `packaging/` directory.
+
 **Fedora**
 ```bash
-sudo dnf install ./imladris-0.9.0-1.fc44.x86_64.rpm
+sudo dnf install ./imladris-0.10.0-1.fc44.x86_64.rpm
 ```
 
 **Debian / Ubuntu**
 ```bash
-sudo dpkg -i imladris_0.9.0_amd64.deb && sudo apt-get install -f
+sudo dpkg -i imladris_0.10.0_amd64.deb && sudo apt-get install -f
 ```
 
 ## Build from source

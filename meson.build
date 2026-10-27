@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.9.0',
+  version: '0.10.0',
   default_options: ['warning_level=1']
 )
 
@@ -33,6 +33,7 @@ sources = files(
   'src/DocumentPage.vala',
   'src/ExecutionEngine.vala',
   'src/AiClient.vala',
+  'src/ai/ElrondEngineController.vala',
   'src/McpServer.vala',
   'src/AssistantPanel.vala',
   'src/Window.vala',
@@ -54,6 +55,7 @@ sources = files(
   'src/ui/RStudioDockGrid.vala',
   'src/ui/new_project_dialog.vala',
   'src/ui/PackageInstallerDialog.vala',
+  'src/ui/PackagesRibbonBar.vala',
   'src/ui/InlineChunkOutputWidget.vala',
   'src/ui/WebViewFactory.vala',
   'src/ui/PreferencesDialog.vala',

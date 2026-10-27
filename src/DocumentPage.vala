@@ -110,6 +110,10 @@ namespace Imladris {
             setup_completion ();
             setup_cell_execution_shortcut ();
 
+            var editor_context_menu = new GLib.Menu ();
+            editor_context_menu.append ("Write with Elrond Assistance (AI)", "app.elrond_assist");
+            source_view.extra_menu = editor_context_menu;
+
             editor_scroller = new Gtk.ScrolledWindow () {
                 child = source_view,
                 hexpand = true,
@@ -189,7 +193,7 @@ namespace Imladris {
 
             if (parent_window != null) {
                 assistant_panel = new AssistantPanel (parent_window);
-                right_stack.add_titled (assistant_panel, "assistant", "AI Assistant");
+                right_stack.add_titled (assistant_panel, "assistant", "Elrond Assistance");
             }
 
             right_box.append (right_stack);

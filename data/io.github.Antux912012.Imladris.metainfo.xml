@@ -56,6 +56,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.0" date="2026-10-27">
+      <description>
+        <p>Release v0.10.0 introduces the unified 'Write with Elrond Assistance (AI)' zero-configuration local copilot and telemetry status bar monitor. Features automatic Qwen2.5-Coder-3B model bootstrapping, zero-setup llama-server lifecycle management with Vulkan GPU offloading and CPU fallback, real-time RAM/VRAM telemetry polling every 2 seconds, editor context menu action and Ctrl+Shift+E shortcut. Also introduces the dedicated top 'Packages' Ribbon Tab with live prefix autocomplete, ETag disk caching, O(log N) binary search, pak and uv fast-path installation, and automatic sandboxed lockfile synchronization.</p>
+      </description>
+    </release>
     <release version="0.9.0" date="2026-10-26">
       <description>
         <p>Release v0.9.0 introduces the Automated micromamba Data Science Toolchain Manager and 4-tier runtime resolution hierarchy (Project Sandbox → Managed Global Toolchain → Host Flatpak Spawn → Host Native). Provides one-click automated installation of R 4.4 with dev compilers, IRkernel, pre-compiled tidyverse, Python 3.12 with uv, and Quarto CLI into user storage ($XDG_DATA_HOME/imladris/toolchains/) with zero root permissions and zero host compilation errors. Enables completely self-contained execution on clean Linux installations inside Flatpak containers.</p>

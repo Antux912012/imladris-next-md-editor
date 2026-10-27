@@ -15,6 +15,12 @@ namespace Imladris {
         private Gtk.Label zoom_lbl;
         private int current_zoom = 100;
 
+        private Adw.ToastOverlay toast_overlay;
+        private Gtk.ToggleButton? tab_btn_home = null;
+        private Gtk.ToggleButton? tab_btn_packages = null;
+        private UI.PackagesRibbonBar? packages_ribbon_bar = null;
+        private Gtk.Label elrond_telemetry_label;
+
         public string current_project_dir { get; private set; default = ""; }
         public ProjectType current_project_type { get; private set; default = ProjectType.STANDARD; }
 
@@ -130,15 +136,20 @@ namespace Imladris {
             };
 
             string[] categories = {
-                "Home", "Insert", "Computation", "Publish", "View"
+                "Home", "Insert", "Computation", "Publish", "View", "Packages"
             };
 
             Gtk.ToggleButton? first_tab = null;
             foreach (string cat in categories) {
                 var tab_btn = new Gtk.ToggleButton.with_label (cat);
                 tab_btn.add_css_class ("ribbon-tab-btn");
+                if (cat == "Home") tab_btn_home = tab_btn;
                 if (cat == "Computation") tab_btn.add_css_class ("ribbon-tab-scientific");
                 if (cat == "Publish") tab_btn.add_css_class ("ribbon-tab-web");
+                if (cat == "Packages") {
+                    tab_btn.add_css_class ("ribbon-tab-packages");
+                    tab_btn_packages = tab_btn;
+                }
 
                 if (first_tab == null) {
                     first_tab = tab_btn;
@@ -185,11 +196,22 @@ namespace Imladris {
             ribbon_scroller.set_child (ribbon_stack);
             top_master_box.append (ribbon_scroller);
 
+            packages_ribbon_bar = new UI.PackagesRibbonBar (pkg_index_cache);
             ribbon_stack.add_named (build_home_ribbon (), "Home");
             ribbon_stack.add_named (build_insert_ribbon (), "Insert");
             ribbon_stack.add_named (build_computation_ribbon (), "Computation");
             ribbon_stack.add_named (build_publish_ribbon (), "Publish");
             ribbon_stack.add_named (build_view_ribbon (), "View");
+            ribbon_stack.add_named (packages_ribbon_bar, "Packages");
+
+            packages_ribbon_bar.dispatch_r_install.connect ((r_cmd, label) => {
+                run_r_install_and_snapshot.begin (r_cmd, label);
+            });
+
+            packages_ribbon_bar.dispatch_python_install.connect ((argv, working_dir, sandboxed, label) => {
+                string py_bin = argv.length > 0 ? argv[0] : "python3";
+                run_python_pip_and_snapshot.begin (py_bin, argv, working_dir, sandboxed, label);
+            });
 
             // =================================================================
             // TIER 3: QUICK ACCESS TOOLBAR & ADW.TABBAR
@@ -203,9 +225,10 @@ namespace Imladris {
             tier3_box.append (RibbonFactory.create_compact_button ("applications-internet-symbolic", "HTML", false, false, true, null, "app.export_html"));
             tier3_box.append (RibbonFactory.create_compact_button ("edit-undo-symbolic", null, false, false, true, null, "win.undo"));
             tier3_box.append (RibbonFactory.create_compact_button ("edit-redo-symbolic", null, false, false, true, null, "win.redo"));
-            var ai_quick_btn = RibbonFactory.create_compact_button ("system-run-symbolic", "AI Assistant");
+            var ai_quick_btn = RibbonFactory.create_compact_button ("system-run-symbolic", "Elrond Assistance");
+            ((Gtk.Button) ai_quick_btn).tooltip_text = "Write with Elrond Assistance (AI) — Local R, Python, SQL & Data Science Copilot (Ctrl+Shift+E)";
             ((Gtk.Button) ai_quick_btn).clicked.connect (() => {
-                trigger_ai_assistant ();
+                trigger_elrond_assistance ();
             });
             tier3_box.append (ai_quick_btn);
 
@@ -261,6 +284,31 @@ namespace Imladris {
             status_words_lbl = new Gtk.Label ("Words: 0 | Lines: 1");
             status_bar.append (status_words_lbl);
 
+            var elrond_sep = new Gtk.Separator (Gtk.Orientation.VERTICAL) {
+                margin_start = 6,
+                margin_end = 6
+            };
+            status_bar.append (elrond_sep);
+
+            elrond_telemetry_label = new Gtk.Label ("Elrond AI: Off") {
+                valign = Gtk.Align.CENTER
+            };
+            elrond_telemetry_label.add_css_class ("caption");
+            elrond_telemetry_label.add_css_class ("dim-label");
+            status_bar.append (elrond_telemetry_label);
+
+            var elrond_ctrl = Imladris.AI.ElrondEngineController.get_default ();
+            elrond_ctrl.statusbar_telemetry_updated.connect ((telemetry_text, is_active) => {
+                elrond_telemetry_label.label = telemetry_text;
+                if (is_active) {
+                    elrond_telemetry_label.remove_css_class ("dim-label");
+                    elrond_telemetry_label.add_css_class ("accent");
+                } else {
+                    elrond_telemetry_label.remove_css_class ("accent");
+                    elrond_telemetry_label.add_css_class ("dim-label");
+                }
+            });
+
             status_bar.append (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) { hexpand = true });
 
             zoom_lbl = new Gtk.Label ("100%");
@@ -281,7 +329,9 @@ namespace Imladris {
             // =================================================================
             // MAIN WORKSPACE & STATE MACHINE LISTENERS
             // =================================================================
-            toolbar_view.set_content (tab_view);
+            toast_overlay = new Adw.ToastOverlay ();
+            toast_overlay.set_child (tab_view);
+            toolbar_view.set_content (toast_overlay);
 
             Services.WorkspaceStateManager.get_default ().layout_changed.connect ((mode) => {
                 apply_workspace_layout (mode);
@@ -359,6 +409,10 @@ namespace Imladris {
             if (doc != null) {
                 doc.show_ai_assistant ();
             }
+        }
+
+        public void trigger_elrond_assistance () {
+            trigger_ai_assistant ();
         }
 
         public void add_document_tab (string title, string lang_id, string? initial_text = null, GLib.File? file = null) {
@@ -957,9 +1011,9 @@ namespace Imladris {
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 4: Assistant & Settings
-            var btn_ai_home = RibbonFactory.create_tool_button ("system-run-symbolic", "AI Assistant", "Invoke AI Assistant");
+            var btn_ai_home = RibbonFactory.create_tool_button ("system-run-symbolic", "Elrond Assistance", "Write with Elrond Assistance (AI) — Local R, Python, SQL & Data Science Copilot (Ctrl+Shift+E)");
             ((Gtk.Button) btn_ai_home).clicked.connect (() => {
-                trigger_ai_assistant ();
+                trigger_elrond_assistance ();
             });
             box.append (btn_ai_home);
 
@@ -1164,9 +1218,9 @@ namespace Imladris {
             box.append (RibbonFactory.create_linked_group ({ btn_restart_kernel, btn_package_installer, btn_snapshot_env, btn_restore_env, btn_toolchains }));
             box.append (RibbonFactory.create_vseparator ());
 
-            var btn_comp_ai = RibbonFactory.create_tool_button ("system-run-symbolic", "AI Assistant", "Invoke AI Coding Assistant");
+            var btn_comp_ai = RibbonFactory.create_tool_button ("system-run-symbolic", "Elrond Assistance", "Write with Elrond Assistance (AI) — Local R, Python, SQL & Data Science Copilot (Ctrl+Shift+E)");
             ((Gtk.Button) btn_comp_ai).clicked.connect (() => {
-                trigger_ai_assistant ();
+                trigger_elrond_assistance ();
             });
             box.append (btn_comp_ai);
 
@@ -1212,9 +1266,9 @@ namespace Imladris {
             box.append (btn_preview);
             box.append (RibbonFactory.create_vseparator ());
 
-            var btn_pub_ai = RibbonFactory.create_tool_button ("system-run-symbolic", "AI Assistant", "Invoke AI Publishing Assistant");
+            var btn_pub_ai = RibbonFactory.create_tool_button ("system-run-symbolic", "Elrond Assistance", "Write with Elrond Assistance (AI) — Local R, Python, SQL & Data Science Copilot (Ctrl+Shift+E)");
             ((Gtk.Button) btn_pub_ai).clicked.connect (() => {
-                trigger_ai_assistant ();
+                trigger_elrond_assistance ();
             });
             box.append (btn_pub_ai);
 
@@ -1343,10 +1397,53 @@ namespace Imladris {
                 btn_live_preview.visible = true;
                 btn_live_preview.sensitive = is_md || is_html || is_notebook;
             }
+
+            // 9. Packages Ribbon Tab (Pillar 2: visible & enabled for computational workflows)
+            bool is_computational = is_script || is_notebook;
+            if (tab_btn_packages != null) {
+                tab_btn_packages.visible = is_computational;
+                tab_btn_packages.sensitive = is_computational;
+                if (!is_computational && tab_btn_packages.active && tab_btn_home != null) {
+                    tab_btn_home.active = true;
+                }
+            }
+            if (packages_ribbon_bar != null) {
+                string pdir = current_project_dir != "" ? current_project_dir : Services.PersistentSessionManager.get_default ().current_working_dir;
+                if (pdir == "") pdir = GLib.Environment.get_current_dir ();
+                packages_ribbon_bar.project_root = pdir;
+                packages_ribbon_bar.is_sandboxed = is_sandboxed;
+                packages_ribbon_bar.update_target_badge ();
+            }
+        }
+
+        public void show_toast (string message) {
+            if (toast_overlay != null) {
+                toast_overlay.add_toast (new Adw.Toast (message));
+            }
         }
 
         // Action Handlers for Pillars 2, 3, 4
         public void show_package_installer_dialog () {
+            if (tab_btn_packages != null && tab_btn_packages.visible) {
+                tab_btn_packages.active = true;
+                if (btn_collapse_ribbon != null && !btn_collapse_ribbon.active) {
+                    btn_collapse_ribbon.active = true;
+                }
+                var doc = get_active_document ();
+                var fmt = DocumentFormat.QMD;
+                if (doc != null) {
+                    fmt = doc.get_document_format ();
+                }
+                bool is_py = (fmt == DocumentFormat.PYSCRIPT || fmt == DocumentFormat.IPYNB);
+                if (packages_ribbon_bar != null) {
+                    packages_ribbon_bar.focus_search (is_py);
+                }
+            } else {
+                open_standalone_package_modal ();
+            }
+        }
+
+        public void open_standalone_package_modal () {
             var doc = get_active_document ();
             var fmt = DocumentFormat.QMD;
             if (doc != null) {
@@ -1377,6 +1474,45 @@ namespace Imladris {
             modal.present (this);
         }
 
+        public async void run_r_install_and_snapshot (string r_cmd, string display_label) {
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.append_console_log (@"▶ [R] Executing: $r_cmd");
+            }
+            if (packages_ribbon_bar != null) {
+                packages_ribbon_bar.set_r_busy (true, display_label);
+            }
+
+            string? plot_file = null;
+            ulong sig_id = 0;
+            sig_id = Services.PersistentSessionManager.get_default ().session_output_received.connect ((eng, line, is_err) => {
+                if (eng == "r" && doc != null) {
+                    doc.append_console_log (line);
+                }
+            });
+
+            try {
+                string output = yield Services.PersistentSessionManager.get_default ().execute_r (r_cmd, out plot_file);
+                if (doc != null && output.strip ().length > 0) {
+                    doc.append_console_log (output.strip ());
+                }
+                if (doc != null) {
+                    doc.append_console_log (@"✔ R package installation finished for $display_label.");
+                }
+                show_toast (@"Successfully installed $display_label");
+            } catch (GLib.Error e) {
+                if (doc != null) {
+                    doc.append_console_log (@"✖ R install error: $(e.message)");
+                }
+                show_toast (@"Installation failed for $display_label");
+            } finally {
+                Services.PersistentSessionManager.get_default ().disconnect (sig_id);
+                if (packages_ribbon_bar != null) {
+                    packages_ribbon_bar.set_r_busy (false, display_label);
+                }
+            }
+        }
+
         public void show_toolchain_setup_dialog () {
             var dlg = new UI.ToolchainSetupDialog ();
             dlg.installation_completed.connect (() => {
@@ -1388,12 +1524,15 @@ namespace Imladris {
             dlg.present (this);
         }
 
-        public async void run_python_pip_and_snapshot (string py_bin, string[] args, string working_dir, bool sandboxed) {
+        public async void run_python_pip_and_snapshot (string py_bin, string[] args, string working_dir, bool sandboxed, string display_label = "") {
             var doc = get_active_document ();
             if (doc != null) {
                 string cmd_disp = string.joinv (" ", args);
                 string tag = args.length > 0 && args[0].contains ("uv") ? "Python/uv" : "Python/pip";
                 doc.append_console_log (@"▶ [$tag] Executing: $cmd_disp");
+            }
+            if (packages_ribbon_bar != null && display_label != "") {
+                packages_ribbon_bar.set_python_busy (true, display_label);
             }
 
             try {
@@ -1421,19 +1560,37 @@ namespace Imladris {
                 }
                 yield proc.wait_async (null);
 
-                if (doc != null) {
-                    doc.append_console_log ("✔ Package installation finished.");
-                }
-
-                if (sandboxed && working_dir != "") {
-                    Services.SandboxController.snapshot_environment (working_dir);
+                if (proc.get_successful ()) {
                     if (doc != null) {
-                        doc.append_console_log ("✔ Sandboxed project requirements.txt updated.");
+                        doc.append_console_log ("✔ Package installation finished.");
+                    }
+                    if (display_label != "") {
+                        show_toast (@"Successfully installed $display_label");
+                    }
+                    if (sandboxed && working_dir != "") {
+                        Services.SandboxController.snapshot_environment (working_dir);
+                        if (doc != null) {
+                            doc.append_console_log ("✔ Sandboxed project requirements.txt updated.");
+                        }
+                    }
+                } else {
+                    if (doc != null) {
+                        doc.append_console_log (@"✖ Installation failed for $display_label (exit code: $(proc.get_exit_status ()))");
+                    }
+                    if (display_label != "") {
+                        show_toast (@"Installation failed for $display_label");
                     }
                 }
             } catch (GLib.Error e) {
                 if (doc != null) {
                     doc.append_console_log (@"✖ Package installer error: $(e.message)");
+                }
+                if (display_label != "") {
+                    show_toast (@"Installation error: $(e.message)");
+                }
+            } finally {
+                if (packages_ribbon_bar != null && display_label != "") {
+                    packages_ribbon_bar.set_python_busy (false, display_label);
                 }
             }
         }

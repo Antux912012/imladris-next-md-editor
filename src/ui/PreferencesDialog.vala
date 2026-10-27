@@ -70,9 +70,68 @@ namespace Imladris.UI {
             var ai_config_mgr = AiConfigManager.get_default ();
 
             var ai_page = new Adw.PreferencesPage () {
-                title = "AI Assistant",
+                title = "AI & Elrond",
                 icon_name = "system-run-symbolic"
             };
+
+            // Write with Elrond Assistance (AI) Group
+            var elrond_group = new Adw.PreferencesGroup () {
+                title = "Write with Elrond Assistance (AI)",
+                description = "Zero-configuration local coding and data science copilot for R, Python, SQL, and HTML"
+            };
+
+            var settings = Core.SettingsManager.get_default ();
+            var elrond_engine = Imladris.AI.ElrondEngineController.get_default ();
+
+            var elrond_enable_row = new Adw.SwitchRow () {
+                title = "Enable Elrond Assistance (AI)",
+                subtitle = "Automatically configures and runs the local AI engine in the background",
+                active = settings.elrond_enabled
+            };
+
+            var level_model = new Gtk.StringList (null);
+            level_model.append ("Low — On-Demand Only (Manual 'Write with Elrond' trigger)");
+            level_model.append ("Medium — Smart Autocomplete & Dataframe Awareness (Recommended)");
+            level_model.append ("High — Full Elrond Copilot & Proactive Graph/Function Suggestions");
+
+            var elrond_level_row = new Adw.ComboRow () {
+                title = "Elrond Assistance Level",
+                subtitle = "Select how proactively Elrond analyzes your report and suggests code or plots",
+                model = level_model,
+                selected = (uint) settings.elrond_level,
+                sensitive = settings.elrond_enabled
+            };
+
+            var elrond_status_row = new Adw.ActionRow () {
+                title = "Elrond Engine Status",
+                subtitle = settings.elrond_enabled ? "Starting..." : "Disabled"
+            };
+            var dl_progress = new Gtk.ProgressBar () {
+                valign = Gtk.Align.CENTER,
+                width_request = 140,
+                visible = false
+            };
+            elrond_status_row.add_suffix (dl_progress);
+
+            elrond_enable_row.notify["active"].connect (() => {
+                settings.elrond_enabled = elrond_enable_row.active;
+                elrond_level_row.sensitive = elrond_enable_row.active;
+            });
+
+            elrond_level_row.notify["selected"].connect (() => {
+                settings.elrond_level = (Core.AiAssistanceLevel) elrond_level_row.selected;
+            });
+
+            elrond_engine.status_updated.connect ((status_text, is_busy, frac) => {
+                elrond_status_row.subtitle = status_text;
+                dl_progress.visible = is_busy;
+                dl_progress.fraction = frac;
+            });
+
+            elrond_group.add (elrond_enable_row);
+            elrond_group.add (elrond_level_row);
+            elrond_group.add (elrond_status_row);
+            ai_page.add (elrond_group);
 
             var ai_general_group = new Adw.PreferencesGroup () {
                 title = "Active AI Provider",

@@ -30,7 +30,11 @@
     <file alias="scalable/categories/applications-internet-symbolic.svg">icons/papirus/scalable/categories/applications-internet-symbolic.svg</file>
     <file alias="scalable/places/folder-symbolic.svg">icons/papirus/scalable/places/folder-symbolic.svg</file>
     <file alias="scalable/places/user-trash-symbolic.svg">icons/papirus/scalable/places/user-trash-symbolic.svg</file>
+    <file alias="scalable/actions/folder-download-symbolic.svg">icons/papirus/scalable/actions/folder-download-symbolic.svg</file>
+    <file alias="scalable/actions/view-more-horizontal-symbolic.svg">icons/papirus/scalable/actions/view-more-horizontal-symbolic.svg</file>
     <file alias="scalable/mimetypes/x-office-presentation-symbolic.svg">icons/papirus/scalable/mimetypes/x-office-presentation-symbolic.svg</file>
+    <file alias="scalable/mimetypes/text-x-r-symbolic.svg">icons/papirus/scalable/mimetypes/text-x-r-symbolic.svg</file>
+    <file alias="scalable/mimetypes/text-x-python-symbolic.svg">icons/papirus/scalable/mimetypes/text-x-python-symbolic.svg</file>
     <file alias="scalable/emblems/emblem-system-symbolic.svg">icons/papirus/scalable/emblems/emblem-system-symbolic.svg</file>
   </gresource>
 </gresources>

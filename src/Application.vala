@@ -22,6 +22,7 @@ namespace Imladris {
             { "export_rstudio", on_export_rstudio },
             { "export_jupyter", on_export_jupyter },
             { "package_installer", on_package_installer },
+            { "elrond_assist", on_elrond_assist },
             { "toolchain_setup", on_toolchain_setup },
             { "snapshot_environment", on_snapshot_environment },
             { "restore_environment", on_restore_environment },
@@ -52,6 +53,7 @@ namespace Imladris {
             this.set_accels_for_action ("app.open", { "<Control>o" });
             this.set_accels_for_action ("app.save", { "<Control>s" });
             this.set_accels_for_action ("app.package_installer", { "<Control><Shift>p" });
+            this.set_accels_for_action ("app.elrond_assist", { "<Control><Shift>e" });
             this.set_accels_for_action ("app.preferences", { "<Control>comma" });
             this.set_accels_for_action ("app.quit", { "<Control>q" });
             this.set_accels_for_action ("win.undo", { "<Control>z" });
@@ -179,6 +181,11 @@ namespace Imladris {
         private void on_package_installer () {
             var win = this.active_window as Window;
             if (win != null) win.show_package_installer_dialog ();
+        }
+
+        private void on_elrond_assist () {
+            var win = this.active_window as Window;
+            if (win != null) win.trigger_elrond_assistance ();
         }
 
         private void on_toolchain_setup () {

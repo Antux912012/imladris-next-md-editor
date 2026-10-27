@@ -1,0 +1,54 @@
+# Maintainer: Antonio De Gaetano <antux912012@users.noreply.github.com>
+pkgname=imladris
+pkgver=0.10.0
+pkgrel=1
+pkgdesc="Polyglot Scientific & Markdown IDE with Elrond Local AI Copilot, R, Python, and Libadwaita UI"
+arch=('x86_64')
+url="https://github.com/Antux912012/imladris-next-md-editor"
+license=('GPL-3.0-or-later')
+depends=(
+    'gtk4>=4.12'
+    'libadwaita>=1.5'
+    'gtksourceview5>=5.10'
+    'webkitgtk-6.0'
+    'libsoup3'
+    'json-glib'
+    'libgee'
+    'glib2'
+    'hicolor-icon-theme'
+)
+optdepends=(
+    'r: R language execution and package management'
+    'python: Python execution and pip integration'
+    'python-uv: Ultra-fast Python package installer'
+    'llama.cpp: Zero-config local LLM inference engine for Elrond Assistance'
+    'vulkan-icd-loader: Vulkan GPU acceleration for Elrond local AI'
+    'quarto-cli-bin: Quarto document rendering'
+    'pandoc: Document export to PDF, HTML, and Word'
+    'libreoffice: Presentation and spreadsheet export'
+)
+makedepends=(
+    'meson>=0.60'
+    'ninja'
+    'vala>=0.56'
+    'pkgconf'
+    'gcc'
+)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/Antux912012/imladris-next-md-editor/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$srcdir/imladris-next-md-editor-$pkgver"
+    arch-meson build
+    meson compile -C build
+}
+
+check() {
+    cd "$srcdir/imladris-next-md-editor-$pkgver"
+    meson test -C build --print-errorlogs || true
+}
+
+package() {
+    cd "$srcdir/imladris-next-md-editor-$pkgver"
+    DESTDIR="$pkgdir" meson install -C build
+}

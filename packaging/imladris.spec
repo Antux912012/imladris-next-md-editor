@@ -1,5 +1,5 @@
 Name:           imladris
-Version:        0.9.0
+Version:        0.10.0
 Release:        1%{?dist}
 Summary:        Scientific notebook studio and Markdown editor
 
@@ -54,6 +54,12 @@ writing environment for technical authors, data scientists, and researchers.
 %{_datadir}/icons/hicolor/scalable/actions/ribbon-toggle-symbolic.svg
 
 %changelog
+* Tue Oct 27 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.10.0-1
+- Release 0.10.0: Unified 'Write with Elrond Assistance (AI)' zero-config local copilot with Qwen2.5-Coder-3B, live RAM/VRAM telemetry status bar, and dedicated Packages Ribbon Tab with O(log N) binary search autocomplete and pak/uv acceleration.
+
+* Mon Oct 26 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.9.0-1
+- Release 0.9.0: Automated micromamba data science toolchain manager and runtime resolution hierarchy.
+
 * Mon Oct 26 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.8.0-1
 - Release 0.8.0: Transparent host R interpreter discovery and execution in Flatpak via flatpak-spawn, shared cache for plotting artifacts, and real-time package compilation log streaming.
 

@@ -40,6 +40,48 @@ namespace Imladris.Core {
         }
     }
 
+    public enum AiAssistanceLevel {
+        LOW = 0,
+        MEDIUM = 1,
+        HIGH = 2;
+
+        public int get_context_size () {
+            switch (this) {
+                case LOW: return 2048;
+                case MEDIUM: return 4096;
+                case HIGH: return 8192;
+                default: return 4096;
+            }
+        }
+
+        public int get_max_tokens () {
+            switch (this) {
+                case LOW: return 128;
+                case MEDIUM: return 256;
+                case HIGH: return 512;
+                default: return 256;
+            }
+        }
+
+        public uint get_debounce_ms () {
+            switch (this) {
+                case LOW: return 0;      // On-demand only
+                case MEDIUM: return 600; // 600ms pause
+                case HIGH: return 280;   // 280ms proactive copilot
+                default: return 600;
+            }
+        }
+
+        public string to_string () {
+            switch (this) {
+                case LOW: return "Low";
+                case MEDIUM: return "Medium";
+                case HIGH: return "High";
+                default: return "Medium";
+            }
+        }
+    }
+
     /**
      * Standard GNOME default system accent colors introduced in GNOME 47 / Libadwaita 1.6.
      */
@@ -134,6 +176,46 @@ namespace Imladris.Core {
         public signal void hardware_acceleration_changed (bool enabled);
         public signal void theme_changed (AppTheme theme);
         public signal void accent_color_changed (GnomeAccent accent);
+        public signal void ai_settings_changed ();
+
+        private bool _elrond_enabled = false;
+        private AiAssistanceLevel _elrond_level = AiAssistanceLevel.MEDIUM;
+        private string _active_model_name = "Qwen2.5-Coder-3B";
+        private KeyFile config_keyfile = new KeyFile ();
+        private string config_ini_path = "";
+
+        public bool elrond_enabled {
+            get { return _elrond_enabled; }
+            set {
+                if (_elrond_enabled != value) {
+                    _elrond_enabled = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public AiAssistanceLevel elrond_level {
+            get { return _elrond_level; }
+            set {
+                if (_elrond_level != value) {
+                    _elrond_level = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public string active_model_name {
+            get { return _active_model_name; }
+            set {
+                if (_active_model_name != value) {
+                    _active_model_name = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
 
         public bool hardware_acceleration_enabled {
             get { return gsettings != null ? gsettings.get_boolean ("hw-acceleration") : _hw_fallback; }
@@ -228,6 +310,43 @@ namespace Imladris.Core {
                     });
                 }
             }
+
+            load_ini ();
+        }
+
+        private void load_ini () {
+            string conf_dir = Path.build_filename (Environment.get_user_config_dir (), "imladris");
+            DirUtils.create_with_parents (conf_dir, 0755);
+            config_ini_path = Path.build_filename (conf_dir, "settings.ini");
+
+            if (FileUtils.test (config_ini_path, FileTest.EXISTS)) {
+                try {
+                    config_keyfile.load_from_file (config_ini_path, KeyFileFlags.NONE);
+                    if (config_keyfile.has_key ("ElrondAI", "enabled")) {
+                        _elrond_enabled = config_keyfile.get_boolean ("ElrondAI", "enabled");
+                    }
+                    if (config_keyfile.has_key ("ElrondAI", "level")) {
+                        _elrond_level = (AiAssistanceLevel) config_keyfile.get_integer ("ElrondAI", "level");
+                    }
+                    if (config_keyfile.has_key ("ElrondAI", "model_name")) {
+                        _active_model_name = config_keyfile.get_string ("ElrondAI", "model_name");
+                    }
+                } catch (Error e) {}
+            }
+        }
+
+        private void save_ini () {
+            if (config_ini_path == "") {
+                string conf_dir = Path.build_filename (Environment.get_user_config_dir (), "imladris");
+                DirUtils.create_with_parents (conf_dir, 0755);
+                config_ini_path = Path.build_filename (conf_dir, "settings.ini");
+            }
+            try {
+                config_keyfile.set_boolean ("ElrondAI", "enabled", _elrond_enabled);
+                config_keyfile.set_integer ("ElrondAI", "level", (int) _elrond_level);
+                config_keyfile.set_string ("ElrondAI", "model_name", _active_model_name);
+                FileUtils.set_contents (config_ini_path, config_keyfile.to_data ());
+            } catch (Error e) {}
         }
 
         public void apply_theme (AppTheme theme) {

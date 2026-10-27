@@ -176,7 +176,7 @@ namespace Imladris {
             // 7. User Prompt Entry Box + Send / Stop Buttons
             var input_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6);
             prompt_entry = new Gtk.Entry () {
-                placeholder_text = "Ask AI Assistant or prompt for code...",
+                placeholder_text = "Write with Elrond Assistance (AI) or ask for code/plots...",
                 hexpand = true
             };
             prompt_entry.activate.connect (() => {
@@ -316,13 +316,13 @@ namespace Imladris {
 
             set_generating_state (true);
 
-            string sys_prompt = "You are Imladris AI Assistant, an expert in scientific writing (Quarto, R Markdown, Jupyter) and data science (R, Python, Julia, Rust). Deliver concise, correct code and explanations.";
+            string sys_prompt = "You are Elrond Assistance (AI), an expert data science and scientific writing copilot inside Imladris IDE (R, Python, SQL, HTML, Quarto, R Markdown). Deliver concise, correct code, statistical functions, visualizations, and explanations.";
 
             ai_client.send_chat_completion_async.begin (sys_prompt, user_prompt, null, (obj, res) => {
                 set_generating_state (false);
                 try {
                     string response = ai_client.send_chat_completion_async.end (res);
-                    append_to_chat (@"🤖 Assistant ($model):\n$response\n");
+                    append_to_chat (@"🧙 Elrond ($model):\n$response\n");
                     status_lbl.label = @"Ready ($(provider.get_short_name ()))";
                 } catch (GLib.IOError.CANCELLED c_err) {
                     append_to_chat ("⚠️ Request cancelled.\n");

@@ -1,0 +1,33 @@
+pkgbase = imladris
+	pkgdesc = Polyglot Scientific & Markdown IDE with Elrond Local AI Copilot, R, Python, and Libadwaita UI
+	pkgver = 0.10.0
+	pkgrel = 1
+	url = https://github.com/Antux912012/imladris-next-md-editor
+	arch = x86_64
+	license = GPL-3.0-or-later
+	makedepends = meson>=0.60
+	makedepends = ninja
+	makedepends = vala>=0.56
+	makedepends = pkgconf
+	makedepends = gcc
+	depends = gtk4>=4.12
+	depends = libadwaita>=1.5
+	depends = gtksourceview5>=5.10
+	depends = webkitgtk-6.0
+	depends = libsoup3
+	depends = json-glib
+	depends = libgee
+	depends = glib2
+	depends = hicolor-icon-theme
+	optdepends = r: R language execution and package management
+	optdepends = python: Python execution and pip integration
+	optdepends = python-uv: Ultra-fast Python package installer
+	optdepends = llama.cpp: Zero-config local LLM inference engine for Elrond Assistance
+	optdepends = vulkan-icd-loader: Vulkan GPU acceleration for Elrond local AI
+	optdepends = quarto-cli-bin: Quarto document rendering
+	optdepends = pandoc: Document export to PDF, HTML, and Word
+	optdepends = libreoffice: Presentation and spreadsheet export
+	source = imladris-0.10.0.tar.gz::https://github.com/Antux912012/imladris-next-md-editor/archive/refs/tags/v0.10.0.tar.gz
+	sha256sums = SKIP
+
+pkgname = imladris
