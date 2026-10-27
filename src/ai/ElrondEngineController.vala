@@ -27,7 +27,8 @@ namespace Imladris.AI {
 
         private ElrondEngineController () {
             soup_session = new Soup.Session () {
-                timeout = 90
+                idle_timeout = 60,
+                timeout = 0
             };
 
             SettingsManager.get_default ().ai_settings_changed.connect (() => {
@@ -82,16 +83,15 @@ namespace Imladris.AI {
             );
         }
 
-        private async bool auto_download_default_model (string dest_path) {
+        private async bool download_url_to_file (string url, string dest_path, string label) {
             download_cancellable = new Cancellable ();
             string part_path = dest_path + ".part";
-            string model_name = SettingsManager.get_default ().active_model_name;
 
-            status_updated ("Bootstrapping Elrond (%s)...".printf (model_name), true, 0.01);
-            statusbar_telemetry_updated ("Elrond bootstrapping %s (0%%)...".printf (model_name), true);
+            status_updated ("Downloading %s...".printf (label), true, 0.01);
+            statusbar_telemetry_updated ("Elrond bootstrapping %s (0%%)...".printf (label), true);
 
             try {
-                var msg = new Soup.Message ("GET", DEFAULT_MODEL_URL);
+                var msg = new Soup.Message ("GET", url);
                 InputStream net_stream = yield soup_session.send_async (msg, Priority.DEFAULT, download_cancellable);
 
                 if (msg.status_code != Soup.Status.OK) {
@@ -117,9 +117,9 @@ namespace Imladris.AI {
 
                     if (total_bytes > 0) {
                         double frac = (double) received / (double) total_bytes;
-                        status_updated ("Downloading %s (%.0f%%)...".printf (model_name, frac * 100.0), true, frac);
+                        status_updated ("Downloading %s (%.0f%%)...".printf (label, frac * 100.0), true, frac);
                         statusbar_telemetry_updated (
-                            "Elrond bootstrapping %s (%.0f%%)...".printf (model_name, frac * 100.0),
+                            "Elrond bootstrapping %s (%.0f%%)...".printf (label, frac * 100.0),
                             true
                         );
                     }
@@ -130,13 +130,27 @@ namespace Imladris.AI {
                 download_cancellable = null;
                 return true;
             } catch (Error e) {
-                FileUtils.remove (part_path);
+                if (FileUtils.test (part_path, FileTest.EXISTS)) {
+                    FileUtils.remove (part_path);
+                }
                 download_cancellable = null;
-                status_updated ("Elrond setup cancelled or failed: %s".printf (e.message), false, 0.0);
-                statusbar_telemetry_updated ("Elrond AI: Off", false);
-                SettingsManager.get_default ().elrond_enabled = false;
+                warning ("Download of %s failed: %s", url, e.message);
                 return false;
             }
+        }
+
+        private async bool auto_download_default_model (string dest_path) {
+            string model_name = SettingsManager.get_default ().active_model_name;
+            status_updated ("Bootstrapping Elrond (%s)...".printf (model_name), true, 0.01);
+            statusbar_telemetry_updated ("Elrond bootstrapping %s (0%%)...".printf (model_name), true);
+
+            bool ok = yield download_url_to_file (DEFAULT_MODEL_URL, dest_path, model_name);
+            if (!ok) {
+                status_updated ("Elrond setup cancelled or failed", false, 0.0);
+                statusbar_telemetry_updated ("Elrond AI: Off", false);
+                SettingsManager.get_default ().elrond_enabled = false;
+            }
+            return ok;
         }
 
         public static string? find_llama_server_binary (ElrondBackend backend = ElrondBackend.VULKAN) {
@@ -164,31 +178,123 @@ namespace Imladris.AI {
         }
 
         public async bool auto_install_llama_server (ElrondBackend backend = ElrondBackend.VULKAN) {
-            string flavor_arg = (backend == ElrondBackend.CUDA) ? "cuda" : "vulkan";
-            status_updated ("Bootstrapping %s engine...".printf (backend.get_display_name ()), true, 0.1);
-            statusbar_telemetry_updated ("Elrond bootstrapping %s...".printf (backend.get_display_name ()), true);
+            string backend_name = backend.get_display_name ();
+            status_updated ("Bootstrapping %s engine...".printf (backend_name), true, 0.05);
+            statusbar_telemetry_updated ("Elrond bootstrapping %s...".printf (backend_name), true);
 
-            string script_path = "/usr/share/imladris/scripts/install-llama-server.sh";
-            if (!FileUtils.test (script_path, FileTest.EXISTS)) {
-                string dev_script = GLib.Path.build_filename (Environment.get_current_dir (), "scripts", "install-llama-server.sh");
-                if (FileUtils.test (dev_script, FileTest.EXISTS)) {
-                    script_path = dev_script;
+            string data_bin_dir = GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "bin");
+            string flavor_dir = (backend == ElrondBackend.CUDA) ? "cuda" : "vulkan";
+            string target_subdir = GLib.Path.build_filename (data_bin_dir, flavor_dir);
+
+            try {
+                DirUtils.create_with_parents (target_subdir, 0755);
+            } catch (Error e) {
+                warning ("Failed to create directory %s: %s", target_subdir, e.message);
+            }
+
+            string release_tag = "b11669";
+            string tarball_name = (backend == ElrondBackend.CUDA)
+                ? "llama-%s-bin-ubuntu-cuda-12.8-x64.tar.gz".printf (release_tag)
+                : "llama-%s-bin-ubuntu-vulkan-x64.tar.gz".printf (release_tag);
+            string download_url = "https://github.com/ggml-org/llama.cpp/releases/download/%s/%s".printf (release_tag, tarball_name);
+
+            string tmp_tarball = GLib.Path.build_filename (Environment.get_tmp_dir (), "imladris_%s.tar.gz".printf (flavor_dir));
+            bool downloaded = yield download_url_to_file (download_url, tmp_tarball, backend_name);
+
+            if (!downloaded && backend == ElrondBackend.VULKAN) {
+                string cpu_tarball = "llama-%s-bin-ubuntu-x64.tar.gz".printf (release_tag);
+                string cpu_url = "https://github.com/ggml-org/llama.cpp/releases/download/%s/%s".printf (release_tag, cpu_tarball);
+                downloaded = yield download_url_to_file (cpu_url, tmp_tarball, "Universal CPU fallback");
+            }
+
+            if (downloaded) {
+                status_updated ("Extracting %s engine...".printf (backend_name), true, 0.95);
+                statusbar_telemetry_updated ("Elrond extracting %s...".printf (backend_name), true);
+
+                bool extracted = yield extract_and_install_engine (tmp_tarball, target_subdir, data_bin_dir, flavor_dir);
+                FileUtils.remove (tmp_tarball);
+
+                if (extracted && backend == ElrondBackend.CUDA) {
+                    string cudart_tarball = "cudart-llama-%s-bin-ubuntu-cuda-12.8-x64.tar.gz".printf (release_tag);
+                    string cudart_url = "https://github.com/ggml-org/llama.cpp/releases/download/%s/%s".printf (release_tag, cudart_tarball);
+                    string tmp_cudart = GLib.Path.build_filename (Environment.get_tmp_dir (), "imladris_cudart.tar.gz");
+                    if (yield download_url_to_file (cudart_url, tmp_cudart, "CUDA Runtime Libraries")) {
+                        yield extract_and_install_engine (tmp_cudart, target_subdir, data_bin_dir, flavor_dir);
+                        FileUtils.remove (tmp_cudart);
+                    }
+                }
+
+                if (find_llama_server_binary (backend) != null) {
+                    status_updated ("%s engine installed successfully".printf (backend_name), false, 1.0);
+                    statusbar_telemetry_updated ("Elrond AI: Ready", false);
+                    return true;
+                }
+            }
+
+            // Fallback to shell installer script
+            bool ok = yield run_installer_script (backend);
+            if (ok) {
+                status_updated ("%s engine installed successfully".printf (backend_name), false, 1.0);
+                statusbar_telemetry_updated ("Elrond AI: Ready", false);
+            } else {
+                status_updated ("%s engine installation failed".printf (backend_name), false, 0.0);
+                statusbar_telemetry_updated ("Elrond AI: Off", false);
+            }
+            return ok;
+        }
+
+        private async bool extract_and_install_engine (
+            string tarball_path,
+            string target_subdir,
+            string data_bin_dir,
+            string flavor_dir
+        ) {
+            try {
+                string script = "tar -xzf \"$1\" -C \"$2\" && find \"$2\" -mindepth 2 -type f \\( -name '*.so*' -o -name 'llama-server' \\) -exec cp -f {} \"$2/\" \\; && chmod 755 \"$2/llama-server\" && cp -f \"$2/llama-server\" \"$3/llama-server-$4\" && cp -f \"$2/llama-server\" \"$3/llama-server\" && chmod 755 \"$3/llama-server-$4\" \"$3/llama-server\" 2>/dev/null || true";
+                string[] argv = { "sh", "-c", script, "_", tarball_path, target_subdir, data_bin_dir, flavor_dir };
+
+                var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_SILENCE | SubprocessFlags.STDERR_SILENCE);
+                var proc = launcher.spawnv (argv);
+                yield proc.wait_async (null);
+
+                string installed_bin = GLib.Path.build_filename (target_subdir, "llama-server");
+                return FileUtils.test (installed_bin, FileTest.IS_EXECUTABLE);
+            } catch (Error e) {
+                warning ("Extraction failed: %s", e.message);
+                return false;
+            }
+        }
+
+        private async bool run_installer_script (ElrondBackend backend) {
+            string flavor_arg = (backend == ElrondBackend.CUDA) ? "cuda" : "vulkan";
+            string[] script_candidates = {
+                "/app/share/imladris/scripts/install-llama-server.sh",
+                "/usr/share/imladris/scripts/install-llama-server.sh",
+                "/usr/local/share/imladris/scripts/install-llama-server.sh",
+                GLib.Path.build_filename (Environment.get_current_dir (), "scripts", "install-llama-server.sh")
+            };
+
+            string? script_path = null;
+            foreach (var p in script_candidates) {
+                if (FileUtils.test (p, FileTest.EXISTS)) {
+                    script_path = p;
+                    break;
                 }
             }
 
             try {
                 string[] argv;
-                if (FileUtils.test (script_path, FileTest.EXISTS)) {
+                if (script_path != null) {
                     argv = { "bash", script_path, flavor_arg };
                 } else {
-                    argv = { "bash", "-c", "curl -sSfL https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/scripts/install-llama-server.sh | bash -s -- " + flavor_arg };
+                    argv = { "bash", "-c", "curl -sSfL --connect-timeout 20 https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/scripts/install-llama-server.sh | bash -s -- " + flavor_arg };
                 }
                 var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_SILENCE | SubprocessFlags.STDERR_SILENCE);
                 var proc = launcher.spawnv (argv);
                 yield proc.wait_async (null);
                 return find_llama_server_binary (backend) != null;
             } catch (Error e) {
-                warning ("Failed to auto-install %s engine: %s", backend.get_display_name (), e.message);
+                warning ("Fallback installer script failed: %s", e.message);
                 return false;
             }
         }

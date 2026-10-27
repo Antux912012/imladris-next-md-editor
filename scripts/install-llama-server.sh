@@ -38,11 +38,11 @@ if [ "${FLAVOR}" = "cuda" ]; then
     URL_CUDART="https://github.com/ggml-org/llama.cpp/releases/download/${RELEASE_TAG}/${CUDART_TARBALL}"
 
     echo "--> Downloading NVIDIA CUDA binary package: ${URL_CUDA}"
-    curl -sSfL -m 120 -o "${TMP_DIR}/cuda.tar.gz" "${URL_CUDA}"
+    curl -sSfL --connect-timeout 20 --max-time 1800 -o "${TMP_DIR}/cuda.tar.gz" "${URL_CUDA}"
     tar -xzf "${TMP_DIR}/cuda.tar.gz" -C "${TMP_DIR}"
 
     echo "--> Downloading CUDA runtime libraries: ${URL_CUDART}"
-    if curl -sSfL -m 60 -o "${TMP_DIR}/cudart.tar.gz" "${URL_CUDART}" 2>/dev/null; then
+    if curl -sSfL --connect-timeout 20 --max-time 900 -o "${TMP_DIR}/cudart.tar.gz" "${URL_CUDART}" 2>/dev/null; then
         tar -xzf "${TMP_DIR}/cudart.tar.gz" -C "${TMP_DIR}" || true
     fi
 
@@ -72,11 +72,11 @@ else
     URL_VULKAN="https://github.com/ggml-org/llama.cpp/releases/download/${RELEASE_TAG}/${VULKAN_TARBALL}"
 
     echo "--> Downloading Vulkan/Universal binary package: ${URL_VULKAN}"
-    if ! curl -sSfL -m 120 -o "${TMP_DIR}/vulkan.tar.gz" "${URL_VULKAN}" 2>/dev/null; then
+    if ! curl -sSfL --connect-timeout 20 --max-time 1800 -o "${TMP_DIR}/vulkan.tar.gz" "${URL_VULKAN}" 2>/dev/null; then
         echo "--> Vulkan download failed, falling back to CPU archive..."
         CPU_TARBALL="llama-${RELEASE_TAG}-bin-ubuntu-x64.tar.gz"
         URL_CPU="https://github.com/ggml-org/llama.cpp/releases/download/${RELEASE_TAG}/${CPU_TARBALL}"
-        curl -sSfL -m 120 -o "${TMP_DIR}/vulkan.tar.gz" "${URL_CPU}"
+        curl -sSfL --connect-timeout 20 --max-time 1800 -o "${TMP_DIR}/vulkan.tar.gz" "${URL_CPU}"
     fi
 
     tar -xzf "${TMP_DIR}/vulkan.tar.gz" -C "${TMP_DIR}"

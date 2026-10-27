@@ -18,6 +18,7 @@ namespace Imladris.Tests {
         GLib.Test.add_func ("/ai/env_var_fallback", test_env_var_fallback);
         GLib.Test.add_func ("/theming/app_theme_metadata", test_app_theme);
         GLib.Test.add_func ("/theming/gnome_accent_metadata", test_gnome_accent_metadata);
+        GLib.Test.add_func ("/core/distro_detection", test_distro_detection);
 
         return GLib.Test.run ();
     }
@@ -389,5 +390,14 @@ namespace Imladris.Tests {
 
         settings.accent_color = GnomeAccent.BLUE;
         assert (settings.accent_color == GnomeAccent.BLUE);
+    }
+
+    private static void test_distro_detection () {
+        var distro = PlatformUtils.detect_linux_distro ();
+        assert (distro != null);
+        assert (distro.id.length > 0);
+        assert (distro.name.length > 0);
+        assert (distro.install_cmd.length > 0);
+        assert (distro.install_cmd.contains ("llama"));
     }
 }

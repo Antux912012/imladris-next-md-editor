@@ -1,5 +1,11 @@
 namespace Imladris.Core {
 
+    public class DistroInfo : GLib.Object {
+        public string id { get; set; default = "linux"; }
+        public string name { get; set; default = "Linux"; }
+        public string install_cmd { get; set; default = "curl -fsSL https://llama.app/install.sh | sh"; }
+    }
+
     public enum RuntimeSource {
         PROJECT_SANDBOX,
         MANAGED_GLOBAL,
@@ -301,6 +307,105 @@ namespace Imladris.Core {
                 }
             } catch (GLib.Error e) {}
             return null;
+        }
+
+        /**
+         * Detects the running Linux distribution from /run/host/os-release or /etc/os-release.
+         * Returns the identified distro name and the exact package installation command for llama.cpp.
+         */
+        public static DistroInfo detect_linux_distro () {
+            var info = new DistroInfo ();
+
+            string[] candidates = {
+                "/run/host/os-release",
+                "/run/host/usr/lib/os-release",
+                "/etc/os-release",
+                "/usr/lib/os-release"
+            };
+
+            string? os_release_file = null;
+            foreach (var path in candidates) {
+                if (GLib.FileUtils.test (path, GLib.FileTest.EXISTS)) {
+                    os_release_file = path;
+                    break;
+                }
+            }
+
+            string raw_id = "";
+            string raw_id_like = "";
+            string raw_name = "";
+            string raw_pretty_name = "";
+
+            if (os_release_file != null) {
+                try {
+                    string content;
+                    GLib.FileUtils.get_contents (os_release_file, out content);
+                    string[] lines = content.split ("\n");
+                    foreach (var line in lines) {
+                        string trimmed = line.strip ();
+                        if (trimmed.has_prefix ("ID=")) {
+                            raw_id = strip_quotes (trimmed.substring (3));
+                        } else if (trimmed.has_prefix ("ID_LIKE=")) {
+                            raw_id_like = strip_quotes (trimmed.substring (8));
+                        } else if (trimmed.has_prefix ("PRETTY_NAME=")) {
+                            raw_pretty_name = strip_quotes (trimmed.substring (12));
+                        } else if (trimmed.has_prefix ("NAME=")) {
+                            raw_name = strip_quotes (trimmed.substring (5));
+                        }
+                    }
+                } catch (GLib.Error e) {
+                    // Fall back to default
+                }
+            }
+
+            string combined = (raw_id + " " + raw_id_like + " " + raw_name + " " + raw_pretty_name).down ();
+
+            if (combined.contains ("ubuntu") || combined.contains ("debian") || combined.contains ("mint") || combined.contains ("pop") || combined.contains ("elementary") || combined.contains ("zorin")) {
+                info.id = "debian";
+                info.name = (raw_pretty_name.length > 0) ? raw_pretty_name : "Debian / Ubuntu";
+                info.install_cmd = "sudo apt install llama.cpp || sudo apt install llama-cpp";
+            } else if (combined.contains ("fedora") || combined.contains ("rhel") || combined.contains ("centos") || combined.contains ("rocky") || combined.contains ("almalinux")) {
+                info.id = "fedora";
+                info.name = (raw_pretty_name.length > 0) ? raw_pretty_name : "Fedora / RHEL";
+                info.install_cmd = "sudo dnf install llama-cpp";
+            } else if (combined.contains ("opensuse") || combined.contains ("suse")) {
+                info.id = "opensuse";
+                info.name = (raw_pretty_name.length > 0) ? raw_pretty_name : "openSUSE";
+                info.install_cmd = "sudo zypper install llama-cpp";
+            } else if (combined.contains ("omarchy")) {
+                info.id = "omarchy";
+                info.name = (raw_pretty_name.length > 0) ? raw_pretty_name : "Omarchy";
+                info.install_cmd = "omarchy pkg add llama.cpp || yay -S llama.cpp";
+            } else if (combined.contains ("arch") || combined.contains ("manjaro") || combined.contains ("endeavouros") || combined.contains ("cachyos") || combined.contains ("artix")) {
+                info.id = "arch";
+                info.name = (raw_pretty_name.length > 0) ? raw_pretty_name : "Arch Linux";
+                info.install_cmd = "sudo pacman -S llama.cpp || yay -S llama.cpp";
+            } else if (combined.contains ("solus")) {
+                info.id = "solus";
+                info.name = (raw_pretty_name.length > 0) ? raw_pretty_name : "Solus";
+                info.install_cmd = "sudo eopkg install llama.cpp";
+            } else if (combined.contains ("nixos")) {
+                info.id = "nixos";
+                info.name = (raw_pretty_name.length > 0) ? raw_pretty_name : "NixOS";
+                info.install_cmd = "nix-env -iA nixpkgs.llama-cpp";
+            } else {
+                info.id = "linux";
+                info.name = (raw_pretty_name.length > 0) ? raw_pretty_name : (raw_name.length > 0 ? raw_name : "Linux");
+                info.install_cmd = "curl -fsSL https://llama.app/install.sh | sh";
+            }
+
+            return info;
+        }
+
+        private static string strip_quotes (string s) {
+            string res = s.strip ();
+            if (res.has_prefix ("\"") && res.has_suffix ("\"") && res.length >= 2) {
+                return res.substring (1, res.length - 2);
+            }
+            if (res.has_prefix ("'") && res.has_suffix ("'") && res.length >= 2) {
+                return res.substring (1, res.length - 2);
+            }
+            return res;
         }
     }
 }

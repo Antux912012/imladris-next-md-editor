@@ -89,18 +89,47 @@ namespace Imladris.UI {
                 active = settings.elrond_enabled
             };
 
-            var level_model = new Gtk.StringList (null);
-            level_model.append ("Low — On-Demand Only (Manual 'Write with Elrond' trigger)");
-            level_model.append ("Medium — Smart Autocomplete & Dataframe Awareness (Recommended)");
-            level_model.append ("High — Full Elrond Copilot & Proactive Graph/Function Suggestions");
-
-            var elrond_level_row = new Adw.ComboRow () {
+            var elrond_level_row = new Adw.ActionRow () {
                 title = "Elrond Assistance Level",
-                subtitle = "Select how proactively Elrond analyzes your report and suggests code or plots",
-                model = level_model,
-                selected = (uint) settings.elrond_level,
                 sensitive = settings.elrond_enabled
             };
+
+            var level_scale = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0.0, 2.0, 1.0) {
+                valign = Gtk.Align.CENTER,
+                hexpand = false,
+                width_request = 200,
+                draw_value = false,
+                round_digits = 0
+            };
+            level_scale.add_mark (0.0, Gtk.PositionType.BOTTOM, "Low");
+            level_scale.add_mark (1.0, Gtk.PositionType.BOTTOM, "Medium");
+            level_scale.add_mark (2.0, Gtk.PositionType.BOTTOM, "High");
+            level_scale.set_value ((double) settings.elrond_level);
+
+            void update_level_subtitle (int val) {
+                switch (val) {
+                    case 0:
+                        elrond_level_row.subtitle = "Low: On-Demand Only (Manual 'Write with Elrond' trigger)";
+                        break;
+                    case 1:
+                        elrond_level_row.subtitle = "Medium: Smart Autocomplete & Dataframe Awareness (Recommended)";
+                        break;
+                    case 2:
+                        elrond_level_row.subtitle = "High: Full Elrond Copilot & Proactive Code/Graph Suggestions";
+                        break;
+                    default:
+                        elrond_level_row.subtitle = "Select assistance level";
+                        break;
+                }
+            }
+            update_level_subtitle ((int) settings.elrond_level);
+
+            level_scale.value_changed.connect (() => {
+                int val = (int) (level_scale.get_value () + 0.5);
+                settings.elrond_level = (Core.AiAssistanceLevel) val;
+                update_level_subtitle (val);
+            });
+            elrond_level_row.add_suffix (level_scale);
 
             var elrond_status_row = new Adw.ActionRow () {
                 title = "Elrond Engine Status",
@@ -116,10 +145,6 @@ namespace Imladris.UI {
             elrond_enable_row.notify["active"].connect (() => {
                 settings.elrond_enabled = elrond_enable_row.active;
                 elrond_level_row.sensitive = elrond_enable_row.active;
-            });
-
-            elrond_level_row.notify["selected"].connect (() => {
-                settings.elrond_level = (Core.AiAssistanceLevel) elrond_level_row.selected;
             });
 
             elrond_engine.status_updated.connect ((status_text, is_busy, frac) => {
@@ -174,20 +199,15 @@ namespace Imladris.UI {
 
             elrond_group.add (elrond_status_row);
 
-            // Important Notice: llama.cpp Required for Local AI
+            // Detected Distribution & llama.cpp Engine Setup
+            var detected_distro = PlatformUtils.detect_linux_distro ();
             var notice_expander = new Adw.ExpanderRow () {
-                title = "Important Notice: llama.cpp Required for Local AI",
-                subtitle = "Installation commands for Debian/Ubuntu, Fedora, openSUSE, Arch, Solus, NixOS, Omarchy",
+                title = "llama.cpp Engine Setup & Distro Instructions",
+                subtitle = "Detected OS: %s — install via package manager or auto-install below".printf (detected_distro.name),
                 icon_name = "dialog-information-symbolic"
             };
 
-            notice_expander.add_row (create_distro_cmd_row ("Debian / Ubuntu", "sudo apt install llama.cpp || sudo apt install llama-cpp"));
-            notice_expander.add_row (create_distro_cmd_row ("Fedora", "sudo dnf install llama-cpp"));
-            notice_expander.add_row (create_distro_cmd_row ("openSUSE", "sudo zypper install llama-cpp"));
-            notice_expander.add_row (create_distro_cmd_row ("Arch Linux", "sudo pacman -S llama.cpp || yay -S llama.cpp"));
-            notice_expander.add_row (create_distro_cmd_row ("Solus", "sudo eopkg install llama.cpp"));
-            notice_expander.add_row (create_distro_cmd_row ("NixOS", "nix-env -iA nixpkgs.llama-cpp"));
-            notice_expander.add_row (create_distro_cmd_row ("Omarchy", "omarchy pkg add llama.cpp || yay -S llama.cpp"));
+            notice_expander.add_row (create_distro_cmd_row ("Install via %s".printf (detected_distro.name), detected_distro.install_cmd));
 
             var auto_vulkan_row = new Adw.ActionRow () {
                 title = "Vulkan / Universal Engine (~/.local/share/imladris/bin/vulkan)",

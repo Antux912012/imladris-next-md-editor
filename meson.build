@@ -4,6 +4,8 @@ project('imladris', 'vala', 'c',
 )
 
 gnome = import('gnome')
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required: false)
 
 deps = [
   dependency('gtk4', version: '>= 4.12'),
@@ -15,6 +17,7 @@ deps = [
   dependency('gee-0.8'),
   dependency('gio-2.0'),
   dependency('glib-2.0'),
+  m_dep,
 ]
 
 resources = gnome.compile_resources(
@@ -133,6 +136,8 @@ ai_test_sources = files(
   'tests/test_ai_integration.vala',
   'src/core/AiConfigManager.vala',
   'src/core/SettingsManager.vala',
+  'src/core/PlatformUtils.vala',
+  'src/core/ToolchainManager.vala',
 )
 
 ai_test_exe = executable('test_ai_integration',
