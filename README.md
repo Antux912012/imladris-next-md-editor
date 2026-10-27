@@ -178,12 +178,12 @@ PKGBUILD and `.SRCINFO` are located in the `packaging/` directory.
 
 **Fedora**
 ```bash
-sudo dnf install ./imladris-0.10.0-1.fc44.x86_64.rpm
+sudo dnf install ./imladris-0.11.0-1.fc44.x86_64.rpm
 ```
 
 **Debian / Ubuntu**
 ```bash
-sudo dpkg -i imladris_0.10.0_amd64.deb && sudo apt-get install -f
+sudo dpkg -i imladris_0.11.0_amd64.deb && sudo apt-get install -f
 ```
 
 ## Build from source

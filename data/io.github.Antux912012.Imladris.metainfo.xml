@@ -56,6 +56,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.11.0" date="2026-10-28">
+      <description>
+        <p>Release v0.11.0 delivers enhanced UX controls and comprehensive performance optimizations: Introduces an intuitive 3-stop slider (Low, Medium, High) for Elrond Assistance Level, automatic host distribution detection displaying tailored llama.cpp installation commands across Debian, Fedora, Arch, openSUSE, Solus, and NixOS, and dual backend switching between Vulkan and NVIDIA CUDA. Also includes major codebase deduplication and performance tuning, caching telemetry size calculations, extracting the standalone PackageIndexCache service, and removing dormant legacy code.</p>
+      </description>
+    </release>
     <release version="0.10.0" date="2026-10-27">
       <description>
         <p>Release v0.10.0 introduces the unified 'Write with Elrond Assistance (AI)' zero-configuration local copilot and telemetry status bar monitor. Features automatic Qwen2.5-Coder-3B model bootstrapping, zero-setup llama-server lifecycle management with Vulkan GPU offloading and CPU fallback, real-time RAM/VRAM telemetry polling every 2 seconds, editor context menu action and Ctrl+Shift+E shortcut. Also introduces the dedicated top 'Packages' Ribbon Tab with live prefix autocomplete, ETag disk caching, O(log N) binary search, pak and uv fast-path installation, and automatic sandboxed lockfile synchronization.</p>

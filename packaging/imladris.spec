@@ -1,5 +1,5 @@
 Name:           imladris
-Version:        0.10.0
+Version:        0.11.0
 Release:        1%{?dist}
 Summary:        Scientific notebook studio and Markdown editor
 
@@ -56,6 +56,9 @@ writing environment for technical authors, data scientists, and researchers.
 %{_datadir}/imladris/
 
 %changelog
+* Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.11.0-1
+- Release 0.11.0: 3-stop Elrond assistance slider, distro-aware llama.cpp setup, Vulkan/CUDA backend toggle, and comprehensive codebase deduplication and performance optimizations.
+
 * Tue Oct 27 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.10.0-1
 - Release 0.10.0: Unified 'Write with Elrond Assistance (AI)' zero-config local copilot with Qwen2.5-Coder-3B, live RAM/VRAM telemetry status bar, and dedicated Packages Ribbon Tab with O(log N) binary search autocomplete and pak/uv acceleration.
 
