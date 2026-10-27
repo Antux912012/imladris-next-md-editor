@@ -32,7 +32,8 @@ The itch it scratches is simple. RStudio is great for analysis but heavy for pro
 
 ### Modernized Libadwaita Ribbon Menu
 The Ribbon menu has been modernized to integrate seamlessly with GNOME Libadwaita and GTK4 design language:
-- **5 High-Density Tabs**: Consolidated 9 fragmented tabs into 5 high-utility tabs: `Home`, `Insert`, `Computation`, `Publish`, and `View`.
+- **6 High-Density Tabs**: Consolidated into 6 high-utility tabs: `Home`, `Insert`, `Computation`, `Publish`, `View`, and **`Packages`**.
+- **Context-Aware Dynamic Visibility**: The `Packages` tab is automatically visible and enabled for computational workflows (`.Rmd`, `.Qmd`, `.ipynb`, `.R`, `.py`) and hidden for plain `.md` and `.html` files.
 - **Linked Controls & Design Tokens**: Uses native `@headerbar_bg_color`, `@window_bg_color`, and `@accent_color` tokens with linked button groups (`.linked`), reducing vertical height by ~35px to a sleek ~52px deck.
 - **Collapsible Ribbon (`Ctrl+F1`)**: Quickly collapse or expand the ribbon deck on demand with the top-bar chevron button or `<Control>F1` shortcut for maximum editor focus.
 - **Wired Functional Tools**: Built-in undo/redo (`Ctrl+Z` / `Ctrl+Shift+Z`), headings (`#`, `##`, `###`), lists and blockquotes, interactive 6x6 table picker popover, code chunk popover, citation popovers, LaTeX math (`$$`), Mermaid diagrams, ggplot2 snippets, and live zoom slider.
@@ -60,19 +61,21 @@ A `.mallorn` file is RStudio's `.Rproj` DCF syntax with a few namespaced `Imladr
 ### "Write with Elrond Assistance (AI)" — Zero-Config Local Copilot
 Imladris features a built-in, zero-configuration local AI coding and data science copilot branded as **Elrond Assistance (AI)**, specialized in **R (tidyverse, ggplot2), Python (pandas, numpy, matplotlib), SQL, HTML, and Quarto/RMarkdown data analysis**:
 - **Zero-Setup "Click-and-Run"**: Enable Elrond with a single switch in **Preferences → AI & Elrond**. If missing, the optimal vertical coding model (`Qwen2.5-Coder-3B`) is automatically bootstrapped in the background with live download progress.
-- **Vulkan GPU Acceleration with CPU Fallback**: Automatically leverages Vulkan GPU compute (`--n-gpu-layers 99`) for lightning-fast token generation, falling back cleanly to multi-threaded CPU execution if no dedicated GPU is detected.
-- **Live Status Bar Telemetry Monitor**: Positioned directly next to the word/line counter in the bottom status bar, continuously displaying live memory metrics every 2 seconds:
-  > `Elrond running on Qwen2.5-Coder-3B - 0.24 GB RAM / 2.08 GB VRAM used`
-- **Three Assistance Levels**:
-  - **Low** *(On-Demand Only)*: Activated strictly via *"Write with Elrond Assistance"* button or `Ctrl+Shift+E` / `Ctrl+Space`.
+- **Dual Hardware Acceleration (Vulkan & CUDA)**: Toggle seamlessly between **Vulkan GPU compute** (default, universally compatible across Intel, AMD, and NVIDIA) and dedicated **NVIDIA CUDA** backends, falling back cleanly to multi-threaded CPU execution if no dedicated GPU is detected.
+- **3-Stop Assistance Level Slider**: An intuitive discrete slider in Preferences lets you tune the copilot interaction:
+  - **Low** *(On-Demand Only)*: Activated strictly via the *"Write with Elrond Assistance"* button or `Ctrl+Shift+E` / `Ctrl+Space`. Uses a lean `--ctx-size 2048` profile.
   - **Medium** *(Smart Autocomplete)*: Debounced inline code completions with active dataframe column awareness (`mtcars`, `df.dtypes`).
-  - **High** *(Full Elrond Copilot)*: Report narrative awareness, proactive `ggplot2`/`matplotlib` graph suggestions, and statistical test generation.
+  - **High** *(Full Elrond Copilot)*: Full document context awareness, proactive `ggplot2`/`matplotlib` graph suggestions, and automated statistical analysis generation.
+- **Distro-Aware Engine Setup**: The application automatically inspects `/etc/os-release` to detect your host Linux distribution (Debian, Fedora, Arch, openSUSE, Solus, NixOS, Omarchy) and presents only the exact terminal command required for your OS with a one-click copy button.
+- **Non-Blocking Background Auto-Installer**: If `llama-server` is not installed on `$PATH`, clicking *"Install Engine Now"* downloads and installs a standalone binary to `~/.local/share/imladris/bin/` asynchronously without locking the UI.
+- **Live Status Bar Telemetry Monitor**: Positioned directly next to the word/line counter in the bottom status bar, continuously displaying live memory metrics every 2 seconds with zero main-thread I/O blocking:
+  > `Elrond running on Qwen2.5-Coder-3B - 0.24 GB RAM / 2.08 GB VRAM used`
 - **Editor Context Menu & Shortcut**: Right-click anywhere in the editor or press `Ctrl+Shift+E` to trigger **"Write with Elrond Assistance (AI)"**.
 
 #### ⚠️ Important Notice: Local AI Requirements (`llama.cpp`)
 In order to use the built-in local AI functions (Elrond Assistance, offline statistical coding, and local telemetry), **`llama.cpp`** (`llama-server`) is required on your system.
 
-Install `llama.cpp` for your distribution using the commands below:
+The app automatically detects your distribution in **Preferences → AI & Elrond**, or you can install it manually:
 
 | Distribution | Installation Command |
 | :--- | :--- |
@@ -85,12 +88,13 @@ Install `llama.cpp` for your distribution using the commands below:
 | **Omarchy** | `omarchy pkg add llama.cpp` *(or `yay -S llama.cpp` / `Super + Space` → Install → Package)* |
 | **Universal / One-Line** | `curl -LsSf https://llama.app/install.sh \| sh` |
 | **Flatpak Bundle** | *Pre-bundled out of the box in `/app/bin/llama-server`.* |
-| **In-App Auto-Installer** | If not found on `$PATH`, Imladris will automatically download a standalone prebuilt `llama-server` binary into `~/.local/share/imladris/bin/`. You can also trigger this anytime in **Preferences → AI & Elrond**. |
+| **In-App Auto-Installer** | If not found on `$PATH`, click **"Install Engine Now"** in Preferences to automatically download a standalone prebuilt `llama-server` binary into `~/.local/share/imladris/bin/`. |
 
 ### Packages Ribbon Tab
-An always-accessible top window menu tab (`Ctrl+Shift+P` or top menu switcher) replacing modal dialogs with an integrated dual-group toolbar:
-- **R Packages Section**: CRAN package search with live autocomplete, one-click install, and a `...` menu for GitHub repositories (`user/repo`) and local source archives (`.tar.gz`, `.zip`).
-- **Python Packages Section**: PyPI search with live autocomplete, and a `...` menu for GitHub repositories (`git+https://`) and local wheels (`.whl`).
+An always-accessible top window menu tab (`Ctrl+Shift+P` or clicking **Packages** in the top ribbon menu) replacing modal dialogs with an integrated dual-group toolbar:
+- **R Packages Section (Left)**: Official R logo badge, CRAN package search with live popover autocomplete, one-click install button, and a `...` menu for GitHub repositories (`remotes::install_github` / `pak::pkg_install`) and local source archives (`.tar.gz`, `.zip`).
+- **Python Packages Section (Right)**: Official Python logo badge, PyPI search with live popover autocomplete, and a `...` menu for GitHub repositories (`git+https://`) and local wheels/archives (`.whl`, `.tar.gz`).
+- **Target Pill & Dependencies**: Dynamic environment indicator pill (`[Target: Sandboxed (renv / .venv)]` in green vs `[Target: System Library]` in amber) and a *"With dependencies"* toggle.
 - **ETag Disk Caching & $O(\log N)$ Binary Search**: Cached sorted package registries in `~/.cache/imladris/indices/` with HTTP ETag validation and instant binary search prefix lookup (under 0.1ms).
 - **`pak` & `uv` Fast-Path Acceleration**: Leverages `pak::pkg_install` for R and `uv pip install` for Python when available, cutting installation times by up to 10x.
 - **Automatic Lockfile Synchronization**: Automatically updates `renv.lock` or `requirements.txt` upon successful installation in sandboxed projects.
@@ -217,7 +221,8 @@ imladris --mcp-server
 | `Ctrl+F1` | Toggle Ribbon collapse / expand |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / Redo |
 | `Ctrl++` / `Ctrl+-` / `Ctrl+0` | Zoom In / Zoom Out / Reset Zoom (100%) |
-| `Ctrl+Shift+P` | Package installer |
+| `Ctrl+Shift+E` | Write with Elrond Assistance (AI) |
+| `Ctrl+Shift+P` | Packages Ribbon tab / Search packages |
 | `Ctrl+Enter` | Run line or selection |
 | `Ctrl+Shift+Enter` | Run current chunk |
 | `Ctrl+,` | Preferences (Appearance & AI Providers) |
