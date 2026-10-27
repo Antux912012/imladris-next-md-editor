@@ -82,6 +82,25 @@ namespace Imladris.Core {
         }
     }
 
+    public enum ElrondBackend {
+        VULKAN = 0,
+        CUDA = 1;
+
+        public string to_string_id () {
+            switch (this) {
+                case CUDA: return "cuda";
+                default: return "vulkan";
+            }
+        }
+
+        public string get_display_name () {
+            switch (this) {
+                case CUDA: return "NVIDIA CUDA";
+                default: return "Vulkan / Universal GPU";
+            }
+        }
+    }
+
     /**
      * Standard GNOME default system accent colors introduced in GNOME 47 / Libadwaita 1.6.
      */
@@ -180,6 +199,7 @@ namespace Imladris.Core {
 
         private bool _elrond_enabled = false;
         private AiAssistanceLevel _elrond_level = AiAssistanceLevel.MEDIUM;
+        private ElrondBackend _elrond_backend = ElrondBackend.VULKAN;
         private string _active_model_name = "Qwen2.5-Coder-3B";
         private KeyFile config_keyfile = new KeyFile ();
         private string config_ini_path = "";
@@ -189,6 +209,17 @@ namespace Imladris.Core {
             set {
                 if (_elrond_enabled != value) {
                     _elrond_enabled = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public ElrondBackend elrond_backend {
+            get { return _elrond_backend; }
+            set {
+                if (_elrond_backend != value) {
+                    _elrond_backend = value;
                     save_ini ();
                     ai_settings_changed ();
                 }
@@ -328,6 +359,9 @@ namespace Imladris.Core {
                     if (config_keyfile.has_key ("ElrondAI", "level")) {
                         _elrond_level = (AiAssistanceLevel) config_keyfile.get_integer ("ElrondAI", "level");
                     }
+                    if (config_keyfile.has_key ("ElrondAI", "backend")) {
+                        _elrond_backend = (ElrondBackend) config_keyfile.get_integer ("ElrondAI", "backend");
+                    }
                     if (config_keyfile.has_key ("ElrondAI", "model_name")) {
                         _active_model_name = config_keyfile.get_string ("ElrondAI", "model_name");
                     }
@@ -344,6 +378,7 @@ namespace Imladris.Core {
             try {
                 config_keyfile.set_boolean ("ElrondAI", "enabled", _elrond_enabled);
                 config_keyfile.set_integer ("ElrondAI", "level", (int) _elrond_level);
+                config_keyfile.set_integer ("ElrondAI", "backend", (int) _elrond_backend);
                 config_keyfile.set_string ("ElrondAI", "model_name", _active_model_name);
                 FileUtils.set_contents (config_ini_path, config_keyfile.to_data ());
             } catch (Error e) {}

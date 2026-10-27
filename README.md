@@ -69,6 +69,24 @@ Imladris features a built-in, zero-configuration local AI coding and data scienc
   - **High** *(Full Elrond Copilot)*: Report narrative awareness, proactive `ggplot2`/`matplotlib` graph suggestions, and statistical test generation.
 - **Editor Context Menu & Shortcut**: Right-click anywhere in the editor or press `Ctrl+Shift+E` to trigger **"Write with Elrond Assistance (AI)"**.
 
+#### ⚠️ Important Notice: Local AI Requirements (`llama.cpp`)
+In order to use the built-in local AI functions (Elrond Assistance, offline statistical coding, and local telemetry), **`llama.cpp`** (`llama-server`) is required on your system.
+
+Install `llama.cpp` for your distribution using the commands below:
+
+| Distribution | Installation Command |
+| :--- | :--- |
+| **Debian / Ubuntu** | `sudo apt install llama.cpp` *(or `sudo apt install llama-cpp`)* |
+| **Fedora** | `sudo dnf install llama-cpp` |
+| **openSUSE** (Tumbleweed / Leap) | `sudo zypper install llama-cpp` |
+| **Arch Linux** | `sudo pacman -S llama.cpp` *(or `yay -S llama.cpp`)* |
+| **Solus** | `sudo eopkg install llama.cpp` |
+| **NixOS** | `nix-env -iA nixpkgs.llama-cpp` *(or add `pkgs.llama-cpp` to `environment.systemPackages`)* |
+| **Omarchy** | `omarchy pkg add llama.cpp` *(or `yay -S llama.cpp` / `Super + Space` → Install → Package)* |
+| **Universal / One-Line** | `curl -LsSf https://llama.app/install.sh \| sh` |
+| **Flatpak Bundle** | *Pre-bundled out of the box in `/app/bin/llama-server`.* |
+| **In-App Auto-Installer** | If not found on `$PATH`, Imladris will automatically download a standalone prebuilt `llama-server` binary into `~/.local/share/imladris/bin/`. You can also trigger this anytime in **Preferences → AI & Elrond**. |
+
 ### Packages Ribbon Tab
 An always-accessible top window menu tab (`Ctrl+Shift+P` or top menu switcher) replacing modal dialogs with an integrated dual-group toolbar:
 - **R Packages Section**: CRAN package search with live autocomplete, one-click install, and a `...` menu for GitHub repositories (`user/repo`) and local source archives (`.tar.gz`, `.zip`).

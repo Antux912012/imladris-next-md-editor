@@ -63,14 +63,24 @@ EOF_META
     rm -rf build-flatpak-app/files/app
   fi
 
-  # Bundle llama-server inside Flatpak if available
+  # Bundle llama-server (Vulkan / Universal) inside Flatpak bundle
   if [ ! -f "build-flatpak-app/files/bin/llama-server" ]; then
-    echo "--> Installing llama-server inside Flatpak bundle..."
-    XDG_DATA_HOME="${PROJECT_DIR}/build-flatpak-app/files/share" "${PROJECT_DIR}/scripts/install-llama-server.sh" || true
-    if [ -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/llama-server" ]; then
+    echo "--> Installing Vulkan llama-server inside Flatpak bundle..."
+    if [ -d "${HOME}/.local/share/imladris/bin/vulkan" ]; then
       mkdir -p build-flatpak-app/files/bin build-flatpak-app/files/lib
-      cp -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/llama-server" build-flatpak-app/files/bin/
-      cp -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/"*.so* build-flatpak-app/files/lib/ 2>/dev/null || true
+      cp -f "${HOME}/.local/share/imladris/bin/vulkan/llama-server" build-flatpak-app/files/bin/
+      cp -f "${HOME}/.local/share/imladris/bin/vulkan/llama-server" build-flatpak-app/files/bin/llama-server-vulkan
+      cp -f "${HOME}/.local/share/imladris/bin/vulkan/"*.so* build-flatpak-app/files/lib/ 2>/dev/null || true
+      echo "✔ Bundled Vulkan llama-server from local cache."
+    else
+      XDG_DATA_HOME="${PROJECT_DIR}/build-flatpak-app/files/share" "${PROJECT_DIR}/scripts/install-llama-server.sh" vulkan || true
+      if [ -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/llama-server" ]; then
+        mkdir -p build-flatpak-app/files/bin build-flatpak-app/files/lib
+        cp -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/llama-server" build-flatpak-app/files/bin/
+        cp -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/llama-server" build-flatpak-app/files/bin/llama-server-vulkan
+        cp -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/vulkan/"*.so* build-flatpak-app/files/lib/ 2>/dev/null || true
+        echo "✔ Bundled Vulkan llama-server from installer script."
+      fi
     fi
   fi
 

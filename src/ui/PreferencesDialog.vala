@@ -130,7 +130,106 @@ namespace Imladris.UI {
 
             elrond_group.add (elrond_enable_row);
             elrond_group.add (elrond_level_row);
+
+            // Hardware Acceleration Backend Selector (Vulkan vs NVIDIA CUDA)
+            var backend_row = new Adw.ActionRow () {
+                title = "Hardware Acceleration Backend",
+                subtitle = "Select GPU runtime: Vulkan/Universal (AMD/Intel/CPU) or NVIDIA CUDA"
+            };
+
+            var btn_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) {
+                valign = Gtk.Align.CENTER
+            };
+            btn_box.add_css_class ("linked");
+
+            var btn_vulkan = new Gtk.ToggleButton.with_label ("⚡ Vulkan / Universal") {
+                active = (settings.elrond_backend == Core.ElrondBackend.VULKAN)
+            };
+            var btn_cuda = new Gtk.ToggleButton.with_label ("🟩 NVIDIA CUDA") {
+                active = (settings.elrond_backend == Core.ElrondBackend.CUDA)
+            };
+
+            btn_vulkan.toggled.connect (() => {
+                if (btn_vulkan.active) {
+                    btn_cuda.active = false;
+                    settings.elrond_backend = Core.ElrondBackend.VULKAN;
+                } else if (!btn_cuda.active) {
+                    btn_vulkan.active = true;
+                }
+            });
+
+            btn_cuda.toggled.connect (() => {
+                if (btn_cuda.active) {
+                    btn_vulkan.active = false;
+                    settings.elrond_backend = Core.ElrondBackend.CUDA;
+                } else if (!btn_vulkan.active) {
+                    btn_cuda.active = true;
+                }
+            });
+
+            btn_box.append (btn_vulkan);
+            btn_box.append (btn_cuda);
+            backend_row.add_suffix (btn_box);
+            elrond_group.add (backend_row);
+
             elrond_group.add (elrond_status_row);
+
+            // Important Notice: llama.cpp Required for Local AI
+            var notice_expander = new Adw.ExpanderRow () {
+                title = "Important Notice: llama.cpp Required for Local AI",
+                subtitle = "Installation commands for Debian/Ubuntu, Fedora, openSUSE, Arch, Solus, NixOS, Omarchy",
+                icon_name = "dialog-information-symbolic"
+            };
+
+            notice_expander.add_row (create_distro_cmd_row ("Debian / Ubuntu", "sudo apt install llama.cpp || sudo apt install llama-cpp"));
+            notice_expander.add_row (create_distro_cmd_row ("Fedora", "sudo dnf install llama-cpp"));
+            notice_expander.add_row (create_distro_cmd_row ("openSUSE", "sudo zypper install llama-cpp"));
+            notice_expander.add_row (create_distro_cmd_row ("Arch Linux", "sudo pacman -S llama.cpp || yay -S llama.cpp"));
+            notice_expander.add_row (create_distro_cmd_row ("Solus", "sudo eopkg install llama.cpp"));
+            notice_expander.add_row (create_distro_cmd_row ("NixOS", "nix-env -iA nixpkgs.llama-cpp"));
+            notice_expander.add_row (create_distro_cmd_row ("Omarchy", "omarchy pkg add llama.cpp || yay -S llama.cpp"));
+
+            var auto_vulkan_row = new Adw.ActionRow () {
+                title = "Vulkan / Universal Engine (~/.local/share/imladris/bin/vulkan)",
+                subtitle = "Optimized for AMD Radeon, Intel Arc/Iris, Apple Silicon, and multi-core CPU"
+            };
+            var btn_auto_vulkan = new Gtk.Button.with_label ("Install Vulkan") {
+                valign = Gtk.Align.CENTER
+            };
+            btn_auto_vulkan.add_css_class ("suggested-action");
+            btn_auto_vulkan.clicked.connect (() => {
+                btn_auto_vulkan.sensitive = false;
+                btn_auto_vulkan.label = "Installing...";
+                elrond_engine.auto_install_llama_server.begin (Core.ElrondBackend.VULKAN, (obj, res) => {
+                    bool ok = elrond_engine.auto_install_llama_server.end (res);
+                    btn_auto_vulkan.sensitive = true;
+                    btn_auto_vulkan.label = ok ? "Installed ✔" : "Retry";
+                });
+            });
+            auto_vulkan_row.add_suffix (btn_auto_vulkan);
+            notice_expander.add_row (auto_vulkan_row);
+
+            var auto_cuda_row = new Adw.ActionRow () {
+                title = "NVIDIA CUDA Engine (~/.local/share/imladris/bin/cuda)",
+                subtitle = "Optimized with cuBLAS for NVIDIA GeForce RTX, GTX, and Tesla GPUs"
+            };
+            var btn_auto_cuda = new Gtk.Button.with_label ("Install CUDA") {
+                valign = Gtk.Align.CENTER
+            };
+            btn_auto_cuda.add_css_class ("suggested-action");
+            btn_auto_cuda.clicked.connect (() => {
+                btn_auto_cuda.sensitive = false;
+                btn_auto_cuda.label = "Installing...";
+                elrond_engine.auto_install_llama_server.begin (Core.ElrondBackend.CUDA, (obj, res) => {
+                    bool ok = elrond_engine.auto_install_llama_server.end (res);
+                    btn_auto_cuda.sensitive = true;
+                    btn_auto_cuda.label = ok ? "Installed ✔" : "Retry";
+                });
+            });
+            auto_cuda_row.add_suffix (btn_auto_cuda);
+            notice_expander.add_row (auto_cuda_row);
+
+            elrond_group.add (notice_expander);
             ai_page.add (elrond_group);
 
             var ai_general_group = new Adw.PreferencesGroup () {
@@ -297,6 +396,23 @@ namespace Imladris.UI {
 
             ai_page.add (keys_group);
             this.add (ai_page);
+        }
+
+        private Adw.ActionRow create_distro_cmd_row (string distro_name, string command_str) {
+            var row = new Adw.ActionRow () {
+                title = distro_name,
+                subtitle = command_str
+            };
+            var copy_btn = new Gtk.Button.from_icon_name ("edit-copy-symbolic") {
+                valign = Gtk.Align.CENTER,
+                tooltip_text = "Copy command to clipboard"
+            };
+            copy_btn.clicked.connect (() => {
+                var clipboard = copy_btn.get_clipboard ();
+                clipboard.set_text (command_str);
+            });
+            row.add_suffix (copy_btn);
+            return row;
         }
     }
 }

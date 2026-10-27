@@ -139,10 +139,18 @@ namespace Imladris.AI {
             }
         }
 
-        public static string? find_llama_server_binary () {
+        public static string? find_llama_server_binary (ElrondBackend backend = ElrondBackend.VULKAN) {
+            string data_dir = GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "bin");
+            string flavor_dir = (backend == ElrondBackend.CUDA) ? "cuda" : "vulkan";
+            string specific_bin = (backend == ElrondBackend.CUDA) ? "llama-server-cuda" : "llama-server-vulkan";
+
             string[] search_candidates = {
+                GLib.Path.build_filename (data_dir, flavor_dir, "llama-server"),
+                GLib.Path.build_filename (data_dir, specific_bin),
+                GLib.Path.build_filename (data_dir, "llama-server"),
+                "/app/bin/" + specific_bin,
                 "/app/bin/llama-server",
-                GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "bin", "llama-server"),
+                GLib.Path.build_filename (Environment.get_home_dir (), ".local", "bin", specific_bin),
                 GLib.Path.build_filename (Environment.get_home_dir (), ".local", "bin", "llama-server"),
                 "/usr/local/bin/llama-server",
                 "/usr/bin/llama-server"
@@ -155,9 +163,10 @@ namespace Imladris.AI {
             return Environment.find_program_in_path ("llama-server");
         }
 
-        private async bool auto_install_llama_server () {
-            status_updated ("Bootstrapping llama-server engine...", true, 0.1);
-            statusbar_telemetry_updated ("Elrond bootstrapping engine...", true);
+        public async bool auto_install_llama_server (ElrondBackend backend = ElrondBackend.VULKAN) {
+            string flavor_arg = (backend == ElrondBackend.CUDA) ? "cuda" : "vulkan";
+            status_updated ("Bootstrapping %s engine...".printf (backend.get_display_name ()), true, 0.1);
+            statusbar_telemetry_updated ("Elrond bootstrapping %s...".printf (backend.get_display_name ()), true);
 
             string script_path = "/usr/share/imladris/scripts/install-llama-server.sh";
             if (!FileUtils.test (script_path, FileTest.EXISTS)) {
@@ -170,16 +179,16 @@ namespace Imladris.AI {
             try {
                 string[] argv;
                 if (FileUtils.test (script_path, FileTest.EXISTS)) {
-                    argv = { "bash", script_path };
+                    argv = { "bash", script_path, flavor_arg };
                 } else {
-                    argv = { "bash", "-c", "curl -sSfL https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/scripts/install-llama-server.sh | bash" };
+                    argv = { "bash", "-c", "curl -sSfL https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/scripts/install-llama-server.sh | bash -s -- " + flavor_arg };
                 }
                 var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_SILENCE | SubprocessFlags.STDERR_SILENCE);
                 var proc = launcher.spawnv (argv);
                 yield proc.wait_async (null);
-                return find_llama_server_binary () != null;
+                return find_llama_server_binary (backend) != null;
             } catch (Error e) {
-                warning ("Failed to auto-install llama-server: %s", e.message);
+                warning ("Failed to auto-install %s engine: %s", backend.get_display_name (), e.message);
                 return false;
             }
         }
@@ -191,18 +200,19 @@ namespace Imladris.AI {
         ) {
             stop_daemon ();
 
-            string? llama_bin = find_llama_server_binary ();
+            var backend = SettingsManager.get_default ().elrond_backend;
+            string? llama_bin = find_llama_server_binary (backend);
             if (llama_bin == null) {
-                bool installed = yield auto_install_llama_server ();
+                bool installed = yield auto_install_llama_server (backend);
                 if (installed) {
-                    llama_bin = find_llama_server_binary ();
+                    llama_bin = find_llama_server_binary (backend);
                 }
             }
 
             if (llama_bin == null) {
                 is_ready = false;
-                status_updated ("llama-server binary not found on PATH or ~/.local/share/imladris/bin. Install llama-cpp to enable local AI.", false, 0.0);
-                statusbar_telemetry_updated ("Elrond AI: llama-server not found", false);
+                status_updated ("%s binary not found. Install or download via Preferences.".printf (backend.get_display_name ()), false, 0.0);
+                statusbar_telemetry_updated ("Elrond AI: %s not found".printf (backend.to_string_id ()), false);
                 return;
             }
 
@@ -228,15 +238,15 @@ namespace Imladris.AI {
                 launcher.setenv ("LD_LIBRARY_PATH", bin_dir + (existing_ld.length > 0 ? ":" + existing_ld : ""), true);
                 llama_proc = launcher.spawnv (argv);
                 daemon_pid_str = llama_proc.get_identifier ();
-                running_on_vulkan = try_vulkan;
+                running_on_vulkan = (backend == ElrondBackend.CUDA) ? true : try_vulkan;
 
                 // Health check after 600ms: if Vulkan failed on older GPU, automatically fall back to CPU
                 Timeout.add (600, () => {
-                    if (llama_proc != null && llama_proc.get_if_exited () && try_vulkan) {
+                    if (llama_proc != null && llama_proc.get_if_exited () && try_vulkan && backend == ElrondBackend.VULKAN) {
                         start_preconfigured_daemon.begin (model_path, false, level);
                     } else if (llama_proc != null && !llama_proc.get_if_exited ()) {
                         is_ready = true;
-                        string accel = running_on_vulkan ? "Vulkan GPU" : "CPU Mode";
+                        string accel = (backend == ElrondBackend.CUDA) ? "NVIDIA CUDA" : (running_on_vulkan ? "Vulkan GPU" : "CPU Mode");
                         status_updated ("Elrond Active (%s • Level: %s)".printf (accel, level.to_string ()), false, 1.0);
                         update_memory_telemetry ();
                         start_telemetry_polling ();
@@ -312,7 +322,9 @@ namespace Imladris.AI {
                 mem_summary = "%.2f GB RAM used".printf (double.max (ram_gb, 2.1));
             }
 
-            string telemetry_line = "Elrond running on %s - %s".printf (model_name, mem_summary);
+            var backend = SettingsManager.get_default ().elrond_backend;
+            string accel_tag = (backend == ElrondBackend.CUDA) ? " (CUDA)" : (running_on_vulkan ? " (Vulkan)" : " (CPU)");
+            string telemetry_line = "Elrond running on %s%s - %s".printf (model_name, accel_tag, mem_summary);
             statusbar_telemetry_updated (telemetry_line, true);
         }
 
