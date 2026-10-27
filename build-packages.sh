@@ -63,6 +63,17 @@ EOF_META
     rm -rf build-flatpak-app/files/app
   fi
 
+  # Bundle llama-server inside Flatpak if available
+  if [ ! -f "build-flatpak-app/files/bin/llama-server" ]; then
+    echo "--> Installing llama-server inside Flatpak bundle..."
+    XDG_DATA_HOME="${PROJECT_DIR}/build-flatpak-app/files/share" "${PROJECT_DIR}/scripts/install-llama-server.sh" || true
+    if [ -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/llama-server" ]; then
+      mkdir -p build-flatpak-app/files/bin build-flatpak-app/files/lib
+      cp -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/llama-server" build-flatpak-app/files/bin/
+      cp -f "${PROJECT_DIR}/build-flatpak-app/files/share/imladris/bin/"*.so* build-flatpak-app/files/lib/ 2>/dev/null || true
+    fi
+  fi
+
   # Generate AppStream catalog XML for Software Center & Bazaar
   mkdir -p "build-flatpak-app/files/share/app-info/xmls" \
            "build-flatpak-app/files/share/app-info/icons/flatpak/128x128" \
@@ -121,6 +132,7 @@ Architecture: ${ARCH}
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Antonio De Gaetano <antux912012@users.noreply.github.com>
 Depends: libc6 (>= 2.34), libglib2.0-0t64 | libglib2.0-0 (>= 2.76), libgtk-4-1 (>= 4.12), libadwaita-1-0 (>= 1.5), libgtksourceview-5-0 (>= 5.10), libwebkitgtk-6.0-4 (>= 2.40), libsoup-3.0-0, libjson-glib-1.0-0, libgee-0.8-2
+Recommends: llama.cpp | llama-cpp
 Homepage: https://github.com/Antux912012/imladris-next-md-editor
 Description: Native Polyglot Studio with AI Assistance, Auto-Completion and MCP Server
  Imladris is a native Linux Markdown and Polyglot Studio built with

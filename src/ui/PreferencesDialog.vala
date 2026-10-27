@@ -177,6 +177,20 @@ namespace Imladris.UI {
             temp_row.add_suffix (temp_spin);
             ai_general_group.add (temp_row);
 
+            var config_row = new Adw.ActionRow () {
+                title = "Provider Credentials & Models",
+                subtitle = "Configure API keys, custom base URLs, and model identifiers"
+            };
+            var btn_configure_keys = new Gtk.Button.with_label ("Configure Providers...") {
+                valign = Gtk.Align.CENTER
+            };
+            btn_configure_keys.add_css_class ("suggested-action");
+            btn_configure_keys.clicked.connect (() => {
+                new UI.AiSettingsDialog ().present (this);
+            });
+            config_row.add_suffix (btn_configure_keys);
+            ai_general_group.add (config_row);
+
             ai_page.add (ai_general_group);
 
             // Cloud API Keys Quick Links Group

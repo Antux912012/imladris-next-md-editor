@@ -22,6 +22,7 @@ optdepends=(
     'python: Python execution and pip integration'
     'python-uv: Ultra-fast Python package installer'
     'llama.cpp: Zero-config local LLM inference engine for Elrond Assistance'
+    'llama-cpp: Alternative package name for local LLM inference'
     'vulkan-icd-loader: Vulkan GPU acceleration for Elrond local AI'
     'quarto-cli-bin: Quarto document rendering'
     'pandoc: Document export to PDF, HTML, and Word'

@@ -139,6 +139,51 @@ namespace Imladris.AI {
             }
         }
 
+        public static string? find_llama_server_binary () {
+            string[] search_candidates = {
+                "/app/bin/llama-server",
+                GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "bin", "llama-server"),
+                GLib.Path.build_filename (Environment.get_home_dir (), ".local", "bin", "llama-server"),
+                "/usr/local/bin/llama-server",
+                "/usr/bin/llama-server"
+            };
+            foreach (var p in search_candidates) {
+                if (FileUtils.test (p, FileTest.IS_EXECUTABLE)) {
+                    return p;
+                }
+            }
+            return Environment.find_program_in_path ("llama-server");
+        }
+
+        private async bool auto_install_llama_server () {
+            status_updated ("Bootstrapping llama-server engine...", true, 0.1);
+            statusbar_telemetry_updated ("Elrond bootstrapping engine...", true);
+
+            string script_path = "/usr/share/imladris/scripts/install-llama-server.sh";
+            if (!FileUtils.test (script_path, FileTest.EXISTS)) {
+                string dev_script = GLib.Path.build_filename (Environment.get_current_dir (), "scripts", "install-llama-server.sh");
+                if (FileUtils.test (dev_script, FileTest.EXISTS)) {
+                    script_path = dev_script;
+                }
+            }
+
+            try {
+                string[] argv;
+                if (FileUtils.test (script_path, FileTest.EXISTS)) {
+                    argv = { "bash", script_path };
+                } else {
+                    argv = { "bash", "-c", "curl -sSfL https://raw.githubusercontent.com/Antux912012/imladris-next-md-editor/main/scripts/install-llama-server.sh | bash" };
+                }
+                var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_SILENCE | SubprocessFlags.STDERR_SILENCE);
+                var proc = launcher.spawnv (argv);
+                yield proc.wait_async (null);
+                return find_llama_server_binary () != null;
+            } catch (Error e) {
+                warning ("Failed to auto-install llama-server: %s", e.message);
+                return false;
+            }
+        }
+
         private async void start_preconfigured_daemon (
             string model_path,
             bool try_vulkan,
@@ -146,17 +191,17 @@ namespace Imladris.AI {
         ) {
             stop_daemon ();
 
-            string? llama_bin = Environment.find_program_in_path ("llama-server");
+            string? llama_bin = find_llama_server_binary ();
             if (llama_bin == null) {
-                string home_local = GLib.Path.build_filename (Environment.get_home_dir (), ".local", "bin", "llama-server");
-                if (FileUtils.test (home_local, FileTest.IS_EXECUTABLE)) {
-                    llama_bin = home_local;
+                bool installed = yield auto_install_llama_server ();
+                if (installed) {
+                    llama_bin = find_llama_server_binary ();
                 }
             }
 
             if (llama_bin == null) {
                 is_ready = false;
-                status_updated ("llama-server binary not found on PATH. Install llama.cpp or enable local server.", false, 0.0);
+                status_updated ("llama-server binary not found on PATH or ~/.local/share/imladris/bin. Install llama-cpp to enable local AI.", false, 0.0);
                 statusbar_telemetry_updated ("Elrond AI: llama-server not found", false);
                 return;
             }
@@ -178,6 +223,9 @@ namespace Imladris.AI {
 
             try {
                 var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_SILENCE | SubprocessFlags.STDERR_SILENCE);
+                string bin_dir = GLib.Path.get_dirname (llama_bin);
+                string existing_ld = Environment.get_variable ("LD_LIBRARY_PATH") ?? "";
+                launcher.setenv ("LD_LIBRARY_PATH", bin_dir + (existing_ld.length > 0 ? ":" + existing_ld : ""), true);
                 llama_proc = launcher.spawnv (argv);
                 daemon_pid_str = llama_proc.get_identifier ();
                 running_on_vulkan = try_vulkan;

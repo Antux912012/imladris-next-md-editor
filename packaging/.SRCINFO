@@ -23,6 +23,7 @@ pkgbase = imladris
 	optdepends = python: Python execution and pip integration
 	optdepends = python-uv: Ultra-fast Python package installer
 	optdepends = llama.cpp: Zero-config local LLM inference engine for Elrond Assistance
+	optdepends = llama-cpp: Alternative package name for local LLM inference
 	optdepends = vulkan-icd-loader: Vulkan GPU acceleration for Elrond local AI
 	optdepends = quarto-cli-bin: Quarto document rendering
 	optdepends = pandoc: Document export to PDF, HTML, and Word

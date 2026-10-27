@@ -290,6 +290,10 @@ namespace Imladris {
         }
 
         private void check_key_status () {
+            if (Core.SettingsManager.get_default ().elrond_enabled) {
+                api_key_banner.revealed = false;
+                return;
+            }
             var prov = config_mgr.active_provider;
             if (prov.requires_api_key () && !config_mgr.has_valid_key (prov)) {
                 api_key_banner.title = @"No API key for $(prov.get_short_name ()).";
@@ -308,6 +312,36 @@ namespace Imladris {
         }
 
         public void send_prompt (string user_prompt) {
+            var settings = Core.SettingsManager.get_default ();
+            if (settings.elrond_enabled) {
+                var elrond_engine = Imladris.AI.ElrondEngineController.get_default ();
+                string model_name = settings.active_model_name;
+
+                append_to_chat (@"👤 You:\n$user_prompt\n\n🤖 Thinking ($model_name)...");
+                status_lbl.label = @"Generating response via Elrond Local AI ($model_name)...";
+                set_generating_state (true);
+
+                var doc = parent_window != null ? parent_window.get_active_document () : null;
+                string doc_lang = doc != null ? doc.doc_type : "markdown";
+                string doc_text = doc != null ? doc.source_buffer.text : "";
+
+                elrond_engine.write_with_elrond.begin (doc_lang, doc_text, "", user_prompt, (obj, res) => {
+                    set_generating_state (false);
+                    try {
+                        string response = elrond_engine.write_with_elrond.end (res);
+                        append_to_chat (@"🧙 Elrond ($model_name):\n$response\n");
+                        status_lbl.label = @"Ready (Elrond Local AI - $model_name)";
+                    } catch (GLib.IOError.CANCELLED c_err) {
+                        append_to_chat ("⚠️ Request cancelled.\n");
+                        status_lbl.label = "Request cancelled";
+                    } catch (GLib.Error e) {
+                        append_to_chat (@"✖ Elrond Error: $(e.message)\n");
+                        status_lbl.label = "Error during generation";
+                    }
+                });
+                return;
+            }
+
             var provider = config_mgr.active_provider;
             string model = config_mgr.get_model_for (provider);
 

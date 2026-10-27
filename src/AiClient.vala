@@ -68,15 +68,6 @@ namespace Imladris {
             }
         }
 
-        public void configure_online (string endpoint, string key, string model) {
-            config_mgr.set_provider_config (config_mgr.active_provider, endpoint, key, model);
-        }
-
-        public void configure_offline (string local_endpoint = "http://localhost:1234/v1", string model = "default") {
-            config_mgr.active_provider = AiProvider.LM_STUDIO;
-            config_mgr.set_provider_config (AiProvider.LM_STUDIO, local_endpoint, "", model);
-        }
-
         public async string send_chat_completion_async (string system_prompt, string user_prompt, Cancellable? cancellable = null) throws GLib.Error {
             var provider = config_mgr.active_provider;
             string key = config_mgr.get_api_key_for (provider);

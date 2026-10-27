@@ -218,10 +218,18 @@ In the spirit of transparency, and to meet Flathub's expectations around AI-gene
 - **Runtime AI is opt-in.** The optional assistant and MCP server only talk to endpoints *you* configure. No telemetry is collected.
 - **Bug reports and human review are very welcome**, particularly for security-relevant paths: subprocess spawning, archive extraction and file export.
 
+## Privacy & GDPR Compliance
+
+Imladris is built from the ground up to respect user privacy and adhere to the European Union General Data Protection Regulation (GDPR):
+- **Zero Remote Telemetry**: Imladris collects no analytics, tracking data, crash dumps, or usage metrics. Status bar telemetry is strictly local CPU/RAM/VRAM hardware polling.
+- **Local-First AI**: Elrond Assistance runs 100% locally via `llama-server` (`127.0.0.1:8088`). No prompts, narrative context, or code ever leave your machine.
+- **Direct Encrypted Cloud AI**: Third-party frontier AI models (Gemini, Claude, OpenAI) are strictly opt-in and connect directly to official provider APIs using your own API keys.
+- For complete details, see our [Privacy Policy (PRIVACY.md)](PRIVACY.md).
+
 ## Contributing
 
 Issues and pull requests are welcome. If you used an AI tool for a contribution, just say so in the PR description; nobody's judging, it just helps reviewers know where to look harder.
 
 ## License
 
-GPL-3.0-or-later.
+All core Imladris code is distributed under **[GNU General Public License v3.0 or later (GPL-3.0-or-later)](LICENSE)**. Permissive (MIT) code is fully compatible with and subsumed under GPLv3. Bundled Papirus symbolic icons are distributed under GNU GPLv3.

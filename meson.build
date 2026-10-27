@@ -94,6 +94,11 @@ install_data(
 
 gnome.post_install(glib_compile_schemas: true)
 
+install_data(
+  'scripts/install-llama-server.sh',
+  install_dir: get_option('datadir') / 'imladris' / 'scripts'
+)
+
 install_subdir(
   'data/icons/hicolor',
   install_dir: get_option('datadir') / 'icons'

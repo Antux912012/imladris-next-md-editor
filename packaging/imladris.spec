@@ -24,6 +24,7 @@ BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(glib-2.0)
 
 Requires:       hicolor-icon-theme
+Recommends:     llama-cpp
 
 %description
 Imladris is a native Linux polyglot document studio and scientific Markdown
@@ -52,6 +53,7 @@ writing environment for technical authors, data scientists, and researchers.
 %{_datadir}/glib-2.0/schemas/io.github.Antux912012.Imladris.gschema.xml
 %{_datadir}/icons/hicolor/*/apps/io.github.Antux912012.Imladris.*
 %{_datadir}/icons/hicolor/scalable/actions/ribbon-toggle-symbolic.svg
+%{_datadir}/imladris/
 
 %changelog
 * Tue Oct 27 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.10.0-1
