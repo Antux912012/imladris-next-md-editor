@@ -576,29 +576,9 @@ namespace Imladris.UI {
             doc_page.source_buffer.get_iter_at_mark (out cursor, doc_page.source_buffer.get_insert ());
             int cursor_line = cursor.get_line ();
 
-            string[] lines = doc_page.source_buffer.text.split ("\n");
-            bool inside_chunk = false;
-            string chunk_engine = "python";
-
-            for (int i = 0; i < lines.length; i++) {
-                string trimmed = lines[i].strip ();
-                if (!inside_chunk && (trimmed.has_prefix ("```{") || trimmed.has_prefix ("```python") || trimmed.has_prefix ("```r") || trimmed.has_prefix ("```bash"))) {
-                    inside_chunk = true;
-                    if (trimmed.contains ("r}") || trimmed.has_prefix ("```r")) chunk_engine = "r";
-                    else if (trimmed.contains ("bash") || trimmed.contains ("sh}")) chunk_engine = "bash";
-                    else chunk_engine = "python";
-                    continue;
-                }
-                if (inside_chunk && trimmed == "```") {
-                    if (cursor_line <= i) {
-                        return chunk_engine;
-                    }
-                    inside_chunk = false;
-                    continue;
-                }
-                if (inside_chunk && cursor_line == i) {
-                    return chunk_engine;
-                }
+            var chunk = Core.ChunkParser.find_chunk_at_line (doc_page.source_buffer.text, cursor_line);
+            if (chunk != null) {
+                return chunk.language;
             }
 
             if (doc_page.doc_type == "r" || (doc_page.file_location != null && doc_page.file_location.get_basename ().has_suffix (".R"))) {
@@ -619,73 +599,22 @@ namespace Imladris.UI {
             doc_page.source_buffer.get_iter_at_mark (out cursor, doc_page.source_buffer.get_insert ());
             int cursor_line = cursor.get_line ();
 
-            string[] lines = text.split ("\n");
-            string engine = "python";
-            var code_sb = new GLib.StringBuilder ();
-            bool inside_chunk = false;
-            bool found_target_chunk = false;
-            int chunk_end_line = -1;
-
-            for (int i = 0; i < lines.length; i++) {
-                string trimmed = lines[i].strip ();
-                if (!inside_chunk && (trimmed.has_prefix ("```{") || trimmed.has_prefix ("```python") || trimmed.has_prefix ("```r") || trimmed.has_prefix ("```bash"))) {
-                    inside_chunk = true;
-                    code_sb.truncate (0);
-                    if (trimmed.contains ("r}") || trimmed.has_prefix ("```r")) engine = "r";
-                    else if (trimmed.contains ("bash") || trimmed.contains ("sh}")) engine = "bash";
-                    else engine = "python";
-                    continue;
-                }
-                if (inside_chunk && trimmed == "```") {
-                    if (cursor_line <= i) {
-                        found_target_chunk = true;
-                        chunk_end_line = i;
-                        break;
-                    }
-                    inside_chunk = false;
-                    continue;
-                }
-                if (inside_chunk && !trimmed.has_prefix ("#|")) {
-                    code_sb.append (lines[i] + "\n");
-                }
-            }
-
-            string code_to_run = code_sb.str.strip ();
-            if (!found_target_chunk || code_to_run.length == 0) {
+            var chunk = Core.ChunkParser.find_chunk_at_line (text, cursor_line);
+            if (chunk == null || chunk.code.length == 0) {
                 // Fallback: execute current line or selection
                 execute_current_line_or_selection ();
                 return;
             }
 
-            run_code_snippet_in_console (engine, code_to_run, chunk_end_line);
+            run_code_snippet_in_console (chunk.language, chunk.code, chunk.end_line);
         }
 
         public void execute_all_cells () {
-            string[] lines = doc_page.source_buffer.text.split ("\n");
-            bool inside_chunk = false;
-            string engine = "python";
-            var code_sb = new GLib.StringBuilder ();
-
-            for (int i = 0; i < lines.length; i++) {
-                string trimmed = lines[i].strip ();
-                if (!inside_chunk && (trimmed.has_prefix ("```{") || trimmed.has_prefix ("```python") || trimmed.has_prefix ("```r") || trimmed.has_prefix ("```bash"))) {
-                    inside_chunk = true;
-                    code_sb.truncate (0);
-                    if (trimmed.contains ("r}") || trimmed.has_prefix ("```r")) engine = "r";
-                    else if (trimmed.contains ("bash") || trimmed.contains ("sh}")) engine = "bash";
-                    else engine = "python";
-                    continue;
-                }
-                if (inside_chunk && trimmed == "```") {
-                    inside_chunk = false;
-                    string snippet = code_sb.str.strip ();
-                    if (snippet.length > 0) {
-                        run_code_snippet_in_console (engine, snippet, i);
-                    }
-                    continue;
-                }
-                if (inside_chunk && !trimmed.has_prefix ("#|")) {
-                    code_sb.append (lines[i] + "\n");
+            string text = doc_page.source_buffer.text;
+            var chunks = Core.ChunkParser.parse_chunks (text);
+            foreach (var ch in chunks) {
+                if (ch.code.length > 0) {
+                    run_code_snippet_in_console (ch.language, ch.code, ch.end_line);
                 }
             }
         }

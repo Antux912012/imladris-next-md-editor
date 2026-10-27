@@ -19,6 +19,7 @@ namespace Imladris.AI {
         private Soup.Session soup_session;
         private Cancellable? download_cancellable = null;
         private uint16 active_port = 18089;
+        private double cached_model_size_gb = 0.0;
 
         public signal void status_updated (string status_text, bool is_busy, double progress_fraction);
         public signal void statusbar_telemetry_updated (string statusbar_text, bool active);
@@ -50,9 +51,7 @@ namespace Imladris.AI {
 
         public string get_model_path () {
             string model_dir = GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "models");
-            try {
-                DirUtils.create_with_parents (model_dir, 0755);
-            } catch (Error e) {}
+            DirUtils.create_with_parents (model_dir, 0755);
             return GLib.Path.build_filename (model_dir, DEFAULT_MODEL_FILENAME);
         }
 
@@ -186,11 +185,7 @@ namespace Imladris.AI {
             string flavor_dir = (backend == ElrondBackend.CUDA) ? "cuda" : "vulkan";
             string target_subdir = GLib.Path.build_filename (data_bin_dir, flavor_dir);
 
-            try {
-                DirUtils.create_with_parents (target_subdir, 0755);
-            } catch (Error e) {
-                warning ("Failed to create directory %s: %s", target_subdir, e.message);
-            }
+            DirUtils.create_with_parents (target_subdir, 0755);
 
             string release_tag = "b11669";
             string tarball_name = (backend == ElrondBackend.CUDA)
@@ -346,6 +341,15 @@ namespace Imladris.AI {
                 daemon_pid_str = llama_proc.get_identifier ();
                 running_on_vulkan = (backend == ElrondBackend.CUDA) ? true : try_vulkan;
 
+                // Cache model size in memory to prevent synchronous disk I/O in the 2s telemetry loop
+                try {
+                    File model_file = File.new_for_path (model_path);
+                    FileInfo info = model_file.query_info (FileAttribute.STANDARD_SIZE, FileQueryInfoFlags.NONE);
+                    cached_model_size_gb = (double) info.get_size () / (1024.0 * 1024.0 * 1024.0);
+                } catch (Error e) {
+                    cached_model_size_gb = 2.0;
+                }
+
                 // Health check after 600ms: if Vulkan failed on older GPU, automatically fall back to CPU
                 Timeout.add (600, () => {
                     if (llama_proc != null && llama_proc.get_if_exited () && try_vulkan && backend == ElrondBackend.VULKAN) {
@@ -405,16 +409,11 @@ namespace Imladris.AI {
                 } catch (Error e) {}
             }
 
-            // If running on Vulkan GPU, also check model footprint in VRAM
+            // If running on Vulkan GPU, calculate VRAM footprint using cached model size
             double vram_gb = 0.0;
             if (running_on_vulkan) {
-                try {
-                    File model_file = File.new_for_path (get_model_path ());
-                    FileInfo info = model_file.query_info (FileAttribute.STANDARD_SIZE, FileQueryInfoFlags.NONE);
-                    // Model weights + KV cache offloaded to Vulkan VRAM
-                    double kv_overhead_gb = (SettingsManager.get_default ().elrond_level == AiAssistanceLevel.HIGH) ? 0.35 : 0.18;
-                    vram_gb = ((double) info.get_size () / (1024.0 * 1024.0 * 1024.0)) + kv_overhead_gb;
-                } catch (Error e) {}
+                double kv_overhead_gb = (SettingsManager.get_default ().elrond_level == AiAssistanceLevel.HIGH) ? 0.35 : 0.18;
+                vram_gb = cached_model_size_gb + kv_overhead_gb;
             }
 
             string mem_summary;

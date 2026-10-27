@@ -203,9 +203,9 @@ namespace Imladris.UI {
             var detected_distro = PlatformUtils.detect_linux_distro ();
             var notice_expander = new Adw.ExpanderRow () {
                 title = "llama.cpp Engine Setup & Distro Instructions",
-                subtitle = "Detected OS: %s — install via package manager or auto-install below".printf (detected_distro.name),
-                icon_name = "dialog-information-symbolic"
+                subtitle = "Detected OS: %s — install via package manager or auto-install below".printf (detected_distro.name)
             };
+            notice_expander.add_prefix (new Gtk.Image.from_icon_name ("dialog-information-symbolic"));
 
             notice_expander.add_row (create_distro_cmd_row ("Install via %s".printf (detected_distro.name), detected_distro.install_cmd));
 

@@ -1424,7 +1424,8 @@ namespace Imladris {
 
         // Action Handlers for Pillars 2, 3, 4
         public void show_package_installer_dialog () {
-            if (tab_btn_packages != null && tab_btn_packages.visible) {
+            if (tab_btn_packages != null) {
+                tab_btn_packages.visible = true;
                 tab_btn_packages.active = true;
                 if (btn_collapse_ribbon != null && !btn_collapse_ribbon.active) {
                     btn_collapse_ribbon.active = true;
@@ -1438,40 +1439,7 @@ namespace Imladris {
                 if (packages_ribbon_bar != null) {
                     packages_ribbon_bar.focus_search (is_py);
                 }
-            } else {
-                open_standalone_package_modal ();
             }
-        }
-
-        public void open_standalone_package_modal () {
-            var doc = get_active_document ();
-            var fmt = DocumentFormat.QMD;
-            if (doc != null) {
-                fmt = doc.get_document_format ();
-            }
-            var eco = (fmt == DocumentFormat.PYSCRIPT || fmt == DocumentFormat.IPYNB)
-                ? UI.PackageEcosystem.PYTHON_PYPI
-                : UI.PackageEcosystem.R_CRAN;
-            string pdir = current_project_dir != "" ? current_project_dir : Services.PersistentSessionManager.get_default ().current_working_dir;
-            if (pdir == "") pdir = GLib.Environment.get_current_dir ();
-            bool is_sandboxed = (current_project_type == ProjectType.SANDBOXED);
-
-            var ctx = new UI.ProjectContext (pdir, is_sandboxed, eco);
-            var modal = new UI.PackageInstallerModal (ctx, pkg_index_cache);
-
-            modal.execute_r_command.connect ((r_code) => {
-                var d = get_active_document ();
-                if (d != null) {
-                    d.append_console_log (@"▶ [R] Executing: $r_code");
-                    d.panel_registry.run_code_snippet_in_console ("r", r_code);
-                }
-            });
-
-            modal.execute_python_command.connect ((py_bin, args, working_dir, sandboxed) => {
-                run_python_pip_and_snapshot.begin (py_bin, args, working_dir, sandboxed);
-            });
-
-            modal.present (this);
         }
 
         public async void run_r_install_and_snapshot (string r_cmd, string display_label) {
@@ -1500,11 +1468,6 @@ namespace Imladris {
                     doc.append_console_log (@"✔ R package installation finished for $display_label.");
                 }
                 show_toast (@"Successfully installed $display_label");
-            } catch (GLib.Error e) {
-                if (doc != null) {
-                    doc.append_console_log (@"✖ R install error: $(e.message)");
-                }
-                show_toast (@"Installation failed for $display_label");
             } finally {
                 Services.PersistentSessionManager.get_default ().disconnect (sig_id);
                 if (packages_ribbon_bar != null) {
