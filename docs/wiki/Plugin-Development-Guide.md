@@ -1,121 +1,100 @@
 # Plugin Development Guide
 
-Imladris features an Obsidian-inspired third-party extension system that allows community developers and researchers to build lightweight add-ons using simple JavaScript. Extensions execute within isolated **JavaScriptCore (`JSC.Context`)** virtual machines provided by `javascriptcoregtk-6.0`, ensuring that a bug or crash in an extension never brings down the main IDE thread.
+Imladris features an Obsidian-inspired extension system that allows community developers to build lightweight, sandboxed extensions using simple JavaScript. Because Imladris runs on **Vala**, **GTK4**, and **WebKitGTK 6.0**, plugins are executed within isolated **JavaScriptCore (`JSC.Context`)** virtual machines. This ensures complete system stability, preventing a plugin bug from crashing the main IDE thread.
 
 > [!NOTE]
-> All plugin UI elements must be built declaratively through the `imladris.ui` host bridge and use **Papirus** symbolic icon names. This ensures extensions automatically respect GNOME Libadwaita styling, accent colors, and Light/Dark theme switching.
+> All plugins must adhere to the **GNOME HIG** and use **Papirus** symbolic icons to ensure seamless integration into both Light and Dark themes.
 
 ---
 
-## 1. Quickstart: Build an Extension in 5 Minutes
+## 1. Plugin Directory Structure
 
-### Step A: Create the Plugin Folder
-Plugins live in your user data directory:
-```bash
-mkdir -p ~/.local/share/imladris/plugins/my-stats-plugin
-cd ~/.local/share/imladris/plugins/my-stats-plugin
+Every third-party extension lives in its own dedicated folder inside the user extensions directory:
+
+```text
+~/.local/share/imladris/plugins/
+└── biostat-table-generator/
+    ├── manifest.json
+    └── main.js
 ```
 
-### Step B: Create `manifest.json`
-Every extension requires a `manifest.json` file declaring its identity, license, and requested capabilities:
+You can also zip or tar your extension folder and rename the extension to **`.implugin`** to allow one-click installation via **Preferences -> Extensions -> Install Extension from File**.
+
+---
+
+## 2. The `manifest.json` Schema
+
+The manifest file defines plugin metadata, security permissions, and UI entry points. Here is a production-ready example:
 
 ```json
 {
-  "id": "my-stats-plugin",
-  "name": "Text Statistics & Metrics",
+  "id": "biostat-table-generator",
+  "name": "APA & Lancet Table Formatter",
   "version": "1.0.0",
-  "author": "Dr. Jane Doe",
-  "description": "Calculates word, character, and line counts with reading time estimates.",
-  "license": "GPL-3.0-or-later",
-  "icon": "format-text-bold-symbolic",
+  "author": "BioStat Community",
+  "description": "Inserts publication-ready gt and kableExtra R summary tables for active dataframes.",
+  "license": "MIT",
+  "icon": "x-office-spreadsheet-symbolic",
   "permissions": [
-    "editor"
+    "editor",
+    "repl_r"
   ]
 }
 ```
 
-#### Manifest Field Breakdown:
-- **`id`** *(Required, string)*: Unique identifier slug (`[a-z0-9\-]`).
-- **`name`** *(Required, string)*: Human-readable name displayed in Preferences and tooltips.
-- **`version`** *(Required, string)*: SemVer version string (e.g., `1.0.0`).
-- **`author`** *(Optional, string)*: Author or team name.
-- **`description`** *(Optional, string)*: Description shown in the Preferences extension expander row.
-- **`license`** *(Required, string)*: License identifier (e.g. `GPL-3.0-or-later`, `MIT`, `Apache-2.0`).
-- **`icon`** *(Optional, string)*: Standard Papirus symbolic icon name (e.g., `format-text-bold-symbolic`, `edit-find-symbolic`, `view-grid-symbolic`).
-- **`permissions`** *(Optional, array)*: Requested access tokens:
-  - `"editor"`: Read and modify active editor buffer.
-  - `"repl_r"`: Dispatch code to the persistent R console.
-  - `"repl_python"`: Dispatch code to the persistent Python console.
-  - `"elrond_ai"`: Send queries to the local or configured Elrond AI engine.
-  - `"export"`: Trigger document export pipelines.
+### Available Permissions
+
+* `"editor"`: Allows reading and modifying text inside the active `GtkSourceView` editor.
+* `"repl_r"`: Allows sending evaluation code to the persistent R console session.
+* `"repl_python"`: Allows sending evaluation code to the persistent Python console session.
+* `"elrond_ai"`: Allows querying the local **Elrond Assistance (AI)** engine.
 
 ---
 
-### Step C: Write `main.js`
-Create `main.js` in the same directory:
+## 3. The `main.js` Lifecycle Script
+
+Your plugin must define two standard lifecycle hooks: **`onload()`** (called when the plugin is enabled) and **`onunload()`** (called when disabled or unloaded).
 
 ```javascript
-/* Text Statistics & Metrics Extension */
+// main.js - APA Table Generator Plugin
 
 function onload() {
-    // 1. Add an action button with a Papirus symbolic icon into the Extensions ribbon
-    imladris.ui.addRibbonButton(
-        "calc-stats",
-        "Text Stats",
-        "format-text-bold-symbolic",
-        function() {
-            // Read active document text
-            const text = imladris.editor.getText();
+    // 1. Register a native Papirus-styled action button in the Ribbon
+    imladris.ui.addRibbonButton({
+        id: "insert-apa-table",
+        label: "APA Table",
+        icon: "x-office-spreadsheet-symbolic",
+        onClick: () => {
+            // Read selected text or default to mtcars
+            const selected = imladris.editor.getSelectedText() || "mtcars";
             
-            // Calculate metrics
-            const words = text.trim().length > 0 ? text.trim().split(/\s+/).length : 0;
-            const chars = text.length;
-            const lines = text.length > 0 ? text.split("\n").length : 0;
-            const readingMin = Math.max(1, Math.ceil(words / 200));
-
-            // Show a native Adw.Toast notification
-            imladris.ui.showToast(
-                `📊 Stats: ${words} words | ${chars} characters | ${lines} lines (~${readingMin} min read)`
-            );
-
-            // Optionally append an updated comment at cursor
-            imladris.editor.insertAtCursor(`\n<!-- Word count verified: ${words} words -->\n`);
+            // Construct a publication-ready Quarto/Rmd code chunk
+            const chunk = `\n\`\`\`{r}\n#| label: tbl-summary\n#| tbl-cap: "Summary statistics generated by Imladris Extension."\nlibrary(gt)\n${selected} |> head(10) |> gt()\n\`\`\`\n`;
+            
+            // Insert chunk at current cursor position
+            imladris.editor.insertAtCursor(chunk);
+            
+            // Fire a native Adw.Toast notification
+            imladris.ui.showToast("Inserted APA Table summary chunk!");
         }
-    );
-
-    imladris.ui.showToast("Text Statistics extension loaded!");
+    });
 }
 
 function onunload() {
-    // Cleanup tasks if necessary. Dynamic ribbon buttons are automatically unmounted.
-    imladris.ui.showToast("Text Statistics extension unloaded.");
+    // Cleanup hooks or UI bindings if necessary
+    imladris.ui.showToast("APA Table Formatter unloaded.");
 }
 ```
 
 ---
 
-## 2. Testing and Activating Your Plugin
+## 4. Packaging and Distributing Your Plugin
 
-1. Launch Imladris or open **Preferences (`Ctrl+,`) → Extensions**.
-2. Locate **"Text Statistics & Metrics"** under **Installed Plugins**.
-3. Toggle the switch to **Active**.
-4. Switch to the **Home** tab in the Ribbon. You will see a new **"Text Stats"** button with a symbolic icon in the **Extensions** group.
-5. Click it to verify that metrics appear in an `Adw.Toast` at the bottom of the window!
+1. Create a folder named after your plugin `id` (e.g., `biostat-table-generator/`).
+2. Add your `manifest.json` and `main.js`.
+3. Compress the folder into a `.zip` archive:
+```bash
+zip -r biostat-table-generator.implugin biostat-table-generator/
+```
 
----
-
-## 3. Packaging into `.implugin` for Distribution
-
-To distribute your extension to collaborators:
-1. Ensure your directory contains `manifest.json` and `main.js`.
-2. Package the files into a `.zip` archive named `<plugin-id>.implugin`:
-   ```bash
-   cd ~/.local/share/imladris/plugins/my-stats-plugin
-   zip -r ../my-stats-plugin.implugin manifest.json main.js
-   ```
-3. A user can install your `.implugin` with one click:
-   - Go to **Preferences → Extensions**.
-   - Click **"Import Plugin…"**.
-   - Select `my-stats-plugin.implugin`.
-   - Imladris displays a security consent modal showing the plugin author, license, and requested permissions (`Editor Access`).
-   - Clicking **"Install & Enable"** extracts the bundle into user storage and enables it instantly.
+4. Share your `.implugin` file with colleagues or publish it to the Imladris Community Extensions registry!

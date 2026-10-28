@@ -253,10 +253,22 @@ namespace Imladris.Plugins {
                     var imladris = {
                         ui: {
                             showToast: function(msg) { _host.showToast(String(msg)); },
-                            addRibbonButton: function(id, label, icon, callback) {
-                                _host.addRibbonButton(String(id), String(label), String(icon));
+                            addRibbonButton: function(id_or_options, label, icon, callback) {
+                                var id, lbl, icn, cb;
+                                if (typeof id_or_options === 'object' && id_or_options !== null) {
+                                    id = id_or_options.id;
+                                    lbl = id_or_options.label;
+                                    icn = id_or_options.icon;
+                                    cb = id_or_options.onClick || id_or_options.callback;
+                                } else {
+                                    id = id_or_options;
+                                    lbl = label;
+                                    icn = icon;
+                                    cb = callback;
+                                }
+                                _host.addRibbonButton(String(id), String(lbl), String(icn));
                                 imladris._callbacks = imladris._callbacks || {};
-                                imladris._callbacks[id] = callback;
+                                imladris._callbacks[id] = cb;
                             }
                         },
                         editor: {
