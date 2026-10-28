@@ -45,20 +45,53 @@ namespace Imladris {
             var header_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6);
 
             engine_dropdown = new Gtk.DropDown.from_strings ({
-                "🌟 Google Gemini",
-                "🎭 Claude (Anthropic)",
-                "🟢 OpenAI (GPT-4o / o1)",
-                "🧠 DeepSeek (Chat & R1)",
-                "🌙 Kimi (Moonshot)",
-                "⚡ Qwen (DashScope)",
-                "🖱️ Cursor API Compatibility",
-                "🟩 NVIDIA NIM",
-                "🦙 Ollama (Local)",
-                "🔮 LM Studio (Local: 1234)",
-                "⚙️ Custom Provider"
+                "Google Gemini",
+                "Claude (Anthropic)",
+                "OpenAI (GPT-4o / o1)",
+                "DeepSeek (Chat & R1)",
+                "Kimi (Moonshot)",
+                "Qwen (DashScope)",
+                "Cursor API Compatibility",
+                "NVIDIA NIM",
+                "Ollama (Local)",
+                "LM Studio (Local)",
+                "Custom Provider"
             });
             engine_dropdown.hexpand = true;
             engine_dropdown.tooltip_text = "Select active AI provider";
+
+            var dropdown_factory = new Gtk.SignalListItemFactory ();
+            dropdown_factory.setup.connect ((obj) => {
+                var list_item = obj as Gtk.ListItem;
+                var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8);
+                var img = new Gtk.Image () { pixel_size = 18 };
+                var lbl = new Gtk.Label ("") { xalign = 0.0f, hexpand = true };
+                box.append (img);
+                box.append (lbl);
+                list_item.child = box;
+            });
+            dropdown_factory.bind.connect ((obj) => {
+                var list_item = obj as Gtk.ListItem;
+                var box = list_item.child as Gtk.Box;
+                if (box != null) {
+                    var img = box.get_first_child () as Gtk.Image;
+                    var lbl = box.get_last_child () as Gtk.Label;
+                    var str_obj = list_item.item as Gtk.StringObject;
+                    if (str_obj != null && img != null && lbl != null) {
+                        uint idx = list_item.position;
+                        if (idx <= (uint) Core.AiProvider.CUSTOM) {
+                            var prov = (Core.AiProvider) idx;
+                            img.icon_name = prov.get_icon_name ();
+                        } else {
+                            img.icon_name = "system-run-symbolic";
+                        }
+                        lbl.label = str_obj.string;
+                    }
+                }
+            });
+            engine_dropdown.factory = dropdown_factory;
+            engine_dropdown.list_factory = dropdown_factory;
+
             header_box.append (engine_dropdown);
 
             model_string_list = new Gtk.StringList (null);
@@ -313,8 +346,12 @@ namespace Imladris {
 
         public void send_prompt (string user_prompt) {
             var settings = Core.SettingsManager.get_default ();
-            if (settings.elrond_enabled) {
-                var elrond_engine = Imladris.AI.ElrondEngineController.get_default ();
+            var elrond_engine = Imladris.AI.ElrondEngineController.get_default ();
+            var provider = config_mgr.active_provider;
+            bool provider_has_key = !provider.requires_api_key () || config_mgr.has_valid_key (provider);
+
+            // If Elrond is enabled and ready, and user hasn't explicitly configured a distinct active provider with a key
+            if (settings.elrond_enabled && elrond_engine.is_ready) {
                 string model_name = settings.active_model_name;
 
                 append_to_chat (@"👤 You:\n$user_prompt\n\n🤖 Thinking ($model_name)...");
@@ -342,7 +379,17 @@ namespace Imladris {
                 return;
             }
 
-            var provider = config_mgr.active_provider;
+            // If Elrond is enabled but not yet ready, inform user if falling back or blocked
+            if (settings.elrond_enabled && !elrond_engine.is_ready) {
+                if (provider_has_key) {
+                    append_to_chat (@"ℹ️ Elrond local engine is initializing or warming up. Routing request via $(provider.get_display_name ())...\n");
+                } else {
+                    append_to_chat ("⚠️ Elrond local AI is currently starting or downloading the model. Please check engine status in Preferences → AI & Elrond, or select a cloud provider with an API key.\n");
+                    status_lbl.label = "Elrond engine warming up...";
+                    return;
+                }
+            }
+
             string model = config_mgr.get_model_for (provider);
 
             append_to_chat (@"👤 You:\n$user_prompt\n\n🤖 Thinking ($model)...");
@@ -367,6 +414,15 @@ namespace Imladris {
                     check_key_status ();
                 }
             });
+        }
+
+        public void focus_input () {
+            prompt_entry.grab_focus ();
+        }
+
+        public void set_prompt_text (string text) {
+            prompt_entry.text = text;
+            prompt_entry.grab_focus ();
         }
 
         private void set_generating_state (bool generating) {

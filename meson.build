@@ -139,6 +139,7 @@ ai_test_sources = files(
   'src/core/SettingsManager.vala',
   'src/core/PlatformUtils.vala',
   'src/core/ToolchainManager.vala',
+  'src/ai/ElrondEngineController.vala',
 )
 
 ai_test_exe = executable('test_ai_integration',

@@ -77,7 +77,8 @@ namespace Imladris.UI {
             // Write with Elrond Assistance (AI) Group
             var elrond_group = new Adw.PreferencesGroup () {
                 title = "Write with Elrond Assistance (AI)",
-                description = "Zero-configuration local coding and data science copilot for R, Python, SQL, and HTML"
+                description = "Zero-configuration local coding and data science copilot for R, Python, SQL, and HTML",
+                header_suffix = new Gtk.Image.from_icon_name ("ai-elrond") { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var settings = Core.SettingsManager.get_default ();
@@ -166,6 +167,50 @@ namespace Imladris.UI {
             });
             elrond_group.add (inline_autocomplete_row);
 
+            var inline_edit_row = new Adw.SwitchRow () {
+                title = "Inline AI Editing Popover",
+                subtitle = "Show inline prompt popover at cursor on 'Write with Elrond Assistance' (Ctrl+Shift+E)",
+                active = settings.inline_editing_enabled
+            };
+            inline_edit_row.notify["active"].connect (() => {
+                settings.inline_editing_enabled = inline_edit_row.active;
+            });
+            elrond_group.add (inline_edit_row);
+
+            var panel_pos_row = new Adw.ActionRow () {
+                title = "AI Chat & Side Panel Position",
+                subtitle = "Keep the LLM chat and preview panel docked on the left or right side of the editor"
+            };
+
+            var pos_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) {
+                valign = Gtk.Align.CENTER
+            };
+            pos_box.add_css_class ("linked");
+
+            var btn_pos_left = new Gtk.ToggleButton.with_label ("◀ Left") {
+                active = (settings.chat_panel_position == Core.SidePanelPosition.LEFT)
+            };
+            var btn_pos_right = new Gtk.ToggleButton.with_label ("Right ▶") {
+                active = (settings.chat_panel_position == Core.SidePanelPosition.RIGHT),
+                group = btn_pos_left
+            };
+
+            btn_pos_left.toggled.connect (() => {
+                if (btn_pos_left.active) {
+                    settings.chat_panel_position = Core.SidePanelPosition.LEFT;
+                }
+            });
+            btn_pos_right.toggled.connect (() => {
+                if (btn_pos_right.active) {
+                    settings.chat_panel_position = Core.SidePanelPosition.RIGHT;
+                }
+            });
+
+            pos_box.append (btn_pos_left);
+            pos_box.append (btn_pos_right);
+            panel_pos_row.add_suffix (pos_box);
+            elrond_group.add (panel_pos_row);
+
             // Model file chooser row
             var model_row = new Adw.ActionRow () {
                 title = "Local Model File (.gguf)",
@@ -173,6 +218,7 @@ namespace Imladris.UI {
                     ? settings.custom_model_path
                     : "Default: %s (Auto-detected)".printf (settings.active_model_name)
             };
+            model_row.add_prefix (new Gtk.Image.from_icon_name ("ai-qwen") { pixel_size = 22 });
             var btn_browse_model = new Gtk.Button.with_label ("Browse...") {
                 valign = Gtk.Align.CENTER
             };
@@ -210,6 +256,7 @@ namespace Imladris.UI {
                 title = "Hardware Acceleration Backend",
                 subtitle = "Select GPU runtime: Vulkan/Universal (AMD/Intel/CPU) or NVIDIA CUDA"
             };
+            backend_row.add_prefix (new Gtk.Image.from_icon_name ("ai-nvidia") { pixel_size = 22 });
 
             var btn_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) {
                 valign = Gtk.Align.CENTER

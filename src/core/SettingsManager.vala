@@ -101,6 +101,32 @@ namespace Imladris.Core {
         }
     }
 
+    public enum SidePanelPosition {
+        RIGHT = 0,
+        LEFT = 1;
+
+        public string to_string_id () {
+            switch (this) {
+                case LEFT: return "left";
+                default: return "right";
+            }
+        }
+
+        public static SidePanelPosition from_string_id (string id) {
+            switch (id.down ()) {
+                case "left": return LEFT;
+                default: return RIGHT;
+            }
+        }
+
+        public string get_display_name () {
+            switch (this) {
+                case LEFT: return "Left";
+                default: return "Right";
+            }
+        }
+    }
+
     /**
      * Standard GNOME default system accent colors introduced in GNOME 47 / Libadwaita 1.6.
      */
@@ -202,6 +228,8 @@ namespace Imladris.Core {
         private ElrondBackend _elrond_backend = ElrondBackend.VULKAN;
         private string _active_model_name = "Qwen2.5-Coder-3B";
         private bool _inline_completion_enabled = true;
+        private bool _inline_editing_enabled = true;
+        private SidePanelPosition _chat_panel_position = SidePanelPosition.RIGHT;
         private string _custom_model_path = "";
         private KeyFile config_keyfile = new KeyFile ();
         private string config_ini_path = "";
@@ -255,6 +283,28 @@ namespace Imladris.Core {
             set {
                 if (_inline_completion_enabled != value) {
                     _inline_completion_enabled = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public bool inline_editing_enabled {
+            get { return _inline_editing_enabled; }
+            set {
+                if (_inline_editing_enabled != value) {
+                    _inline_editing_enabled = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public SidePanelPosition chat_panel_position {
+            get { return _chat_panel_position; }
+            set {
+                if (_chat_panel_position != value) {
+                    _chat_panel_position = value;
                     save_ini ();
                     ai_settings_changed ();
                 }
@@ -392,6 +442,13 @@ namespace Imladris.Core {
                     if (config_keyfile.has_key ("ElrondAI", "inline_completion")) {
                         _inline_completion_enabled = config_keyfile.get_boolean ("ElrondAI", "inline_completion");
                     }
+                    if (config_keyfile.has_key ("ElrondAI", "inline_editing")) {
+                        _inline_editing_enabled = config_keyfile.get_boolean ("ElrondAI", "inline_editing");
+                    }
+                    if (config_keyfile.has_key ("ElrondAI", "chat_panel_position")) {
+                        string pos_str = config_keyfile.get_string ("ElrondAI", "chat_panel_position");
+                        _chat_panel_position = SidePanelPosition.from_string_id (pos_str);
+                    }
                     if (config_keyfile.has_key ("ElrondAI", "custom_model_path")) {
                         _custom_model_path = config_keyfile.get_string ("ElrondAI", "custom_model_path");
                     }
@@ -411,6 +468,8 @@ namespace Imladris.Core {
                 config_keyfile.set_integer ("ElrondAI", "backend", (int) _elrond_backend);
                 config_keyfile.set_string ("ElrondAI", "model_name", _active_model_name);
                 config_keyfile.set_boolean ("ElrondAI", "inline_completion", _inline_completion_enabled);
+                config_keyfile.set_boolean ("ElrondAI", "inline_editing", _inline_editing_enabled);
+                config_keyfile.set_string ("ElrondAI", "chat_panel_position", _chat_panel_position.to_string_id ());
                 config_keyfile.set_string ("ElrondAI", "custom_model_path", _custom_model_path);
                 FileUtils.set_contents (config_ini_path, config_keyfile.to_data ());
             } catch (Error e) {}

@@ -24,13 +24,17 @@ run_meson_build() {
     local build_dir="$1"
     local prefix_dir="$2"
     local dest_dir="$3"
+    local sdk_ver="50"
+    if flatpak info org.gnome.Sdk//51 >/dev/null 2>&1; then
+        sdk_ver="51"
+    fi
     if pkg-config --atleast-version=4.12 gtk4 && pkg-config --atleast-version=1.5 libadwaita-1 && pkg-config --exists gtksourceview-5 webkitgtk-6.0; then
         rm -rf "${build_dir}"
         meson setup "${build_dir}" --prefix="${prefix_dir}"
         meson compile -C "${build_dir}"
         DESTDIR="${dest_dir}" meson install -C "${build_dir}"
     else
-        flatpak run --system --command=bash --devel --filesystem="${PROJECT_DIR}" org.gnome.Sdk//50 -c \
+        flatpak run --system --command=bash --devel --filesystem="${PROJECT_DIR}" org.gnome.Sdk//${sdk_ver} -c \
             "cd '${PROJECT_DIR}' && rm -rf '${build_dir}' && meson setup '${build_dir}' --prefix='${prefix_dir}' && meson compile -C '${build_dir}' && DESTDIR='${dest_dir}' meson install -C '${build_dir}'"
     fi
 }
@@ -41,11 +45,20 @@ if [[ "${1:-}" != "--deb-only" ]]; then
   rm -rf build-flatpak-app repo Imladris.flatpak "${BUNDLE_NAME}"
   mkdir -p build-flatpak-app/files build-flatpak-app/var
 
+  PLATFORM_VER="51"
+  if ! flatpak info org.gnome.Platform//51 >/dev/null 2>&1; then
+      PLATFORM_VER="50"
+  fi
+  SDK_VER="50"
+  if flatpak info org.gnome.Sdk//51 >/dev/null 2>&1; then
+      SDK_VER="51"
+  fi
+
   cat << EOF_META > build-flatpak-app/metadata
 [Application]
 name=${APP_ID}
-runtime=org.gnome.Platform/x86_64/50
-sdk=org.gnome.Sdk/x86_64/50
+runtime=org.gnome.Platform/x86_64/${PLATFORM_VER}
+sdk=org.gnome.Sdk/x86_64/${SDK_VER}
 command=imladris
 
 [Context]
@@ -53,6 +66,9 @@ shared=ipc;network;
 sockets=fallback-x11;wayland;
 devices=dri;
 filesystems=home;~/.cache/imladris:create;
+
+[Session Bus Policy]
+org.freedesktop.Flatpak=talk
 EOF_META
 
   run_meson_build "build-flatpak" "/app" "${PROJECT_DIR}/build-flatpak-app/files"

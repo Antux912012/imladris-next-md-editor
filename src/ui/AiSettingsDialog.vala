@@ -28,7 +28,8 @@ namespace Imladris.UI {
             // --- Google Gemini Group ---
             var gemini_group = new Adw.PreferencesGroup () {
                 title = "Google Gemini",
-                description = "Google DeepMind's flagship models with state-of-the-art multimodal reasoning"
+                description = "Google DeepMind's flagship models with state-of-the-art multimodal reasoning",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.GEMINI.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var gemini_settings = config_mgr.get_settings_for (AiProvider.GEMINI);
@@ -92,7 +93,8 @@ namespace Imladris.UI {
             // --- Claude / Anthropic Group ---
             var claude_group = new Adw.PreferencesGroup () {
                 title = "Claude (Anthropic)",
-                description = "Anthropic's Claude 3.5 Sonnet, 3.7 Sonnet, Haiku, and Opus via native Messages API"
+                description = "Anthropic's Claude 3.5 Sonnet, 3.7 Sonnet, Haiku, and Opus via native Messages API",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.CLAUDE.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var claude_settings = config_mgr.get_settings_for (AiProvider.CLAUDE);
@@ -144,7 +146,8 @@ namespace Imladris.UI {
             // --- OpenAI Group ---
             var openai_group = new Adw.PreferencesGroup () {
                 title = "OpenAI",
-                description = "OpenAI GPT-4o, GPT-4o-mini, o1, and o3-mini models"
+                description = "OpenAI GPT-4o, GPT-4o-mini, o1, and o3-mini models",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.OPENAI.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var openai_settings = config_mgr.get_settings_for (AiProvider.OPENAI);
@@ -196,7 +199,8 @@ namespace Imladris.UI {
             // --- Cursor API Compatibility Group ---
             var cursor_group = new Adw.PreferencesGroup () {
                 title = "Cursor API Compatibility",
-                description = "Connect using Cursor API or OpenAI-compatible Cursor proxies"
+                description = "Connect using Cursor API or OpenAI-compatible Cursor proxies",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.CURSOR.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var cursor_settings = config_mgr.get_settings_for (AiProvider.CURSOR);
@@ -258,7 +262,8 @@ namespace Imladris.UI {
             // --- DeepSeek Group ---
             var deepseek_group = new Adw.PreferencesGroup () {
                 title = "DeepSeek",
-                description = "High-performance coding (deepseek-chat) and reasoning (deepseek-reasoner / R1)"
+                description = "High-performance coding (deepseek-chat) and reasoning (deepseek-reasoner / R1)",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.DEEPSEEK.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var ds_settings = config_mgr.get_settings_for (AiProvider.DEEPSEEK);
@@ -310,7 +315,8 @@ namespace Imladris.UI {
             // --- NVIDIA NIM Group ---
             var nvidia_group = new Adw.PreferencesGroup () {
                 title = "NVIDIA NIM",
-                description = "NVIDIA Inference Microservices with GPU-accelerated Llama 3.3, Nemotron, and DeepSeek R1"
+                description = "NVIDIA Inference Microservices with GPU-accelerated Llama 3.3, Nemotron, and DeepSeek R1",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.NVIDIA_NIM.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var nvidia_settings = config_mgr.get_settings_for (AiProvider.NVIDIA_NIM);
@@ -362,7 +368,8 @@ namespace Imladris.UI {
             // --- Kimi (Moonshot AI) Group ---
             var kimi_group = new Adw.PreferencesGroup () {
                 title = "Kimi (Moonshot AI)",
-                description = "Ultra-long context window and advanced conversational intelligence"
+                description = "Ultra-long context window and advanced conversational intelligence",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.KIMI.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var kimi_settings = config_mgr.get_settings_for (AiProvider.KIMI);
@@ -414,7 +421,8 @@ namespace Imladris.UI {
             // --- Qwen (Alibaba DashScope) Group ---
             var qwen_group = new Adw.PreferencesGroup () {
                 title = "Qwen (Alibaba DashScope)",
-                description = "Top-tier code generation and scientific modeling (Qwen 2.5 Coder)"
+                description = "Top-tier code generation and scientific modeling (Qwen 2.5 Coder)",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.QWEN.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var qwen_settings = config_mgr.get_settings_for (AiProvider.QWEN);
@@ -476,7 +484,8 @@ namespace Imladris.UI {
             // --- Ollama Group ---
             var ollama_group = new Adw.PreferencesGroup () {
                 title = "Ollama (Local)",
-                description = "Run open-weights models locally via Ollama service (no API key required)"
+                description = "Run open-weights models locally via Ollama service (no API key required)",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.OLLAMA.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var ollama_settings = config_mgr.get_settings_for (AiProvider.OLLAMA);
@@ -506,7 +515,8 @@ namespace Imladris.UI {
             // --- LM Studio (Local Server) Group ---
             var lm_studio_group = new Adw.PreferencesGroup () {
                 title = "LM Studio (Local Server)",
-                description = "Connect to LM Studio's OpenAI-compatible local inference server (port 1234)"
+                description = "Connect to LM Studio's OpenAI-compatible local inference server (port 1234)",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.LM_STUDIO.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var lm_settings = config_mgr.get_settings_for (AiProvider.LM_STUDIO);
@@ -554,7 +564,8 @@ namespace Imladris.UI {
             // --- Custom OpenAI Compatible Group ---
             var custom_group = new Adw.PreferencesGroup () {
                 title = "Custom OpenAI-Compatible Endpoint",
-                description = "Connect to any provider supporting standard OpenAI /v1/chat/completions"
+                description = "Connect to any provider supporting standard OpenAI /v1/chat/completions",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.CUSTOM.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
             };
 
             var custom_settings = config_mgr.get_settings_for (AiProvider.CUSTOM);

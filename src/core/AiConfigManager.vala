@@ -90,6 +90,23 @@ namespace Imladris.Core {
             }
         }
 
+        public string get_icon_name () {
+            switch (this) {
+                case GEMINI: return "ai-gemini";
+                case CLAUDE: return "ai-claude";
+                case OPENAI: return "ai-openai";
+                case DEEPSEEK: return "ai-deepseek";
+                case KIMI: return "ai-kimi";
+                case QWEN: return "ai-qwen";
+                case CURSOR: return "ai-cursor";
+                case NVIDIA_NIM: return "ai-nvidia";
+                case OLLAMA: return "ai-ollama";
+                case LM_STUDIO: return "ai-lmstudio";
+                case CUSTOM: return "ai-custom";
+                default: return "system-run-symbolic";
+            }
+        }
+
         public string get_default_endpoint () {
             switch (this) {
                 case GEMINI: return "https://generativelanguage.googleapis.com/v1beta/openai";

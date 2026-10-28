@@ -414,7 +414,11 @@ namespace Imladris {
         public void trigger_elrond_assistance () {
             var doc = get_active_document ();
             if (doc != null) {
-                doc.show_inline_prompt_popover ();
+                if (Core.SettingsManager.get_default ().inline_editing_enabled) {
+                    doc.show_inline_prompt_popover ();
+                } else {
+                    doc.show_ai_assistant ();
+                }
             } else {
                 trigger_ai_assistant ();
             }

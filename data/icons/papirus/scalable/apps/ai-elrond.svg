@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <radialGradient id="elrondGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#729fcf" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#204a87" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0c1d38" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe082"/>
+      <stop offset="50%" stop-color="#ffb300"/>
+      <stop offset="100%" stop-color="#ff8f00"/>
+    </linearGradient>
+    <linearGradient id="sapphireGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#99c1f1"/>
+      <stop offset="50%" stop-color="#3584e4"/>
+      <stop offset="100%" stop-color="#1c71d8"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer Glow -->
+  <circle cx="64" cy="64" r="58" fill="url(#elrondGlow)" />
+  <!-- Elven Star / Ring Ring Rays -->
+  <g stroke="url(#goldGrad)" stroke-width="4" stroke-linecap="round" fill="none">
+    <path d="M 64 8 L 64 120" opacity="0.6"/>
+    <path d="M 8 64 L 120 64" opacity="0.6"/>
+    <path d="M 24 24 L 104 104" opacity="0.4"/>
+    <path d="M 24 104 L 104 24" opacity="0.4"/>
+  </g>
+  <!-- 8-Point Elven Crown Star of Vilya -->
+  <path d="M 64 14 L 75 48 L 114 64 L 75 80 L 64 114 L 53 80 L 14 64 L 53 48 Z" fill="url(#sapphireGrad)" stroke="#1a5fb4" stroke-width="2"/>
+  <path d="M 64 28 L 71 52 L 100 64 L 71 76 L 64 100 L 57 76 L 28 64 L 57 52 Z" fill="url(#goldGrad)" opacity="0.85"/>
+  <!-- Central Sapphire Jewel -->
+  <circle cx="64" cy="64" r="16" fill="url(#sapphireGrad)" stroke="#ffffff" stroke-width="2.5"/>
+  <circle cx="60" cy="60" r="5" fill="#ffffff" opacity="0.8"/>
+  <!-- AI Sparks -->
+  <circle cx="64" cy="18" r="3" fill="#ffe082"/>
+  <circle cx="110" cy="64" r="3" fill="#ffe082"/>
+  <circle cx="64" cy="110" r="3" fill="#ffe082"/>
+  <circle cx="18" cy="64" r="3" fill="#ffe082"/>
+</svg>

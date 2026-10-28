@@ -20,6 +20,8 @@ namespace Imladris.Tests {
         GLib.Test.add_func ("/theming/app_theme_metadata", test_app_theme);
         GLib.Test.add_func ("/theming/gnome_accent_metadata", test_gnome_accent_metadata);
         GLib.Test.add_func ("/core/distro_detection", test_distro_detection);
+        GLib.Test.add_func ("/ai/elrond_binary_discovery", test_elrond_binary_discovery);
+        GLib.Test.add_func ("/ai/side_panel_and_inline_editing", test_side_panel_and_inline_editing);
 
         return GLib.Test.run ();
     }
@@ -121,6 +123,19 @@ namespace Imladris.Tests {
         assert (lm_studio.requires_api_key () == false);
         assert (lm_studio.get_default_endpoint () == "http://localhost:1234/v1");
         assert (lm_studio.get_default_model () == "default");
+
+        // 10. AI Model Logo Icon Identifiers
+        assert (gemini.get_icon_name () == "ai-gemini");
+        assert (claude.get_icon_name () == "ai-claude");
+        assert (openai.get_icon_name () == "ai-openai");
+        assert (ds.get_icon_name () == "ai-deepseek");
+        assert (kimi.get_icon_name () == "ai-kimi");
+        assert (qwen.get_icon_name () == "ai-qwen");
+        assert (cursor.get_icon_name () == "ai-cursor");
+        assert (nvidia.get_icon_name () == "ai-nvidia");
+        assert (ollama.get_icon_name () == "ai-ollama");
+        assert (lm_studio.get_icon_name () == "ai-lmstudio");
+        assert (AiProvider.CUSTOM.get_icon_name () == "ai-custom");
     }
 
     private static void test_url_normalization () {
@@ -400,5 +415,49 @@ namespace Imladris.Tests {
         assert (distro.name.length > 0);
         assert (distro.install_cmd.length > 0);
         assert (distro.install_cmd.contains ("llama"));
+    }
+
+    private static void test_elrond_binary_discovery () {
+        // Test is_binary_runnable on nonexistent path
+        assert (!Imladris.AI.ElrondEngineController.is_binary_runnable ("/nonexistent/path/to/binary"));
+
+        // If llama-server exists, discovery should find it and it should be runnable
+        bool is_host = false;
+        string? found = Imladris.AI.ElrondEngineController.find_llama_server_binary (ElrondBackend.VULKAN, out is_host);
+        if (found != null) {
+            assert (Imladris.AI.ElrondEngineController.is_binary_runnable (found, is_host));
+        }
+    }
+
+    private static void test_side_panel_and_inline_editing () {
+        // 1. SidePanelPosition enum tests
+        assert (SidePanelPosition.RIGHT.to_string_id () == "right");
+        assert (SidePanelPosition.LEFT.to_string_id () == "left");
+        assert (SidePanelPosition.from_string_id ("right") == SidePanelPosition.RIGHT);
+        assert (SidePanelPosition.from_string_id ("left") == SidePanelPosition.LEFT);
+        assert (SidePanelPosition.from_string_id ("invalid") == SidePanelPosition.RIGHT);
+        assert (SidePanelPosition.RIGHT.get_display_name () == "Right");
+        assert (SidePanelPosition.LEFT.get_display_name () == "Left");
+
+        // 2. SettingsManager property defaults and mutability
+        var settings = SettingsManager.get_default ();
+        bool orig_inline = settings.inline_editing_enabled;
+        var orig_pos = settings.chat_panel_position;
+
+        settings.inline_editing_enabled = false;
+        assert (settings.inline_editing_enabled == false);
+
+        settings.inline_editing_enabled = true;
+        assert (settings.inline_editing_enabled == true);
+
+        settings.chat_panel_position = SidePanelPosition.LEFT;
+        assert (settings.chat_panel_position == SidePanelPosition.LEFT);
+
+        settings.chat_panel_position = SidePanelPosition.RIGHT;
+        assert (settings.chat_panel_position == SidePanelPosition.RIGHT);
+
+        // Restore originals
+        settings.inline_editing_enabled = orig_inline;
+        settings.chat_panel_position = orig_pos;
     }
 }

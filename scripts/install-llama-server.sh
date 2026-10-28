@@ -39,28 +39,33 @@ if [ "${FLAVOR}" = "cuda" ]; then
 
     echo "--> Downloading NVIDIA CUDA binary package: ${URL_CUDA}"
     curl -sSfL --connect-timeout 20 --max-time 1800 -o "${TMP_DIR}/cuda.tar.gz" "${URL_CUDA}"
-    tar -xzf "${TMP_DIR}/cuda.tar.gz" -C "${TMP_DIR}"
+    tar -xzf "${TMP_DIR}/cuda.tar.gz" --strip-components=1 -C "${TARGET_SUBDIR}"
 
     echo "--> Downloading CUDA runtime libraries: ${URL_CUDART}"
     if curl -sSfL --connect-timeout 20 --max-time 900 -o "${TMP_DIR}/cudart.tar.gz" "${URL_CUDART}" 2>/dev/null; then
-        tar -xzf "${TMP_DIR}/cudart.tar.gz" -C "${TMP_DIR}" || true
+        tar -xzf "${TMP_DIR}/cudart.tar.gz" --strip-components=1 -C "${TARGET_SUBDIR}" || true
     fi
 
-    FOUND_BIN=$(find "${TMP_DIR}" -type f -name "llama-server" | head -n1)
-    if [ -z "${FOUND_BIN}" ]; then
-        echo "✖ llama-server binary not found in CUDA archive" >&2
-        exit 1
-    fi
+    # Ensure symlinks exist
+    for so in "${TARGET_SUBDIR}"/lib*.so.*.*.*; do
+        [ -f "$so" ] || continue
+        base="${so%.*.*}"
+        major="${so%.*}"
+        [ ! -e "$major" ] && ln -sf "$(basename "$so")" "$major" 2>/dev/null || true
+        [ ! -e "$base" ] && ln -sf "$(basename "$major")" "$base" 2>/dev/null || true
+    done
 
-    # Copy shared libraries and binary into TARGET_SUBDIR
-    find "${TMP_DIR}" -type f \( -name "*.so*" -o -name "llama-server" \) -exec cp -f {} "${TARGET_SUBDIR}/" \;
-    chmod 755 "${TARGET_SUBDIR}/llama-server"
-    cp -f "${TARGET_SUBDIR}/llama-server" "${TARGET_BIN}"
+    chmod 755 "${TARGET_SUBDIR}/llama-server" 2>/dev/null || true
+
+    # Create wrapper launcher script
+    cat << 'EOF_LAUNCHER' > "${TARGET_BIN}"
+#!/bin/sh
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$DIR/cuda/llama-server" "$@"
+EOF_LAUNCHER
     chmod 755 "${TARGET_BIN}"
-
-    # Also point default llama-server to CUDA if requested
     cp -f "${TARGET_BIN}" "${DEST_DIR}/llama-server"
-    echo "✔ Successfully installed NVIDIA CUDA engine to ${TARGET_BIN}"
+    echo "✔ Successfully installed NVIDIA CUDA engine to ${TARGET_SUBDIR}/llama-server"
 
 else
     # Default: Vulkan / Universal GPU & CPU
@@ -79,22 +84,28 @@ else
         curl -sSfL --connect-timeout 20 --max-time 1800 -o "${TMP_DIR}/vulkan.tar.gz" "${URL_CPU}"
     fi
 
-    tar -xzf "${TMP_DIR}/vulkan.tar.gz" -C "${TMP_DIR}"
+    tar -xzf "${TMP_DIR}/vulkan.tar.gz" --strip-components=1 -C "${TARGET_SUBDIR}"
 
-    FOUND_BIN=$(find "${TMP_DIR}" -type f -name "llama-server" | head -n1)
-    if [ -z "${FOUND_BIN}" ]; then
-        echo "✖ llama-server binary not found in Vulkan archive" >&2
-        exit 1
-    fi
+    # Ensure symlinks exist
+    for so in "${TARGET_SUBDIR}"/lib*.so.*.*.*; do
+        [ -f "$so" ] || continue
+        base="${so%.*.*}"
+        major="${so%.*}"
+        [ ! -e "$major" ] && ln -sf "$(basename "$so")" "$major" 2>/dev/null || true
+        [ ! -e "$base" ] && ln -sf "$(basename "$major")" "$base" 2>/dev/null || true
+    done
 
-    find "${TMP_DIR}" -type f \( -name "*.so*" -o -name "llama-server" \) -exec cp -f {} "${TARGET_SUBDIR}/" \;
-    chmod 755 "${TARGET_SUBDIR}/llama-server"
-    cp -f "${TARGET_SUBDIR}/llama-server" "${TARGET_BIN}"
+    chmod 755 "${TARGET_SUBDIR}/llama-server" 2>/dev/null || true
+
+    # Create wrapper launcher script
+    cat << 'EOF_LAUNCHER' > "${TARGET_BIN}"
+#!/bin/sh
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$DIR/vulkan/llama-server" "$@"
+EOF_LAUNCHER
     chmod 755 "${TARGET_BIN}"
-
-    # Set as primary llama-server
     cp -f "${TARGET_BIN}" "${DEST_DIR}/llama-server"
-    echo "✔ Successfully installed Vulkan/Universal engine to ${TARGET_BIN}"
+    echo "✔ Successfully installed Vulkan/Universal engine to ${TARGET_SUBDIR}/llama-server"
 fi
 
 exit 0

@@ -32,6 +32,7 @@ namespace Imladris {
         public RStudioDockGrid rstudio_dock_grid { get; private set; }
         public ProjectType project_type { get; set; default = ProjectType.STANDARD; }
         private Services.LayoutMode current_layout_mode = Services.LayoutMode.APOSTROPHE;
+        private ulong ai_settings_handler_id = 0;
 
         public DocumentFormat get_document_format () {
             if (file_location != null) {
@@ -154,7 +155,6 @@ namespace Imladris {
                 hexpand = true,
                 vexpand = true
             };
-            paned.set_start_child (apostrophe_editor_host);
 
             console_revealer = new Gtk.Revealer () {
                 transition_type = Gtk.RevealerTransitionType.SLIDE_LEFT,
@@ -183,6 +183,17 @@ namespace Imladris {
             };
             right_header.append (stack_switcher);
             right_header.append (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) { hexpand = true });
+
+            var btn_close_panel = new Gtk.Button.from_icon_name ("window-close-symbolic") {
+                tooltip_text = "Close Panel",
+                valign = Gtk.Align.CENTER
+            };
+            btn_close_panel.add_css_class ("flat");
+            btn_close_panel.clicked.connect (() => {
+                console_revealer.reveal_child = false;
+            });
+            right_header.append (btn_close_panel);
+
             right_box.append (right_header);
 
             apostrophe_preview_host = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
@@ -198,7 +209,9 @@ namespace Imladris {
 
             right_box.append (right_stack);
             console_revealer.set_child (right_box);
-            paned.set_end_child (console_revealer);
+
+            apply_panel_position ();
+            ai_settings_handler_id = Core.SettingsManager.get_default ().ai_settings_changed.connect (apply_panel_position);
 
             this.append (paned);
             this.append (rstudio_dock_grid);
@@ -245,6 +258,10 @@ namespace Imladris {
         }
 
         ~DocumentPage () {
+            if (ai_settings_handler_id != 0) {
+                Core.SettingsManager.get_default ().disconnect (ai_settings_handler_id);
+                ai_settings_handler_id = 0;
+            }
             if (update_debounce_id != 0) {
                 GLib.Source.remove (update_debounce_id);
                 update_debounce_id = 0;
@@ -575,13 +592,46 @@ print("Python Interpreter:", sys.version.split()[0])
             }
         }
 
+        public void apply_panel_position () {
+            var settings = Core.SettingsManager.get_default ();
+            var pos = settings.chat_panel_position;
+
+            bool is_currently_left = (paned.get_start_child () == console_revealer);
+            if (pos == Core.SidePanelPosition.LEFT && is_currently_left) {
+                return;
+            }
+            if (pos == Core.SidePanelPosition.RIGHT && !is_currently_left && paned.get_end_child () == console_revealer) {
+                return;
+            }
+
+            paned.set_start_child (null);
+            paned.set_end_child (null);
+
+            if (pos == Core.SidePanelPosition.LEFT) {
+                console_revealer.transition_type = Gtk.RevealerTransitionType.SLIDE_RIGHT;
+                paned.set_start_child (console_revealer);
+                paned.set_end_child (apostrophe_editor_host);
+                paned.position = 480;
+            } else {
+                console_revealer.transition_type = Gtk.RevealerTransitionType.SLIDE_LEFT;
+                paned.set_start_child (apostrophe_editor_host);
+                paned.set_end_child (console_revealer);
+                int total_w = paned.get_width ();
+                paned.position = total_w > 500 ? (total_w - 480) : 780;
+            }
+        }
+
         public void show_ai_assistant () {
             if (current_layout_mode == Services.LayoutMode.RSTUDIO) {
                 set_workbench_mode (Services.LayoutMode.APOSTROPHE);
             }
+            apply_panel_position ();
             console_revealer.visible = true;
             console_revealer.reveal_child = true;
             right_stack.visible_child_name = "assistant";
+            if (assistant_panel != null) {
+                assistant_panel.focus_input ();
+            }
         }
 
         private void setup_completion () {
@@ -652,7 +702,7 @@ print("Python Interpreter:", sys.version.split()[0])
             };
 
             var header_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6);
-            var icon = new Gtk.Image.from_icon_name ("system-run-symbolic");
+            var icon = new Gtk.Image.from_icon_name ("ai-elrond") { pixel_size = 20 };
             var title_lbl = new Gtk.Label ("Write with Elrond Assistance (AI)") {
                 css_classes = { "heading" },
                 hexpand = true,
@@ -671,7 +721,7 @@ print("Python Interpreter:", sys.version.split()[0])
             var actions_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6) {
                 halign = Gtk.Align.END
             };
-            var spinner = new Gtk.Spinner () { visible = false };
+            var spinner = new Adw.Spinner () { visible = false };
             var btn_generate = new Gtk.Button.with_label ("Generate & Insert") {
                 css_classes = { "suggested-action" }
             };
@@ -687,7 +737,6 @@ print("Python Interpreter:", sys.version.split()[0])
                 prompt_entry.sensitive = false;
                 btn_generate.sensitive = false;
                 spinner.visible = true;
-                spinner.start ();
 
                 string sel = get_selected_text ();
                 string doc_lang = this.doc_type;
@@ -696,7 +745,6 @@ print("Python Interpreter:", sys.version.split()[0])
                 var elrond = Imladris.AI.ElrondEngineController.get_default ();
                 if (elrond.is_ready) {
                     elrond.write_with_elrond.begin (doc_lang, doc_text, "", prompt + (sel.length > 0 ? "\n[Selected Code]:\n" + sel : ""), (obj, res) => {
-                        spinner.stop ();
                         spinner.visible = false;
                         popover.popdown ();
                         try {
@@ -710,7 +758,6 @@ print("Python Interpreter:", sys.version.split()[0])
                     var ai_client = new AiClient ();
                     string sys_prompt = "You are Elrond Assistance (AI), an expert scientific and coding assistant. Generate clean, correct code or statistical functions. Return only the code or visualization chunk.";
                     ai_client.send_chat_completion_async.begin (sys_prompt, prompt + (sel.length > 0 ? "\n[Selected Code]:\n" + sel : ""), null, (obj, res) => {
-                        spinner.stop ();
                         spinner.visible = false;
                         popover.popdown ();
                         try {

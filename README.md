@@ -162,6 +162,49 @@ Built-in MCP server (`imladris --mcp-server`), and crash recovery that keeps sha
 
 ---
 
+## Architecture & Subsystem Map
+
+Imladris is structured around a decoupled, reactive architecture separating presentation, interactive execution, AI services, and persistent runtime management:
+
+```mermaid
+flowchart TD
+    subgraph UI ["Presentation & UI Shell"]
+        APP["Application & Window"] --> DOC["DocumentPage (Editor Host)"]
+        DOC --> DOCK["RStudioDockGrid & PanelRegistry"]
+        DOC --> CHAT["AssistantPanel (AI Chat)"]
+        APP --> RIBBON["RibbonFactory & PackagesRibbonBar"]
+    end
+
+    subgraph Execution ["Computation & Execution Engine"]
+        DOC --> ENG["ChunkExecutionEngine"]
+        ENG --> REPL["ReplBridge (Persistent R & Python)"]
+        ENG --> OUT["InlineChunkOutputWidget"]
+    end
+
+    subgraph AI ["AI & Copilot Subsystem"]
+        DOC --> ELROND["ElrondEngineController"]
+        ELROND --> LLAMA["llama-server (127.0.0.1:18089)"]
+        CHAT --> AICLIENT["AiClient (Cloud Frontier LLMs)"]
+    end
+
+    subgraph Core ["Core Services & Toolchains"]
+        REPL --> TOOLCHAIN["ToolchainManager (4-Tier Resolution)"]
+        DOC --> RECOVERY["RecoveryService (Shadow Snapshots)"]
+        APP --> SETTINGS["SettingsManager (Preferences & INI)"]
+    end
+```
+
+| Subsystem | Primary Components | Key Source Files |
+| :--- | :--- | :--- |
+| **Presentation & UI Shell** | Ribbon Bar, Dock Grid, Tabs, Settings | `Application.vala`, `Window.vala`, `DocumentPage.vala`, `PackagesRibbonBar.vala`, `PreferencesDialog.vala` |
+| **Computation & REPL** | Interactive Stdio, Cell Execution, Devices | `ReplBridge.vala`, `ChunkExecutionEngine.vala`, `ChunkParser.vala`, `InlineChunkOutputWidget.vala` |
+| **AI & Copilot Services** | Local `llama.cpp` Supervisor, Cloud APIs | `ElrondEngineController.vala`, `AiCompletionProvider.vala`, `AiClient.vala`, `AssistantPanel.vala` |
+| **Core & Toolchains** | 4-Tier Resolution, Sandboxes, Recovery | `ToolchainManager.vala`, `SettingsManager.vala`, `MallornManager.vala`, `RecoveryService.vala` |
+
+For complete technical specifications, component connection maps, sequence flows, and the **Bug Localization & Diagnostic Matrix**, consult the **[Architecture Blueprint (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**.
+
+---
+
 ## Install
 
 Packages for each release live on the [Releases page](https://github.com/Antux912012/imladris-next-md-editor/releases).
