@@ -1506,7 +1506,7 @@ namespace Imladris {
             var dialog = new Adw.AboutDialog () {
                 application_name = "Imladris",
                 application_icon = "io.github.Antux912012.Imladris",
-                version = "0.12.0",
+                version = "0.12.1",
                 developer_name = "Antonio De Gaetano",
                 developers = {
                     "Antonio De Gaetano <https://github.com/Antux912012>"
