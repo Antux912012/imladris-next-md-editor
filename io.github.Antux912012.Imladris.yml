@@ -11,6 +11,7 @@ finish-args:
   - --device=dri
   - --filesystem=home
   - --filesystem=~/.cache/imladris:create
+  - --env=WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
   - --talk-name=org.freedesktop.Flatpak
   - --metadata=X-DConf=default-settings
 cleanup:

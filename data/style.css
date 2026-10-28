@@ -14,7 +14,6 @@ menubutton.imladris-brand-btn {
     background: transparent;
     border: none;
     box-shadow: none;
-    overflow: hidden;
 }
 
 menubutton.imladris-brand-btn > button {

@@ -134,6 +134,14 @@ namespace Imladris {
             settings.enable_developer_extras = true;
             settings.enable_javascript = true;
 
+            web_view.web_process_terminated.connect ((reason) => {
+                GLib.warning ("WebKit WebProcess terminated (reason: %d), recovering preview...", (int) reason);
+                GLib.Idle.add (() => {
+                    refresh_live_preview ();
+                    return GLib.Source.REMOVE;
+                });
+            });
+
             console_view = new Gtk.TextView () {
                 editable = false,
                 monospace = true,
@@ -155,7 +163,11 @@ namespace Imladris {
             paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
                 hexpand = true,
                 vexpand = true,
-                position = 780
+                position = 780,
+                resize_start_child = true,
+                resize_end_child = true,
+                shrink_start_child = false,
+                shrink_end_child = false
             };
 
             apostrophe_editor_host = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
@@ -213,6 +225,7 @@ namespace Imladris {
                 assistant_panel = new AssistantPanel (parent_window);
                 right_stack.add_titled (assistant_panel, "assistant", "Elrond Assistance");
             }
+            right_stack.visible_child_name = "preview";
 
             right_box.append (right_stack);
             console_revealer.set_child (right_box);
@@ -435,8 +448,16 @@ print("Python Interpreter:", sys.version.split()[0])
 
         public void refresh_live_preview () {
             string raw = source_buffer.text;
+            string? base_uri = null;
+            if (file_location != null) {
+                var parent = file_location.get_parent ();
+                base_uri = parent != null ? parent.get_uri () + "/" : file_location.get_uri ();
+            } else {
+                base_uri = "file://" + GLib.Environment.get_current_dir () + "/";
+            }
+
             if (doc_type == "html") {
-                web_view.load_html (raw, null);
+                web_view.load_html (raw, base_uri);
                 return;
             }
 
@@ -557,7 +578,7 @@ print("Python Interpreter:", sys.version.split()[0])
                 fmt.to_badge_label (), body_html
             );
 
-            web_view.load_html (html, null);
+            web_view.load_html (html, base_uri);
         }
 
         public void set_split_orientation (Services.SplitMode split) {
@@ -604,6 +625,7 @@ print("Python Interpreter:", sys.version.split()[0])
             if (current_layout_mode == Services.LayoutMode.RSTUDIO) {
                 dock_layout_state.activate_tab (QuadrantId.Q4_BOTTOM_RIGHT, PanelId.LIVE_PREVIEW);
             } else {
+                console_revealer.visible = true;
                 console_revealer.reveal_child = true;
                 right_stack.visible_child_name = "preview";
             }
