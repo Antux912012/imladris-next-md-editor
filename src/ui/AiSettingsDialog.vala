@@ -561,6 +561,66 @@ namespace Imladris.UI {
 
             local_page.add (lm_studio_group);
 
+            // --- Cherry Studio / LocalAI Group ---
+            var cherry_group = new Adw.PreferencesGroup () {
+                title = "Cherry Studio / LocalAI (Local)",
+                description = "Connect to Cherry Studio, LocalAI, or local llama.cpp servers (ports 23333 / 8080)",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.CHERRY_STUDIO.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
+            };
+
+            var cherry_settings = config_mgr.get_settings_for (AiProvider.CHERRY_STUDIO);
+
+            var cherry_endpoint_row = new Adw.EntryRow () {
+                title = "Base Endpoint",
+                text = cherry_settings.endpoint
+            };
+            cherry_endpoint_row.notify["text"].connect (() => {
+                cherry_settings.endpoint = cherry_endpoint_row.text;
+                config_mgr.save ();
+            });
+            cherry_group.add (cherry_endpoint_row);
+
+            var cherry_model_row = new Adw.EntryRow () {
+                title = "Model Name",
+                text = cherry_settings.model
+            };
+            cherry_model_row.notify["text"].connect (() => {
+                cherry_settings.model = cherry_model_row.text;
+                config_mgr.save ();
+            });
+            cherry_group.add (cherry_model_row);
+
+            local_page.add (cherry_group);
+
+            // --- Antigravity Agent Harness Group ---
+            var agy_group = new Adw.PreferencesGroup () {
+                title = "Antigravity CLI (agy Agent Harness)",
+                description = "Use Google DeepMind's agentic CLI harness (~/.local/bin/agy) for local code tasks",
+                header_suffix = new Gtk.Image.from_icon_name (AiProvider.ANTIGRAVITY.get_icon_name ()) { pixel_size = 28, valign = Gtk.Align.CENTER }
+            };
+
+            var agy_settings = config_mgr.get_settings_for (AiProvider.ANTIGRAVITY);
+
+            var agy_model_row = new Adw.EntryRow () {
+                title = "Preferred Model / Agent Profile",
+                text = agy_settings.model
+            };
+            agy_model_row.notify["text"].connect (() => {
+                agy_settings.model = agy_model_row.text;
+                config_mgr.save ();
+            });
+            agy_group.add (agy_model_row);
+
+            var agy_status_row = new Adw.ActionRow () {
+                title = "Harness Status",
+                subtitle = (Imladris.AI.ElrondEngineController.find_agy_binary () != null)
+                    ? "Antigravity CLI detected: %s".printf (Imladris.AI.ElrondEngineController.find_agy_binary ())
+                    : "Not found in ~/.local/bin or PATH"
+            };
+            agy_group.add (agy_status_row);
+
+            local_page.add (agy_group);
+
             // --- Custom OpenAI Compatible Group ---
             var custom_group = new Adw.PreferencesGroup () {
                 title = "Custom OpenAI-Compatible Endpoint",

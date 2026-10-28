@@ -101,6 +101,51 @@ namespace Imladris.Core {
         }
     }
 
+    public enum ElrondMode {
+        AUTO_DETECT = 0,
+        OLLAMA = 1,
+        LM_STUDIO = 2,
+        CHERRY_STUDIO = 3,
+        ANTIGRAVITY = 4,
+        CUSTOM = 5;
+
+        public string to_string_id () {
+            switch (this) {
+                case OLLAMA: return "ollama";
+                case LM_STUDIO: return "lm_studio";
+                case CHERRY_STUDIO: return "cherry_studio";
+                case ANTIGRAVITY: return "antigravity";
+                case CUSTOM: return "custom";
+                default: return "auto";
+            }
+        }
+
+        public static ElrondMode from_string_id (string id) {
+            switch (id.down ()) {
+                case "ollama": return OLLAMA;
+                case "lm_studio": return LM_STUDIO;
+                case "cherry":
+                case "cherry_studio": return CHERRY_STUDIO;
+                case "agy":
+                case "antigravity": return ANTIGRAVITY;
+                case "custom": return CUSTOM;
+                default: return AUTO_DETECT;
+            }
+        }
+
+        public string get_display_name () {
+            switch (this) {
+                case AUTO_DETECT: return "Auto-Detect Local AI (Recommended)";
+                case OLLAMA: return "Ollama (localhost:11434)";
+                case LM_STUDIO: return "LM Studio (localhost:1234)";
+                case CHERRY_STUDIO: return "Cherry Studio / LocalAI (localhost:23333 / 8080)";
+                case ANTIGRAVITY: return "Antigravity CLI (agy Agent Harness)";
+                case CUSTOM: return "Custom Local Server";
+                default: return "Auto-Detect Local AI";
+            }
+        }
+    }
+
     public enum SidePanelPosition {
         RIGHT = 0,
         LEFT = 1;
@@ -226,6 +271,8 @@ namespace Imladris.Core {
         private bool _elrond_enabled = false;
         private AiAssistanceLevel _elrond_level = AiAssistanceLevel.MEDIUM;
         private ElrondBackend _elrond_backend = ElrondBackend.VULKAN;
+        private ElrondMode _elrond_mode = ElrondMode.AUTO_DETECT;
+        private string _custom_local_endpoint = "http://127.0.0.1:8080/v1";
         private string _active_model_name = "Qwen2.5-Coder-3B";
         private bool _inline_completion_enabled = true;
         private bool _inline_editing_enabled = true;
@@ -250,6 +297,28 @@ namespace Imladris.Core {
             set {
                 if (_elrond_backend != value) {
                     _elrond_backend = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public ElrondMode elrond_mode {
+            get { return _elrond_mode; }
+            set {
+                if (_elrond_mode != value) {
+                    _elrond_mode = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public string custom_local_endpoint {
+            get { return _custom_local_endpoint; }
+            set {
+                if (_custom_local_endpoint != value) {
+                    _custom_local_endpoint = value;
                     save_ini ();
                     ai_settings_changed ();
                 }
@@ -436,6 +505,12 @@ namespace Imladris.Core {
                     if (config_keyfile.has_key ("ElrondAI", "backend")) {
                         _elrond_backend = (ElrondBackend) config_keyfile.get_integer ("ElrondAI", "backend");
                     }
+                    if (config_keyfile.has_key ("ElrondAI", "mode")) {
+                        _elrond_mode = (ElrondMode) config_keyfile.get_integer ("ElrondAI", "mode");
+                    }
+                    if (config_keyfile.has_key ("ElrondAI", "custom_local_endpoint")) {
+                        _custom_local_endpoint = config_keyfile.get_string ("ElrondAI", "custom_local_endpoint");
+                    }
                     if (config_keyfile.has_key ("ElrondAI", "model_name")) {
                         _active_model_name = config_keyfile.get_string ("ElrondAI", "model_name");
                     }
@@ -466,6 +541,8 @@ namespace Imladris.Core {
                 config_keyfile.set_boolean ("ElrondAI", "enabled", _elrond_enabled);
                 config_keyfile.set_integer ("ElrondAI", "level", (int) _elrond_level);
                 config_keyfile.set_integer ("ElrondAI", "backend", (int) _elrond_backend);
+                config_keyfile.set_integer ("ElrondAI", "mode", (int) _elrond_mode);
+                config_keyfile.set_string ("ElrondAI", "custom_local_endpoint", _custom_local_endpoint);
                 config_keyfile.set_string ("ElrondAI", "model_name", _active_model_name);
                 config_keyfile.set_boolean ("ElrondAI", "inline_completion", _inline_completion_enabled);
                 config_keyfile.set_boolean ("ElrondAI", "inline_editing", _inline_editing_enabled);

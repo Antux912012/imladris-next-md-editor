@@ -64,6 +64,32 @@ namespace Imladris.UI {
 
             hw_group.add (hw_row);
             gen_page.add (hw_group);
+
+            var about_group = new Adw.PreferencesGroup () {
+                title = "About Imladris",
+                description = "Scientific writing, notebooks and data work • Proudly developed with Gemini Assistance"
+            };
+
+            var about_row = new Adw.ActionRow () {
+                title = "Imladris v0.12.0",
+                subtitle = "Documentation, credits, and project inspiration"
+            };
+            about_row.add_prefix (new Gtk.Image.from_icon_name ("help-browser-symbolic") { pixel_size = 22 });
+
+            var btn_open_about = new Gtk.Button.with_label ("About...") {
+                valign = Gtk.Align.CENTER
+            };
+            btn_open_about.clicked.connect (() => {
+                var app = GLib.Application.get_default () as Application;
+                if (app != null) {
+                    var win = app.active_window as Window;
+                    if (win != null) win.show_about_dialog ();
+                }
+            });
+            about_row.add_suffix (btn_open_about);
+            about_group.add (about_row);
+            gen_page.add (about_group);
+
             this.add (gen_page);
 
             // Page 2: AI Engine Configuration
@@ -211,141 +237,87 @@ namespace Imladris.UI {
             panel_pos_row.add_suffix (pos_box);
             elrond_group.add (panel_pos_row);
 
-            // Model file chooser row
-            var model_row = new Adw.ActionRow () {
-                title = "Local Model File (.gguf)",
-                subtitle = (settings.custom_model_path.length > 0)
-                    ? settings.custom_model_path
-                    : "Default: %s (Auto-detected)".printf (settings.active_model_name)
-            };
-            model_row.add_prefix (new Gtk.Image.from_icon_name ("ai-qwen") { pixel_size = 22 });
-            var btn_browse_model = new Gtk.Button.with_label ("Browse...") {
-                valign = Gtk.Align.CENTER
-            };
-            btn_browse_model.clicked.connect (() => {
-                var file_dialog = new Gtk.FileDialog () {
-                    title = "Select Local GGUF Model File"
-                };
-                var filter = new Gtk.FileFilter ();
-                filter.name = "GGUF Models (*.gguf)";
-                filter.add_pattern ("*.gguf");
-                var filters = new GLib.ListStore (typeof (Gtk.FileFilter));
-                filters.append (filter);
-                file_dialog.filters = filters;
+            // Local AI Server Mode Selector (Auto-detect, Ollama, LM Studio, Cherry Studio, Antigravity, Custom)
+            var mode_strings = new Gtk.StringList (null);
+            mode_strings.append ("⚡ Auto-Detect Local AI (Recommended)");
+            mode_strings.append ("🦙 Ollama (localhost:11434)");
+            mode_strings.append ("🧪 LM Studio (localhost:1234)");
+            mode_strings.append ("🍒 Cherry Studio / LocalAI (localhost:23333 / 8080)");
+            mode_strings.append ("🚀 Antigravity CLI (agy Agent Harness)");
+            mode_strings.append ("⚙️ Custom Local Server");
 
-                file_dialog.open.begin (this.get_root () as Gtk.Window, null, (obj, res) => {
-                    try {
-                        var file = file_dialog.open.end (res);
-                        if (file != null) {
-                            string path = file.get_path ();
-                            settings.custom_model_path = path;
-                            string bname = file.get_basename ();
-                            if (bname.has_suffix (".gguf")) {
-                                settings.active_model_name = bname.substring (0, bname.length - 5);
-                            }
-                            model_row.subtitle = path;
-                        }
-                    } catch (Error e) {}
-                });
-            });
-            model_row.add_suffix (btn_browse_model);
-            elrond_group.add (model_row);
-
-            // Hardware Acceleration Backend Selector (Vulkan vs NVIDIA CUDA)
-            var backend_row = new Adw.ActionRow () {
-                title = "Hardware Acceleration Backend",
-                subtitle = "Select GPU runtime: Vulkan/Universal (AMD/Intel/CPU) or NVIDIA CUDA"
+            var mode_row = new Adw.ComboRow () {
+                title = "Local AI Server & Harness Bridge",
+                subtitle = "Connect to running local inference servers or host agent harnesses",
+                model = mode_strings,
+                selected = (uint) settings.elrond_mode
             };
-            backend_row.add_prefix (new Gtk.Image.from_icon_name ("ai-nvidia") { pixel_size = 22 });
+            mode_row.add_prefix (new Gtk.Image.from_icon_name ("ai-elrond") { pixel_size = 22 });
 
-            var btn_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) {
-                valign = Gtk.Align.CENTER
+            var custom_endpoint_row = new Adw.EntryRow () {
+                title = "Custom Local Endpoint",
+                text = settings.custom_local_endpoint,
+                visible = (settings.elrond_mode == Core.ElrondMode.CUSTOM)
             };
-            btn_box.add_css_class ("linked");
-
-            var btn_vulkan = new Gtk.ToggleButton.with_label ("⚡ Vulkan / Universal") {
-                active = (settings.elrond_backend == Core.ElrondBackend.VULKAN)
-            };
-            var btn_cuda = new Gtk.ToggleButton.with_label ("🟩 NVIDIA CUDA") {
-                active = (settings.elrond_backend == Core.ElrondBackend.CUDA)
-            };
-
-            btn_vulkan.toggled.connect (() => {
-                if (btn_vulkan.active) {
-                    btn_cuda.active = false;
-                    settings.elrond_backend = Core.ElrondBackend.VULKAN;
-                } else if (!btn_cuda.active) {
-                    btn_vulkan.active = true;
-                }
+            custom_endpoint_row.notify["text"].connect (() => {
+                settings.custom_local_endpoint = custom_endpoint_row.text;
             });
 
-            btn_cuda.toggled.connect (() => {
-                if (btn_cuda.active) {
-                    btn_vulkan.active = false;
-                    settings.elrond_backend = Core.ElrondBackend.CUDA;
-                } else if (!btn_vulkan.active) {
-                    btn_cuda.active = true;
-                }
+            mode_row.notify["selected"].connect (() => {
+                var sel_mode = (Core.ElrondMode) mode_row.selected;
+                settings.elrond_mode = sel_mode;
+                custom_endpoint_row.visible = (sel_mode == Core.ElrondMode.CUSTOM);
+                elrond_engine.probe_servers_async.begin ();
             });
+            elrond_group.add (mode_row);
+            elrond_group.add (custom_endpoint_row);
 
-            btn_box.append (btn_vulkan);
-            btn_box.append (btn_cuda);
-            backend_row.add_suffix (btn_box);
-            elrond_group.add (backend_row);
-
+            var btn_probe = new Gtk.Button.from_icon_name ("view-refresh-symbolic") {
+                valign = Gtk.Align.CENTER,
+                tooltip_text = "Probe and refresh local AI servers"
+            };
+            btn_probe.clicked.connect (() => {
+                elrond_engine.probe_servers_async.begin ();
+            });
+            elrond_status_row.add_suffix (btn_probe);
             elrond_group.add (elrond_status_row);
 
-            // Detected Distribution & llama.cpp Engine Setup
-            var detected_distro = PlatformUtils.detect_linux_distro ();
-            var notice_expander = new Adw.ExpanderRow () {
-                title = "llama.cpp Engine Setup & Distro Instructions",
-                subtitle = "Detected OS: %s — install via package manager or auto-install below".printf (detected_distro.name)
+            // Local AI Ecosystem Setup Guide
+            var guide_expander = new Adw.ExpanderRow () {
+                title = "Local AI & Agent Harness Setup Guide",
+                subtitle = "Supported local engines: Ollama, LM Studio, Cherry Studio, and Antigravity"
             };
-            notice_expander.add_prefix (new Gtk.Image.from_icon_name ("dialog-information-symbolic"));
+            guide_expander.add_prefix (new Gtk.Image.from_icon_name ("dialog-information-symbolic"));
 
-            notice_expander.add_row (create_distro_cmd_row ("Install via %s".printf (detected_distro.name), detected_distro.install_cmd));
+            var guide_ollama_row = new Adw.ActionRow () {
+                title = "Ollama (Port 11434)",
+                subtitle = "Terminal command: ollama run qwen2.5-coder  (or deepseek-r1 / llama3.2)"
+            };
+            guide_ollama_row.add_prefix (new Gtk.Image.from_icon_name ("ai-ollama") { pixel_size = 22 });
+            guide_expander.add_row (guide_ollama_row);
 
-            var auto_vulkan_row = new Adw.ActionRow () {
-                title = "Vulkan / Universal Engine (~/.local/share/imladris/bin/vulkan)",
-                subtitle = "Optimized for AMD Radeon, Intel Arc/Iris, Apple Silicon, and multi-core CPU"
+            var guide_lm_row = new Adw.ActionRow () {
+                title = "LM Studio (Port 1234)",
+                subtitle = "Open LM Studio -> Developer tab (<->) -> Select model and click 'Start Server'"
             };
-            var btn_auto_vulkan = new Gtk.Button.with_label ("Install Vulkan") {
-                valign = Gtk.Align.CENTER
-            };
-            btn_auto_vulkan.add_css_class ("suggested-action");
-            btn_auto_vulkan.clicked.connect (() => {
-                btn_auto_vulkan.sensitive = false;
-                btn_auto_vulkan.label = "Installing...";
-                elrond_engine.auto_install_llama_server.begin (Core.ElrondBackend.VULKAN, (obj, res) => {
-                    bool ok = elrond_engine.auto_install_llama_server.end (res);
-                    btn_auto_vulkan.sensitive = true;
-                    btn_auto_vulkan.label = ok ? "Installed ✔" : "Retry";
-                });
-            });
-            auto_vulkan_row.add_suffix (btn_auto_vulkan);
-            notice_expander.add_row (auto_vulkan_row);
+            guide_lm_row.add_prefix (new Gtk.Image.from_icon_name ("ai-lmstudio") { pixel_size = 22 });
+            guide_expander.add_row (guide_lm_row);
 
-            var auto_cuda_row = new Adw.ActionRow () {
-                title = "NVIDIA CUDA Engine (~/.local/share/imladris/bin/cuda)",
-                subtitle = "Optimized with cuBLAS for NVIDIA GeForce RTX, GTX, and Tesla GPUs"
+            var guide_cherry_row = new Adw.ActionRow () {
+                title = "Cherry Studio & LocalAI (Port 23333 or 8080)",
+                subtitle = "Runs local OpenAI-compatible inference servers across multiple backends"
             };
-            var btn_auto_cuda = new Gtk.Button.with_label ("Install CUDA") {
-                valign = Gtk.Align.CENTER
-            };
-            btn_auto_cuda.add_css_class ("suggested-action");
-            btn_auto_cuda.clicked.connect (() => {
-                btn_auto_cuda.sensitive = false;
-                btn_auto_cuda.label = "Installing...";
-                elrond_engine.auto_install_llama_server.begin (Core.ElrondBackend.CUDA, (obj, res) => {
-                    bool ok = elrond_engine.auto_install_llama_server.end (res);
-                    btn_auto_cuda.sensitive = true;
-                    btn_auto_cuda.label = ok ? "Installed ✔" : "Retry";
-                });
-            });
-            auto_cuda_row.add_suffix (btn_auto_cuda);
-            notice_expander.add_row (auto_cuda_row);
+            guide_cherry_row.add_prefix (new Gtk.Image.from_icon_name ("ai-custom") { pixel_size = 22 });
+            guide_expander.add_row (guide_cherry_row);
 
-            elrond_group.add (notice_expander);
+            var guide_agy_row = new Adw.ActionRow () {
+                title = "Antigravity Agent Harness (agy)",
+                subtitle = "Google DeepMind's agentic CLI harness (~/.local/bin/agy) for local code tasks"
+            };
+            guide_agy_row.add_prefix (new Gtk.Image.from_icon_name ("ai-elrond") { pixel_size = 22 });
+            guide_expander.add_row (guide_agy_row);
+
+            elrond_group.add (guide_expander);
             ai_page.add (elrond_group);
 
             var ai_general_group = new Adw.PreferencesGroup () {

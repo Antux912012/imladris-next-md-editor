@@ -116,6 +116,7 @@ namespace Imladris {
             var prefs_sec = new GLib.Menu ();
             prefs_sec.append ("Data Science Toolchains...", "app.toolchain_setup");
             prefs_sec.append ("Preferences", "app.preferences");
+            prefs_sec.append ("About Imladris", "app.about");
             brand_menu.append_section (null, prefs_sec);
 
             var brand_btn = new Gtk.MenuButton () {
@@ -1027,6 +1028,7 @@ namespace Imladris {
             box.append (btn_ai_home);
 
             box.append (RibbonFactory.create_tool_button ("emblem-system-symbolic", "Preferences", "Open Preferences (Ctrl+,)", false, false, true, null, "app.preferences"));
+            box.append (RibbonFactory.create_tool_button ("help-browser-symbolic", "About", "About Imladris & Credits", false, false, true, null, "app.about"));
 
             return box;
         }
@@ -1494,6 +1496,47 @@ namespace Imladris {
                 }
             });
             dlg.present (this);
+        }
+
+        public void show_about_dialog () {
+            var dialog = new Adw.AboutDialog () {
+                application_name = "Imladris",
+                application_icon = "io.github.Antux912012.Imladris",
+                version = "0.12.0",
+                developer_name = "Antonio De Gaetano",
+                developers = {
+                    "Antonio De Gaetano <https://github.com/Antux912012>"
+                },
+                copyright = "© 2026 Antonio De Gaetano",
+                license_type = Gtk.License.GPL_3_0_ONLY,
+                website = "https://github.com/Antux912012/imladris-next-md-editor",
+                issue_url = "https://github.com/Antux912012/imladris-next-md-editor/issues",
+                support_url = "https://github.com/Antux912012/imladris-next-md-editor/discussions",
+                comments = "A GNOME-native home for scientific writing, notebooks and data work.\n\n✨ Proudly developed with Gemini Assistance."
+            };
+
+            dialog.add_link ("Architecture Blueprint", "https://github.com/Antux912012/imladris-next-md-editor/blob/main/docs/ARCHITECTURE.md");
+            dialog.add_link ("Project Documentation", "https://github.com/Antux912012/imladris-next-md-editor#readme");
+            dialog.add_link ("Author GitHub Profile (@Antux912012)", "https://github.com/Antux912012");
+            dialog.add_link ("Imladris Repository on GitHub", "https://github.com/Antux912012/imladris-next-md-editor");
+
+            dialog.add_credit_section ("AI Pair Programming", {
+                "Google Gemini Assistance (Advanced Agentic AI Pair Programmer)"
+            });
+
+            dialog.add_acknowledgement_section ("Inspiration & Ecosystem", {
+                "RStudio & Posit (Workbench ergonomics, DCF & Mallorn project models)",
+                "Apostrophe (Distraction-free Markdown writing)",
+                "Python Software Foundation & Project Jupyter (Interactive computing & REPL)",
+                "The R Foundation & CRAN (Statistical computing & reproducible packages)",
+                "LM Studio & Ollama (Local open-weights AI inference)",
+                "llama.cpp & Georgi Gerganov (Local LLM runtime)",
+                "Quarto & Pandoc (Scientific publishing pipeline)",
+                "GNOME & Libadwaita Teams (Modern design language and components)",
+                "Papirus Development Team (Icon design)"
+            });
+
+            dialog.present (this);
         }
 
         public async void run_python_pip_and_snapshot (string py_bin, string[] args, string working_dir, bool sandboxed, string display_label = "") {

@@ -15,6 +15,8 @@ namespace Imladris.Core {
         NVIDIA_NIM,
         OLLAMA,
         LM_STUDIO,
+        CHERRY_STUDIO,
+        ANTIGRAVITY,
         CUSTOM;
 
         public string to_string_id () {
@@ -29,6 +31,8 @@ namespace Imladris.Core {
                 case NVIDIA_NIM: return "nvidia_nim";
                 case OLLAMA: return "ollama";
                 case LM_STUDIO: return "lm_studio";
+                case CHERRY_STUDIO: return "cherry_studio";
+                case ANTIGRAVITY: return "antigravity";
                 case CUSTOM: return "custom";
                 default: return "gemini";
             }
@@ -51,6 +55,10 @@ namespace Imladris.Core {
                 case "ollama": return OLLAMA;
                 case "lm_studio":
                 case "local_llama": return LM_STUDIO;
+                case "cherry":
+                case "cherry_studio": return CHERRY_STUDIO;
+                case "antigravity":
+                case "agy": return ANTIGRAVITY;
                 case "custom": return CUSTOM;
                 default: return GEMINI;
             }
@@ -68,6 +76,8 @@ namespace Imladris.Core {
                 case NVIDIA_NIM: return "NVIDIA NIM (integrate.api.nvidia.com)";
                 case OLLAMA: return "Ollama (localhost:11434)";
                 case LM_STUDIO: return "LM Studio (localhost:1234)";
+                case CHERRY_STUDIO: return "Cherry Studio / LocalAI (localhost:23333 / 8080)";
+                case ANTIGRAVITY: return "Antigravity (agy Agent Harness)";
                 case CUSTOM: return "Custom OpenAI-Compatible API";
                 default: return "Unknown";
             }
@@ -85,6 +95,8 @@ namespace Imladris.Core {
                 case NVIDIA_NIM: return "NVIDIA NIM";
                 case OLLAMA: return "Ollama";
                 case LM_STUDIO: return "LM Studio";
+                case CHERRY_STUDIO: return "Cherry Studio";
+                case ANTIGRAVITY: return "Antigravity";
                 case CUSTOM: return "Custom";
                 default: return "AI";
             }
@@ -102,6 +114,8 @@ namespace Imladris.Core {
                 case NVIDIA_NIM: return "ai-nvidia";
                 case OLLAMA: return "ai-ollama";
                 case LM_STUDIO: return "ai-lmstudio";
+                case CHERRY_STUDIO: return "ai-custom";
+                case ANTIGRAVITY: return "ai-elrond";
                 case CUSTOM: return "ai-custom";
                 default: return "system-run-symbolic";
             }
@@ -119,6 +133,8 @@ namespace Imladris.Core {
                 case NVIDIA_NIM: return "https://integrate.api.nvidia.com/v1";
                 case OLLAMA: return "http://localhost:11434/v1";
                 case LM_STUDIO: return "http://localhost:1234/v1";
+                case CHERRY_STUDIO: return "http://localhost:23333/v1";
+                case ANTIGRAVITY: return "local://agy";
                 case CUSTOM: return "https://api.openai.com/v1";
                 default: return "";
             }
@@ -136,6 +152,8 @@ namespace Imladris.Core {
                 case NVIDIA_NIM: return "meta/llama-3.3-70b-instruct";
                 case OLLAMA: return "qwen2.5-coder:latest";
                 case LM_STUDIO: return "default";
+                case CHERRY_STUDIO: return "default";
+                case ANTIGRAVITY: return "gemini-2.5-pro";
                 case CUSTOM: return "gpt-4o";
                 default: return "";
             }
@@ -163,6 +181,10 @@ namespace Imladris.Core {
                     return { "qwen2.5-coder:latest", "deepseek-r1:latest", "llama3.2:latest", "codellama:latest" };
                 case LM_STUDIO:
                     return { "default", "loaded-model", "qwen2.5-coder-7b", "deepseek-r1-distill-qwen-7b", "llama-3.2-3b" };
+                case CHERRY_STUDIO:
+                    return { "default", "loaded-model", "qwen2.5-coder", "deepseek-r1" };
+                case ANTIGRAVITY:
+                    return { "gemini-2.5-pro", "gemini-2.5-flash", "auto" };
                 case CUSTOM:
                     return { "gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet", "deepseek-chat" };
                 default:
@@ -181,6 +203,7 @@ namespace Imladris.Core {
                 case CURSOR: return "https://cursor.com";
                 case NVIDIA_NIM: return "https://build.nvidia.com";
                 case LM_STUDIO: return "https://lmstudio.ai";
+                case CHERRY_STUDIO: return "https://cherry-ai.com";
                 case CUSTOM: return "https://platform.openai.com/api-keys";
                 default: return null;
             }
@@ -205,6 +228,8 @@ namespace Imladris.Core {
             switch (this) {
                 case OLLAMA:
                 case LM_STUDIO:
+                case CHERRY_STUDIO:
+                case ANTIGRAVITY:
                     return false;
                 default:
                     return true;
@@ -287,6 +312,8 @@ namespace Imladris.Core {
                 AiProvider.NVIDIA_NIM,
                 AiProvider.OLLAMA,
                 AiProvider.LM_STUDIO,
+                AiProvider.CHERRY_STUDIO,
+                AiProvider.ANTIGRAVITY,
                 AiProvider.CUSTOM
             };
 

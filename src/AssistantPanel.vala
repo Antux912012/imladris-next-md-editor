@@ -55,6 +55,8 @@ namespace Imladris {
                 "NVIDIA NIM",
                 "Ollama (Local)",
                 "LM Studio (Local)",
+                "Cherry Studio / LocalAI",
+                "Antigravity (agy Agent)",
                 "Custom Provider"
             });
             engine_dropdown.hexpand = true;

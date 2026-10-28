@@ -32,6 +32,7 @@ namespace Imladris {
             { "run_line_selection", on_run_line_selection },
             { "interrupt_execution", on_interrupt_execution },
             { "preferences", on_preferences },
+            { "about", on_about },
             { "print", on_print_document },
             { "quit", on_quit }
         };
@@ -231,6 +232,11 @@ namespace Imladris {
         private void on_preferences () {
             var win = this.active_window;
             if (win != null) new UI.PreferencesDialog ().present (win);
+        }
+
+        private void on_about () {
+            var win = this.active_window as Window;
+            if (win != null) win.show_about_dialog ();
         }
 
         private void on_print_document () {

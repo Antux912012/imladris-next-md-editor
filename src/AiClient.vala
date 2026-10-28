@@ -13,7 +13,10 @@ namespace Imladris {
 
         public bool is_online {
             get {
-                return config_mgr.active_provider != AiProvider.LM_STUDIO && config_mgr.active_provider != AiProvider.OLLAMA;
+                return config_mgr.active_provider != AiProvider.LM_STUDIO &&
+                       config_mgr.active_provider != AiProvider.OLLAMA &&
+                       config_mgr.active_provider != AiProvider.CHERRY_STUDIO &&
+                       config_mgr.active_provider != AiProvider.ANTIGRAVITY;
             }
             set {
                 if (!value) {
@@ -84,6 +87,12 @@ namespace Imladris {
             }
 
             var req_cancellable = cancellable ?? new Cancellable ();
+
+            // Antigravity (agy Agent Harness)
+            if (provider == AiProvider.ANTIGRAVITY) {
+                string full_p = system_prompt.length > 0 ? (system_prompt + "\n\n" + user_prompt) : user_prompt;
+                return yield Imladris.AI.ElrondEngineController.run_agy_prompt_async (full_p, req_cancellable);
+            }
 
             // Claude / Anthropic uses /v1/messages API with custom headers and body format
             if (provider == AiProvider.CLAUDE) {

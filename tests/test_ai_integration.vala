@@ -124,6 +124,22 @@ namespace Imladris.Tests {
         assert (lm_studio.get_default_endpoint () == "http://localhost:1234/v1");
         assert (lm_studio.get_default_model () == "default");
 
+        var cherry = AiProvider.CHERRY_STUDIO;
+        assert (cherry.to_string_id () == "cherry_studio");
+        assert (AiProvider.from_string_id ("cherry_studio") == AiProvider.CHERRY_STUDIO);
+        assert (AiProvider.from_string_id ("cherry") == AiProvider.CHERRY_STUDIO);
+        assert (cherry.requires_api_key () == false);
+        assert (cherry.get_default_endpoint () == "http://localhost:23333/v1");
+        assert (cherry.get_icon_name () == "ai-custom");
+
+        var agy = AiProvider.ANTIGRAVITY;
+        assert (agy.to_string_id () == "antigravity");
+        assert (AiProvider.from_string_id ("antigravity") == AiProvider.ANTIGRAVITY);
+        assert (AiProvider.from_string_id ("agy") == AiProvider.ANTIGRAVITY);
+        assert (agy.requires_api_key () == false);
+        assert (agy.get_default_endpoint () == "local://agy");
+        assert (agy.get_icon_name () == "ai-elrond");
+
         // 10. AI Model Logo Icon Identifiers
         assert (gemini.get_icon_name () == "ai-gemini");
         assert (claude.get_icon_name () == "ai-claude");
@@ -135,6 +151,8 @@ namespace Imladris.Tests {
         assert (nvidia.get_icon_name () == "ai-nvidia");
         assert (ollama.get_icon_name () == "ai-ollama");
         assert (lm_studio.get_icon_name () == "ai-lmstudio");
+        assert (cherry.get_icon_name () == "ai-custom");
+        assert (agy.get_icon_name () == "ai-elrond");
         assert (AiProvider.CUSTOM.get_icon_name () == "ai-custom");
     }
 
@@ -426,6 +444,31 @@ namespace Imladris.Tests {
         string? found = Imladris.AI.ElrondEngineController.find_llama_server_binary (ElrondBackend.VULKAN, out is_host);
         if (found != null) {
             assert (Imladris.AI.ElrondEngineController.is_binary_runnable (found, is_host));
+        }
+
+        // Test ElrondMode enum serialization and parsing
+        assert (ElrondMode.AUTO_DETECT.to_string_id () == "auto");
+        assert (ElrondMode.OLLAMA.to_string_id () == "ollama");
+        assert (ElrondMode.LM_STUDIO.to_string_id () == "lm_studio");
+        assert (ElrondMode.CHERRY_STUDIO.to_string_id () == "cherry_studio");
+        assert (ElrondMode.ANTIGRAVITY.to_string_id () == "antigravity");
+        assert (ElrondMode.CUSTOM.to_string_id () == "custom");
+
+        assert (ElrondMode.from_string_id ("auto") == ElrondMode.AUTO_DETECT);
+        assert (ElrondMode.from_string_id ("ollama") == ElrondMode.OLLAMA);
+        assert (ElrondMode.from_string_id ("lm_studio") == ElrondMode.LM_STUDIO);
+        assert (ElrondMode.from_string_id ("cherry_studio") == ElrondMode.CHERRY_STUDIO);
+        assert (ElrondMode.from_string_id ("cherry") == ElrondMode.CHERRY_STUDIO);
+        assert (ElrondMode.from_string_id ("antigravity") == ElrondMode.ANTIGRAVITY);
+        assert (ElrondMode.from_string_id ("agy") == ElrondMode.ANTIGRAVITY);
+        assert (ElrondMode.from_string_id ("custom") == ElrondMode.CUSTOM);
+        assert (ElrondMode.from_string_id ("unknown") == ElrondMode.AUTO_DETECT);
+
+        // Test Antigravity CLI binary resolution
+        string? agy_bin = Imladris.AI.ElrondEngineController.find_agy_binary ();
+        // If agy is installed on the testing host, it should resolve to a valid path
+        if (agy_bin != null) {
+            assert (agy_bin.length > 0);
         }
     }
 
