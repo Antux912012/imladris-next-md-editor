@@ -29,6 +29,12 @@ namespace Imladris.Plugins {
         public abstract void insert_in_active_editor (string text);
         public abstract void ask_elrond (string prompt);
         public abstract void append_console_log (string text);
+        public abstract string[] list_workspace_files (string pattern);
+        public abstract string read_workspace_file (string relative_path);
+        public abstract void open_workspace_file (string relative_path, int line);
+        public abstract string get_workspace_root ();
+        public abstract string get_active_file_path ();
+        public abstract void show_web_dialog (string title, string html_content, int width, int height);
     }
 
     public class PluginManifest : GLib.Object {
@@ -63,6 +69,9 @@ namespace Imladris.Plugins {
                         break;
                     case "elrond_ai":
                         parts.add ("Elrond AI Access");
+                        break;
+                    case "workspace":
+                        parts.add ("Workspace Files Access");
                         break;
                     case "export":
                         parts.add ("Export Automation");
@@ -245,6 +254,99 @@ namespace Imladris.Plugins {
                     return new JSC.Value.@null (plugin.context);
                 }, typeof (JSC.Value));
 
+                jsc_class.add_method ("listFiles", (instance, jsc_args) => {
+                    unowned PluginInstance plugin = (PluginInstance) instance;
+                    if (!plugin.manifest.has_permission ("workspace")) {
+                        plugin.manager.show_toast (@"Plugin '$(plugin.manifest.name)' denied: missing 'workspace' permission.");
+                        return plugin.context.evaluate ("[]", -1);
+                    }
+                    string pattern = (jsc_args != null && jsc_args.length > 0) ? jsc_args.get (0).to_string () : "*.md";
+                    string[] files = plugin.manager.list_workspace_files (pattern);
+                    var builder = new Json.Builder ();
+                    builder.begin_array ();
+                    foreach (var f in files) {
+                        builder.add_string_value (f);
+                    }
+                    builder.end_array ();
+                    var gen = new Json.Generator ();
+                    gen.set_root (builder.get_root ());
+                    string json_str = gen.to_data (null);
+                    return plugin.context.evaluate (json_str, -1);
+                }, typeof (JSC.Value));
+
+                jsc_class.add_method ("readFile", (instance, jsc_args) => {
+                    unowned PluginInstance plugin = (PluginInstance) instance;
+                    if (!plugin.manifest.has_permission ("workspace")) {
+                        plugin.manager.show_toast (@"Plugin '$(plugin.manifest.name)' denied: missing 'workspace' permission.");
+                        return new JSC.Value.string (plugin.context, "");
+                    }
+                    if (jsc_args != null && jsc_args.length > 0) {
+                        string rel_path = jsc_args.get (0).to_string ();
+                        string content = plugin.manager.read_workspace_file (rel_path);
+                        return new JSC.Value.string (plugin.context, content);
+                    }
+                    return new JSC.Value.string (plugin.context, "");
+                }, typeof (JSC.Value));
+
+                jsc_class.add_method ("openFile", (instance, jsc_args) => {
+                    unowned PluginInstance plugin = (PluginInstance) instance;
+                    if (!plugin.manifest.has_permission ("workspace")) {
+                        plugin.manager.show_toast (@"Plugin '$(plugin.manifest.name)' denied: missing 'workspace' permission.");
+                        return new JSC.Value.@null (plugin.context);
+                    }
+                    if (jsc_args != null && jsc_args.length > 0) {
+                        string rel_path = jsc_args.get (0).to_string ();
+                        int line = (jsc_args.length > 1) ? (int) jsc_args.get (1).to_double () : 1;
+                        plugin.manager.open_workspace_file (rel_path, line);
+                    }
+                    return new JSC.Value.@null (plugin.context);
+                }, typeof (JSC.Value));
+
+                jsc_class.add_method ("getWorkspaceRoot", (instance, jsc_args) => {
+                    unowned PluginInstance plugin = (PluginInstance) instance;
+                    if (!plugin.manifest.has_permission ("workspace")) {
+                        return new JSC.Value.string (plugin.context, "");
+                    }
+                    return new JSC.Value.string (plugin.context, plugin.manager.get_workspace_root ());
+                }, typeof (JSC.Value));
+
+                jsc_class.add_method ("getActiveFilePath", (instance, jsc_args) => {
+                    unowned PluginInstance plugin = (PluginInstance) instance;
+                    return new JSC.Value.string (plugin.context, plugin.manager.get_active_file_path ());
+                }, typeof (JSC.Value));
+
+                jsc_class.add_method ("showWebDialog", (instance, jsc_args) => {
+                    unowned PluginInstance plugin = (PluginInstance) instance;
+                    if (jsc_args != null && jsc_args.length >= 2) {
+                        string title = jsc_args.get (0).to_string ();
+                        string html = jsc_args.get (1).to_string ();
+                        int width = (jsc_args.length > 2) ? (int) jsc_args.get (2).to_double () : 950;
+                        int height = (jsc_args.length > 3) ? (int) jsc_args.get (3).to_double () : 700;
+                        plugin.manager.show_web_dialog (title, html, width, height);
+                    }
+                    return new JSC.Value.@null (plugin.context);
+                }, typeof (JSC.Value));
+
+                jsc_class.add_method ("readAsset", (instance, jsc_args) => {
+                    unowned PluginInstance plugin = (PluginInstance) instance;
+                    if (jsc_args != null && jsc_args.length > 0) {
+                        string asset_rel = jsc_args.get (0).to_string ();
+                        if (!asset_rel.contains ("..")) {
+                            string asset_path = Path.build_filename (plugin.dir_path, asset_rel);
+                            if (FileUtils.test (asset_path, FileTest.EXISTS)) {
+                                try {
+                                    string content;
+                                    FileUtils.get_contents (asset_path, out content);
+                                    return new JSC.Value.string (plugin.context, content);
+                                } catch (GLib.Error e) {
+                                    debug ("Error reading plugin asset: %s", e.message);
+                                }
+                            }
+                        }
+                    }
+                    return new JSC.Value.string (plugin.context, "");
+                }, typeof (JSC.Value));
+
                 var host_obj = new JSC.Value.object (context, this, jsc_class);
                 context.set_value ("_host", host_obj);
 
@@ -269,7 +371,26 @@ namespace Imladris.Plugins {
                                 _host.addRibbonButton(String(id), String(lbl), String(icn));
                                 imladris._callbacks = imladris._callbacks || {};
                                 imladris._callbacks[id] = cb;
+                            },
+                            openWebDialog: function(options) {
+                                var opts = options || {};
+                                _host.showWebDialog(
+                                    String(opts.title || "Imladris View"),
+                                    String(opts.html || ""),
+                                    Number(opts.width || 950),
+                                    Number(opts.height || 700)
+                                );
                             }
+                        },
+                        workspace: {
+                            listFiles: function(pattern) { return _host.listFiles(pattern || "*.md"); },
+                            readFile: function(path) { return _host.readFile(String(path)); },
+                            openFile: function(path, line) { return _host.openFile(String(path), Number(line || 1)); },
+                            getRoot: function() { return _host.getWorkspaceRoot(); },
+                            getActiveFile: function() { return _host.getActiveFilePath(); }
+                        },
+                        plugin: {
+                            readAsset: function(path) { return _host.readAsset(String(path)); }
                         },
                         editor: {
                             getText: function() { return _host.getText(); },
@@ -669,6 +790,58 @@ function onunload() {
             }
         }
 
+        public string[] test_workspace_files = {};
+        public Gee.HashMap<string, string> test_workspace_file_contents = new Gee.HashMap<string, string> ();
+        public string test_last_opened_file = "";
+        public string test_last_web_dialog_title = "";
+        public string test_last_web_dialog_html = "";
+
+        public string[] list_workspace_files (string pattern) {
+            if (active_window != null) {
+                return active_window.list_workspace_files (pattern);
+            }
+            return test_workspace_files;
+        }
+
+        public string read_workspace_file (string relative_path) {
+            if (active_window != null) {
+                return active_window.read_workspace_file (relative_path);
+            }
+            if (test_workspace_file_contents.has_key (relative_path)) {
+                return test_workspace_file_contents.get (relative_path);
+            }
+            return "";
+        }
+
+        public void open_workspace_file (string relative_path, int line) {
+            if (active_window != null) {
+                active_window.open_workspace_file (relative_path, line);
+            }
+            test_last_opened_file = relative_path;
+        }
+
+        public string get_workspace_root () {
+            if (active_window != null) {
+                return active_window.get_workspace_root ();
+            }
+            return "";
+        }
+
+        public string get_active_file_path () {
+            if (active_window != null) {
+                return active_window.get_active_file_path ();
+            }
+            return "";
+        }
+
+        public void show_web_dialog (string title, string html_content, int width, int height) {
+            if (active_window != null) {
+                active_window.show_web_dialog (title, html_content, width, height);
+            }
+            test_last_web_dialog_title = title;
+            test_last_web_dialog_html = html_content;
+        }
+
         public async bool import_plugin_archive (string archive_path, Gtk.Window parent_window) throws GLib.Error {
             if (!FileUtils.test (archive_path, FileTest.EXISTS)) {
                 throw new IOError.NOT_FOUND (@"Archive file not found: $archive_path");
@@ -764,6 +937,9 @@ function onunload() {
                         break;
                     case "elrond_ai":
                         sb.append ("  • Elrond AI Access (Send queries to AI engine)\n");
+                        break;
+                    case "workspace":
+                        sb.append ("  • Workspace Access (Read and navigate project files)\n");
                         break;
                     case "export":
                         sb.append ("  • Export Automation (Trigger document exports)\n");

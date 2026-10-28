@@ -508,6 +508,135 @@ namespace Imladris {
             }
         }
 
+        public string get_workspace_root () {
+            if (current_project_dir != null && current_project_dir != "") {
+                return current_project_dir;
+            }
+            var doc = get_active_document ();
+            if (doc != null && doc.file_location != null) {
+                var parent = doc.file_location.get_parent ();
+                if (parent != null) {
+                    return parent.get_path ();
+                }
+            }
+            return GLib.Environment.get_home_dir ();
+        }
+
+        public string get_active_file_path () {
+            var doc = get_active_document ();
+            if (doc != null && doc.file_location != null) {
+                return doc.file_location.get_path ();
+            }
+            return "";
+        }
+
+        public string[] list_workspace_files (string pattern) {
+            string root = get_workspace_root ();
+            var results = new Gee.ArrayList<string> ();
+            if (root == "" || !GLib.FileUtils.test (root, GLib.FileTest.IS_DIR)) {
+                return results.to_array ();
+            }
+            scan_dir_for_workspace_files (root, root, results);
+            return results.to_array ();
+        }
+
+        private void scan_dir_for_workspace_files (string base_dir, string current_dir, Gee.ArrayList<string> results) {
+            try {
+                var dir = GLib.Dir.open (current_dir, 0);
+                string? name = null;
+                while ((name = dir.read_name ()) != null) {
+                    if (name.has_prefix (".") || name == "node_modules" || name == "renv" || name == ".venv" || name == "build" || name == "target") {
+                        continue;
+                    }
+                    string full_path = GLib.Path.build_filename (current_dir, name);
+                    if (GLib.FileUtils.test (full_path, GLib.FileTest.IS_DIR)) {
+                        scan_dir_for_workspace_files (base_dir, full_path, results);
+                    } else if (name.has_suffix (".md") || name.has_suffix (".qmd") || name.has_suffix (".Rmd")) {
+                        string rel_path = full_path.substring (base_dir.length);
+                        if (rel_path.has_prefix ("/")) {
+                            rel_path = rel_path.substring (1);
+                        }
+                        results.add (rel_path);
+                    }
+                }
+            } catch (GLib.Error e) {
+                debug ("Error scanning directory %s: %s", current_dir, e.message);
+            }
+        }
+
+        public string read_workspace_file (string relative_path) {
+            string root = get_workspace_root ();
+            if (root == "" || relative_path.contains ("..")) {
+                return "";
+            }
+            string full_path = GLib.Path.build_filename (root, relative_path);
+            if (!GLib.FileUtils.test (full_path, GLib.FileTest.EXISTS)) {
+                return "";
+            }
+            try {
+                string contents;
+                GLib.FileUtils.get_contents (full_path, out contents);
+                return contents;
+            } catch (GLib.Error e) {
+                return "";
+            }
+        }
+
+        public void open_workspace_file (string relative_path, int line) {
+            string root = get_workspace_root ();
+            if (root == "" || relative_path.contains ("..")) {
+                return;
+            }
+            string full_path = GLib.Path.build_filename (root, relative_path);
+            if (GLib.FileUtils.test (full_path, GLib.FileTest.EXISTS)) {
+                open_file_from_path.begin (full_path);
+            }
+        }
+
+        public void show_web_dialog (string title, string html_content, int width, int height) {
+            var dialog = new Adw.Dialog ();
+            dialog.title = title;
+            dialog.content_width = width > 0 ? width : 950;
+            dialog.content_height = height > 0 ? height : 700;
+
+            var toolbar_view = new Adw.ToolbarView ();
+            var header = new Adw.HeaderBar ();
+            toolbar_view.add_top_bar (header);
+
+            var webview = UI.WebViewFactory.create ();
+            var ucm = webview.get_user_content_manager ();
+            ucm.register_script_message_handler ("imladrisHost", (!) null);
+            ucm.script_message_received.connect ((val) => {
+                try {
+                    string json_str = val.to_json (0);
+                    var parser = new Json.Parser ();
+                    parser.load_from_data (json_str);
+                    var root = parser.get_root ();
+                    if (root != null && root.get_node_type () == Json.NodeType.OBJECT) {
+                        var obj = root.get_object ();
+                        string action = obj.has_member ("action") ? obj.get_string_member ("action") : "";
+                        if (action == "open_file") {
+                            string fpath = obj.has_member ("path") ? obj.get_string_member ("path") : "";
+                            if (fpath != "") {
+                                open_workspace_file (fpath, 1);
+                                dialog.close ();
+                            }
+                        } else if (action == "show_toast") {
+                            string msg = obj.has_member ("message") ? obj.get_string_member ("message") : "";
+                            show_toast (msg);
+                        }
+                    }
+                } catch (GLib.Error e) {
+                    debug ("Error handling webview script message: %s", e.message);
+                }
+            });
+
+            webview.load_html (html_content, "imladris-plugin://dialog/");
+            toolbar_view.set_content (webview);
+            dialog.set_child (toolbar_view);
+            dialog.present (this);
+        }
+
         private void on_plugin_ribbon_button_added (string plugin_id, string button_id, string label, string icon) {
             if (extensions_ribbon_box == null) return;
             string key = plugin_id + ":" + button_id;

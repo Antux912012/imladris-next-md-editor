@@ -31,6 +31,21 @@ Registers a custom action button in the Ribbon bar.
   });
   ```
 
+### `imladris.ui.openWebDialog(options)`
+Opens a hardware-accelerated WebKitGTK modal dialog (`Adw.Dialog`) rendering custom HTML5 Canvas or WebGL content.
+* **Parameters**: `options` (Object) containing:
+  * `title` (string): Dialog window title.
+  * `html` (string): HTML content string to load.
+  * `width` (number, optional): Preferred window width (default `950`).
+  * `height` (number, optional): Preferred window height (default `700`).
+* **IPC Messaging**: JavaScript inside the webview can communicate with the host via:
+  ```javascript
+  window.webkit.messageHandlers.imladrisHost.postMessage({
+      action: "open_file",
+      path: "notes/chapter1.md"
+  });
+  ```
+
 ---
 
 ## 2. `imladris.editor` (Source Editor Bridge)
@@ -97,3 +112,43 @@ Queries the local Vulkan/CPU **Elrond Assistance (AI)** engine using the active 
   }
   suggestPlot();
   ```
+
+---
+
+## 5. `imladris.workspace` (Project & Filesystem Bridge)
+
+> [!IMPORTANT]
+> Requires the `"workspace"` permission declared in your `manifest.json`.
+
+### `imladris.workspace.listFiles(pattern)`
+Recursively enumerates all matching files within the currently active workspace directory.
+* **Parameters**: `pattern` *(string, optional)* — Glob pattern (e.g., `"*.md"`, `"*.qmd"`). Default is `"*.md"`.
+* **Returns**: `string[]` — Array of relative file paths.
+
+### `imladris.workspace.readFile(relativePath)`
+Reads the complete plain text contents of a file within the project directory.
+* **Parameters**: `relativePath` *(string)* — Relative path to the project file. Path traversal (`..`) is strictly blocked.
+* **Returns**: `string` — File contents.
+
+### `imladris.workspace.openFile(relativePath, line)`
+Opens the target project file in an editor tab in Imladris.
+* **Parameters**:
+  * `relativePath` *(string)* — Relative path to the project file.
+  * `line` *(number, optional)* — Line number to scroll to (default `1`).
+
+### `imladris.workspace.getRoot()`
+Returns the absolute path to the active workspace project root folder.
+* **Returns**: `string`
+
+### `imladris.workspace.getActiveFile()`
+Returns the path to the currently active open document.
+* **Returns**: `string`
+
+---
+
+## 6. `imladris.plugin` (Asset Bridge)
+
+### `imladris.plugin.readAsset(relativePath)`
+Reads an asset file bundled inside the plugin's own directory (e.g. templates, CSS, or JSON schemas).
+* **Parameters**: `relativePath` *(string)* — Relative asset path within the plugin folder.
+* **Returns**: `string` — File contents.

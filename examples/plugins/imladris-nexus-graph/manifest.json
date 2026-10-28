@@ -1,0 +1,13 @@
+{
+  "id": "imladris-nexus-graph",
+  "name": "Nexus Knowledge Graph & Book Weaver",
+  "version": "1.0.0",
+  "author": "Imladris Community",
+  "description": "Visualizes markdown notebook interconnections as an Obsidian-style force-directed graph with keyword clustering, local/global views, and linear book compilation.",
+  "license": "GPL-3.0-or-later",
+  "icon": "applications-graphics-symbolic",
+  "permissions": [
+    "editor",
+    "workspace"
+  ]
+}

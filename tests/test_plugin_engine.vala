@@ -57,6 +57,10 @@ public class PluginEngineTests {
         pm.test_last_r_code = "";
         pm.test_last_python_code = "";
         pm.test_last_elrond_prompt = "";
+        pm.test_workspace_files = { "chapter1.md", "notes/index.md" };
+        pm.test_workspace_file_contents.set ("chapter1.md", "# Chapter 1\nSee [[notes/index]]");
+        pm.test_last_opened_file = "";
+        pm.test_last_web_dialog_title = "";
 
         string last_toast = "";
         pm.toast_requested.connect ((msg) => {
@@ -82,7 +86,7 @@ public class PluginEngineTests {
   "version": "1.0.0",
   "author": "Tester",
   "license": "GPL-3.0-or-later",
-  "permissions": ["editor", "repl_r", "repl_python", "elrond_ai"]
+  "permissions": ["editor", "repl_r", "repl_python", "elrond_ai", "workspace"]
 }""";
             FileUtils.set_contents (Path.build_filename (tmp_dir, "manifest.json"), manifest_json);
 
@@ -96,6 +100,11 @@ function onload() {
         imladris.repl.runR("r_test_command()");
         imladris.repl.runPython("py_test_command()");
         imladris.elrond.ask("How to optimize Julia code?");
+
+        var files = imladris.workspace.listFiles("*.md");
+        var ch1 = imladris.workspace.readFile("chapter1.md");
+        imladris.workspace.openFile("chapter1.md", 5);
+        imladris.ui.openWebDialog({ title: "Custom Graph", html: "<h1>Graph</h1>", width: 800, height: 600 });
     });
 }
 
@@ -122,6 +131,8 @@ function onunload() {
             assert (pm.test_last_r_code == "r_test_command()");
             assert (pm.test_last_python_code == "py_test_command()");
             assert (pm.test_last_elrond_prompt == "How to optimize Julia code?");
+            assert (pm.test_last_opened_file == "chapter1.md");
+            assert (pm.test_last_web_dialog_title == "Custom Graph");
 
             // Unload
             plugin.unload ();
@@ -141,6 +152,7 @@ function onunload() {
         pm.test_last_r_code = "";
         pm.test_last_python_code = "";
         pm.test_last_elrond_prompt = "";
+        pm.test_last_opened_file = "";
 
         string last_toast = "";
         pm.toast_requested.connect ((msg) => {
@@ -168,6 +180,9 @@ function onload() {
         imladris.repl.runR("system('rm -rf /')");
         imladris.repl.runPython("os.system('id')");
         imladris.elrond.ask("malicious prompt");
+        imladris.workspace.listFiles("*.md");
+        imladris.workspace.readFile("secret.md");
+        imladris.workspace.openFile("secret.md");
     });
 }
 
@@ -189,6 +204,7 @@ function onunload() {}
             assert (pm.test_last_r_code == "");
             assert (pm.test_last_python_code == "");
             assert (pm.test_last_elrond_prompt == "");
+            assert (pm.test_last_opened_file == "");
             assert (last_toast.contains ("denied") || last_toast.contains ("permission"));
 
             plugin.unload ();
