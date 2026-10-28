@@ -245,6 +245,14 @@ namespace Imladris {
             tier3_box.append (RibbonFactory.create_vseparator ());
 
             tab_view = new Adw.TabView ();
+            tab_view.close_page.connect ((page) => {
+                var doc = page.child as DocumentPage;
+                if (doc != null) {
+                    doc.cleanup ();
+                }
+                tab_view.close_page_finish (page, true);
+                return true;
+            });
             tab_bar = new Adw.TabBar () {
                 view = tab_view,
                 autohide = false,
@@ -763,7 +771,7 @@ namespace Imladris {
                     string target_dir = Path.build_filename (folder.get_path (), proj_name);
                     doc.append_console_log (@"▶ Exporting project '$proj_name' to RStudio workspace at $target_dir...");
                     try {
-                        Services.SandboxController.export_to_rstudio (project_dir.get_path (), target_dir);
+                        Services.SandboxController.export_for_rstudio (project_dir.get_path (), target_dir);
                         doc.append_console_log (@"✔ Successfully exported RStudio project to $target_dir");
                     } catch (GLib.Error e) {
                         doc.append_console_log (@"✖ Failed to export for RStudio: $(e.message)");
@@ -804,7 +812,7 @@ namespace Imladris {
                     string target_dir = Path.build_filename (folder.get_path (), proj_name);
                     doc.append_console_log (@"▶ Exporting project '$proj_name' to Jupyter workspace at $target_dir...");
                     try {
-                        Services.SandboxController.export_to_jupyter (project_dir.get_path (), target_dir);
+                        Services.SandboxController.export_for_jupyter (project_dir.get_path (), target_dir);
                         doc.append_console_log (@"✔ Successfully exported Jupyter project to $target_dir");
                     } catch (GLib.Error e) {
                         doc.append_console_log (@"✖ Failed to export for Jupyter: $(e.message)");
@@ -1506,7 +1514,7 @@ namespace Imladris {
             var dialog = new Adw.AboutDialog () {
                 application_name = "Imladris",
                 application_icon = "io.github.Antux912012.Imladris",
-                version = "0.12.1",
+                version = "0.12.2",
                 developer_name = "Antonio De Gaetano",
                 developers = {
                     "Antonio De Gaetano <https://github.com/Antux912012>"

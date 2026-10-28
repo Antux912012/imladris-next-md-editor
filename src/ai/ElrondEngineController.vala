@@ -611,10 +611,5 @@ Analyze the report narrative and active dataframe columns to suggest the optimal
             }
             return null;
         }
-
-        public async bool auto_install_llama_server (ElrondBackend backend = ElrondBackend.VULKAN) {
-            status_updated ("Internal llama-server downloading deprecated. Use Ollama, LM Studio, or Cherry Studio instead.", false, 0.0);
-            return false;
-        }
     }
 }

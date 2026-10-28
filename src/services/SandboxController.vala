@@ -39,13 +39,6 @@ namespace Imladris.Services {
             }
         }
 
-        public static void export_to_rstudio (string project_path, string dest_path) throws GLib.Error {
-            export_for_rstudio (project_path, dest_path);
-        }
-
-        public static void export_to_jupyter (string project_path, string dest_path) throws GLib.Error {
-            export_for_jupyter (project_path, dest_path);
-        }
 
         /**
          * Initializes an isolated R sandbox in project_path using renv.

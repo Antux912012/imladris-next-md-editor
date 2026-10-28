@@ -3,7 +3,7 @@ using Gtk;
 
 namespace Imladris.Execution {
 
-    public class Nap : GLib.Object {
+    public class Nap {
         public static async void sleep (uint ms) {
             GLib.Timeout.add (ms, () => {
                 sleep.callback ();
@@ -21,7 +21,7 @@ namespace Imladris.Execution {
         private ReplBridge python_bridge;
         private string project_root;
 
-        public class ChunkResult : GLib.Object {
+        public class ChunkResult {
             public string stdout { get; set; default = ""; }
             public string stderr { get; set; default = ""; }
             public string? plot_path { get; set; default = null; }

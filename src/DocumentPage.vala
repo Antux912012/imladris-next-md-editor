@@ -33,6 +33,8 @@ namespace Imladris {
         public ProjectType project_type { get; set; default = ProjectType.STANDARD; }
         private Services.LayoutMode current_layout_mode = Services.LayoutMode.APOSTROPHE;
         private ulong ai_settings_handler_id = 0;
+        private ulong theme_changed_handler_id = 0;
+        private ulong dark_notify_handler_id = 0;
 
         public DocumentFormat get_document_format () {
             if (file_location != null) {
@@ -74,18 +76,23 @@ namespace Imladris {
 
             // 1. Setup GtkSource.Buffer with Syntax Highlighting + Rich TextTags
             var lang_manager = GtkSource.LanguageManager.get_default ();
-            var language = lang_manager.get_language (lang_id == "rmd" ? "markdown" : lang_id);
+            var fmt = DocumentFormat.from_filename (title);
+            string syntax_code = fmt.to_syntax_lang ();
+            var language = lang_manager.get_language (syntax_code);
+            if (language == null && lang_id.length > 0) {
+                language = lang_manager.get_language (lang_id == "rmd" ? "markdown" : lang_id);
+            }
             source_buffer = new GtkSource.Buffer.with_language (language);
             source_buffer.highlight_syntax = true;
 
             update_style_scheme ();
 
-            Core.SettingsManager.get_default ().theme_changed.connect ((t) => {
+            theme_changed_handler_id = Core.SettingsManager.get_default ().theme_changed.connect ((t) => {
                 update_style_scheme ();
                 refresh_live_preview ();
             });
 
-            Adw.StyleManager.get_default ().notify["dark"].connect (() => {
+            dark_notify_handler_id = Adw.StyleManager.get_default ().notify["dark"].connect (() => {
                 if (Core.SettingsManager.get_default ().app_theme == Core.AppTheme.SYSTEM) {
                     update_style_scheme ();
                     refresh_live_preview ();
@@ -257,15 +264,30 @@ namespace Imladris {
             });
         }
 
-        ~DocumentPage () {
+        public void cleanup () {
             if (ai_settings_handler_id != 0) {
                 Core.SettingsManager.get_default ().disconnect (ai_settings_handler_id);
                 ai_settings_handler_id = 0;
+            }
+            if (theme_changed_handler_id != 0) {
+                Core.SettingsManager.get_default ().disconnect (theme_changed_handler_id);
+                theme_changed_handler_id = 0;
+            }
+            if (dark_notify_handler_id != 0) {
+                Adw.StyleManager.get_default ().disconnect (dark_notify_handler_id);
+                dark_notify_handler_id = 0;
             }
             if (update_debounce_id != 0) {
                 GLib.Source.remove (update_debounce_id);
                 update_debounce_id = 0;
             }
+            if (source_buffer != null && !source_buffer.get_modified ()) {
+                Services.RecoveryService.get_default ().purge_document_cache (doc_id);
+            }
+        }
+
+        ~DocumentPage () {
+            cleanup ();
         }
 
         private void setup_cell_execution_shortcut () {

@@ -201,22 +201,17 @@ namespace Imladris.Core {
                 return argv;
             }
 
-            var list = new GLib.GenericArray<string> ();
-            list.add ("flatpak-spawn");
-            list.add ("--host");
-            list.add ("--watch-bus");
-
+            int base_count = (working_dir != null && working_dir != "") ? 4 : 3;
+            string[] result = new string[base_count + argv.length];
+            result[0] = "flatpak-spawn";
+            result[1] = "--host";
+            result[2] = "--watch-bus";
+            int idx = 3;
             if (working_dir != null && working_dir != "") {
-                list.add ("--directory=" + working_dir);
+                result[idx++] = "--directory=" + working_dir;
             }
-
             for (int i = 0; i < argv.length; i++) {
-                list.add (argv[i]);
-            }
-
-            string[] result = new string[list.length];
-            for (int i = 0; i < list.length; i++) {
-                result[i] = list[i];
+                result[idx++] = argv[i];
             }
             return result;
         }

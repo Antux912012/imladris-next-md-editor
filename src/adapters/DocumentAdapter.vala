@@ -117,9 +117,14 @@ namespace Imladris.Adapters {
             bool in_ul = false;
 
             foreach (var line in lines) {
-                if (line.has_prefix ("<div class=\"code-chunk-card\"") || line.has_prefix ("</div>") || line.has_prefix ("<header") ||
-                    line.has_prefix ("<figure") || line.has_prefix ("</figure>") || line.has_prefix ("<div class=\"media-video-container\"") ||
-                    line.has_prefix ("<video") || line.has_prefix ("</video>")) {
+                string trimmed_line = line.strip ();
+                if (trimmed_line.has_prefix ("<div") || trimmed_line.has_prefix ("</div") ||
+                    trimmed_line.has_prefix ("<pre") || trimmed_line.has_prefix ("</pre") ||
+                    trimmed_line.has_prefix ("<header") || trimmed_line.has_prefix ("</header") ||
+                    trimmed_line.has_prefix ("<figure") || trimmed_line.has_prefix ("</figure") ||
+                    trimmed_line.has_prefix ("<video") || trimmed_line.has_prefix ("</video") ||
+                    trimmed_line.has_prefix ("<figcaption") || trimmed_line.has_prefix ("</figcaption") ||
+                    trimmed_line.has_prefix ("<img")) {
                     res.append (line);
                     res.append ("\n");
                     continue;

@@ -60,6 +60,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.12.2" date="2026-10-28">
+      <description>
+        <p>Release v0.12.2 delivers the complete Conventional Software Architecture and Engineering Audit refactoring: Eliminates dormant proto-code and uncalled methods in MallornManager and ElrondEngineController; resolves GObject lifecycle memory retention across document tabs via Adw.TabView close_page hooks and explicit signal disconnection; fixes syntax language mapping for .qmd files in GtkSourceView; eliminates whole-document string duplication in frontmatter parsing; resolves nested block formatting in basic_markdown_to_html; optimizes host command generation; and synchronizes MCP server protocol metadata.</p>
+      </description>
+    </release>
     <release version="0.12.1" date="2026-10-28">
       <description>
         <p>Release v0.12.1 resolves container exit 127 issues and streamlines multimedia insertion: Transitions Elrond AI into a robust Smart Local Server &amp; Agent Harness Bridge supporting Ollama (:11434), LM Studio (:1234), Cherry Studio / LocalAI (:23333 / :8080), and host Antigravity CLI (agy); introduces an interactive file picker dialog for images and videos with automatic asset copying to the project's /img subfolder in sandboxed projects; supports format-aware Quarto video shortcodes and HTML5 video rendering in live preview; and adds an About Imladris dialog with documentation links, ecosystem credits, and Gemini Assistance acknowledgment.</p>

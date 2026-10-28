@@ -486,85 +486,86 @@ print(np.mean([1, 2, 3]))
         string tmp_dir = Path.build_filename (Environment.get_tmp_dir (), @"test_media_$(GLib.Random.next_int ())");
         string proj_dir = Path.build_filename (tmp_dir, "my_sandboxed_project");
         string ext_dir = Path.build_filename (tmp_dir, "external_downloads");
-
-        DirUtils.create_with_parents (proj_dir, 0755);
-        DirUtils.create_with_parents (ext_dir, 0755);
-
         string ext_img = Path.build_filename (ext_dir, "statistical_plot.png");
-        FileUtils.set_contents (ext_img, "DUMMY_PNG_DATA");
-
         string ext_vid = Path.build_filename (ext_dir, "simulation_run.mp4");
-        FileUtils.set_contents (ext_vid, "DUMMY_MP4_DATA");
-
         string doc_qmd = Path.build_filename (proj_dir, "report.qmd");
-        FileUtils.set_contents (doc_qmd, "# Report\n");
-
         string doc_md = Path.build_filename (proj_dir, "notes.md");
-        FileUtils.set_contents (doc_md, "# Notes\n");
-
-        // 1. External image into sandboxed project -> copied to /img and linked
-        string img_snippet = Services.MediaHelper.process_and_link_media (
-            ext_img,
-            proj_dir,
-            true, // is_sandboxed
-            doc_qmd,
-            false // is_video
-        );
-
         string expected_img_dest = Path.build_filename (proj_dir, "img", "statistical_plot.png");
-        assert (FileUtils.test (expected_img_dest, FileTest.EXISTS));
-        assert (img_snippet == "![Statistical plot](img/statistical_plot.png)\n");
-
-        // 2. External video into sandboxed project (.qmd Quarto shortcode)
-        string vid_qmd_snippet = Services.MediaHelper.process_and_link_media (
-            ext_vid,
-            proj_dir,
-            true,
-            doc_qmd,
-            true // is_video
-        );
-
         string expected_vid_dest = Path.build_filename (proj_dir, "img", "simulation_run.mp4");
-        assert (FileUtils.test (expected_vid_dest, FileTest.EXISTS));
-        assert (vid_qmd_snippet == "{{< video img/simulation_run.mp4 >}}\n");
-
-        // 3. External video into Markdown (.md HTML5 video tag)
-        string vid_md_snippet = Services.MediaHelper.process_and_link_media (
-            ext_vid,
-            proj_dir,
-            true,
-            doc_md,
-            true
-        );
-        assert (vid_md_snippet == "<video src=\"img/simulation_run.mp4\" controls width=\"100%\"></video>\n");
-
-        // 4. File collision resolution when copying different external file with same name
         string ext_dir2 = Path.build_filename (tmp_dir, "external_downloads_2");
-        DirUtils.create_with_parents (ext_dir2, 0755);
         string ext_img2 = Path.build_filename (ext_dir2, "statistical_plot.png");
-        FileUtils.set_contents (ext_img2, "DIFFERENT_CONTENT_FOR_COLLISION_TESTING");
-
-        string collision_snippet = Services.MediaHelper.process_and_link_media (
-            ext_img2,
-            proj_dir,
-            true,
-            doc_qmd,
-            false
-        );
         string expected_collision_dest = Path.build_filename (proj_dir, "img", "statistical_plot_1.png");
-        assert (FileUtils.test (expected_collision_dest, FileTest.EXISTS));
-        assert (collision_snippet == "![Statistical plot 1](img/statistical_plot_1.png)\n");
 
-        // 5. Custom caption override
-        string custom_caption_snippet = Services.MediaHelper.process_and_link_media (
-            expected_img_dest,
-            proj_dir,
-            true,
-            doc_qmd,
-            false,
-            "Figure 1: Gene Expression Correlation"
-        );
-        assert (custom_caption_snippet == "![Figure 1: Gene Expression Correlation](img/statistical_plot.png)\n");
+        try {
+            DirUtils.create_with_parents (proj_dir, 0755);
+            DirUtils.create_with_parents (ext_dir, 0755);
+            DirUtils.create_with_parents (ext_dir2, 0755);
+
+            FileUtils.set_contents (ext_img, "DUMMY_PNG_DATA");
+            FileUtils.set_contents (ext_vid, "DUMMY_MP4_DATA");
+            FileUtils.set_contents (doc_qmd, "# Report\n");
+            FileUtils.set_contents (doc_md, "# Notes\n");
+
+            // 1. External image into sandboxed project -> copied to /img and linked
+            string img_snippet = Services.MediaHelper.process_and_link_media (
+                ext_img,
+                proj_dir,
+                true, // is_sandboxed
+                doc_qmd,
+                false // is_video
+            );
+
+            assert (FileUtils.test (expected_img_dest, FileTest.EXISTS));
+            assert (img_snippet == "![Statistical plot](img/statistical_plot.png)\n");
+
+            // 2. External video into sandboxed project (.qmd Quarto shortcode)
+            string vid_qmd_snippet = Services.MediaHelper.process_and_link_media (
+                ext_vid,
+                proj_dir,
+                true,
+                doc_qmd,
+                true // is_video
+            );
+
+            assert (FileUtils.test (expected_vid_dest, FileTest.EXISTS));
+            assert (vid_qmd_snippet == "{{< video img/simulation_run.mp4 >}}\n");
+
+            // 3. External video into Markdown (.md HTML5 video tag)
+            string vid_md_snippet = Services.MediaHelper.process_and_link_media (
+                ext_vid,
+                proj_dir,
+                true,
+                doc_md,
+                true
+            );
+            assert (vid_md_snippet == "<video src=\"img/simulation_run.mp4\" controls width=\"100%\"></video>\n");
+
+            // 4. File collision resolution when copying different external file with same name
+            FileUtils.set_contents (ext_img2, "DIFFERENT_CONTENT_FOR_COLLISION_TESTING");
+
+            string collision_snippet = Services.MediaHelper.process_and_link_media (
+                ext_img2,
+                proj_dir,
+                true,
+                doc_qmd,
+                false
+            );
+            assert (FileUtils.test (expected_collision_dest, FileTest.EXISTS));
+            assert (collision_snippet == "![Statistical plot 1](img/statistical_plot_1.png)\n");
+
+            // 5. Custom caption override
+            string custom_caption_snippet = Services.MediaHelper.process_and_link_media (
+                expected_img_dest,
+                proj_dir,
+                true,
+                doc_qmd,
+                false,
+                "Figure 1: Gene Expression Correlation"
+            );
+            assert (custom_caption_snippet == "![Figure 1: Gene Expression Correlation](img/statistical_plot.png)\n");
+        } catch (Error e) {
+            assert_not_reached ();
+        }
 
         // Clean up
         FileUtils.remove (expected_collision_dest);

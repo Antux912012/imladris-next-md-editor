@@ -78,12 +78,20 @@ namespace Imladris.Core {
             data = null;
             markdown_body = content;
 
-            string trimmed = content.strip ();
-            if (!trimmed.has_prefix ("---")) {
+            int first_delim = -1;
+            int len = content.length;
+            for (int i = 0; i < len; i++) {
+                char c = content[i];
+                if (c == ' ' || c == '\t' || c == '\r' || c == '\n') continue;
+                if (c == '-' && i + 2 < len && content[i+1] == '-' && content[i+2] == '-') {
+                    first_delim = i;
+                }
+                break;
+            }
+            if (first_delim == -1) {
                 return;
             }
 
-            int first_delim = content.index_of ("---");
             int search_start = first_delim + 3;
 
             int second_delim = content.index_of ("\n---", search_start);

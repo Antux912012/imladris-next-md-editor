@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.12.1',
+  version: '0.12.2',
   default_options: ['warning_level=1']
 )
 

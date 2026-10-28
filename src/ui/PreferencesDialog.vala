@@ -71,7 +71,7 @@ namespace Imladris.UI {
             };
 
             var about_row = new Adw.ActionRow () {
-                title = "Imladris v0.12.1",
+                title = "Imladris v0.12.2",
                 subtitle = "Documentation, credits, and project inspiration"
             };
             about_row.add_prefix (new Gtk.Image.from_icon_name ("help-browser-symbolic") { pixel_size = 22 });
