@@ -33,6 +33,8 @@ namespace Imladris {
             { "interrupt_execution", on_interrupt_execution },
             { "preferences", on_preferences },
             { "about", on_about },
+            { "insert_image", on_insert_image },
+            { "insert_video", on_insert_video },
             { "print", on_print_document },
             { "quit", on_quit }
         };
@@ -56,6 +58,8 @@ namespace Imladris {
             this.set_accels_for_action ("app.package_installer", { "<Control><Shift>p" });
             this.set_accels_for_action ("app.elrond_assist", { "<Control><Shift>e" });
             this.set_accels_for_action ("app.preferences", { "<Control>comma" });
+            this.set_accels_for_action ("app.insert_image", { "<Control><Shift>i" });
+            this.set_accels_for_action ("app.insert_video", { "<Control><Shift>v" });
             this.set_accels_for_action ("app.quit", { "<Control>q" });
             this.set_accels_for_action ("win.undo", { "<Control>z" });
             this.set_accels_for_action ("win.redo", { "<Control><Shift>z", "<Control>y" });
@@ -237,6 +241,16 @@ namespace Imladris {
         private void on_about () {
             var win = this.active_window as Window;
             if (win != null) win.show_about_dialog ();
+        }
+
+        private void on_insert_image () {
+            var win = this.active_window as Window;
+            if (win != null) win.prompt_insert_media.begin (false);
+        }
+
+        private void on_insert_video () {
+            var win = this.active_window as Window;
+            if (win != null) win.prompt_insert_media.begin (true);
         }
 
         private void on_print_document () {

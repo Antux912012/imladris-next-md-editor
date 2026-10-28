@@ -672,6 +672,19 @@ print("Python Interpreter:", sys.version.split()[0])
             source_buffer.end_user_action ();
         }
 
+        public void insert_media_snippet (string snippet) {
+            source_buffer.begin_user_action ();
+            Gtk.TextIter start, end;
+            if (source_buffer.get_selection_bounds (out start, out end)) {
+                source_buffer.delete (ref start, ref end);
+                source_buffer.insert (ref start, snippet, -1);
+            } else {
+                source_buffer.insert_at_cursor (snippet, -1);
+            }
+            source_buffer.end_user_action ();
+            refresh_live_preview ();
+        }
+
         public void show_inline_prompt_popover () {
             Gtk.TextIter cursor_iter;
             source_buffer.get_iter_at_mark (out cursor_iter, source_buffer.get_insert ());

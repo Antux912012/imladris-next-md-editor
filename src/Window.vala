@@ -1084,10 +1084,14 @@ namespace Imladris {
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 3: Media & Web Elements
-            var btn_img = RibbonFactory.create_tool_button ("insert-image-symbolic", "Image", "Insert Image");
+            var btn_img = RibbonFactory.create_tool_button ("insert-image-symbolic", "Image", "Insert Image from file manager");
             ((Gtk.Button) btn_img).clicked.connect (() => {
-                var d = get_active_document ();
-                if (d != null) d.source_buffer.insert_at_cursor ("![Image caption](image.png)\n", -1);
+                prompt_insert_media.begin (false);
+            });
+
+            var btn_video = RibbonFactory.create_tool_button ("video-x-generic-symbolic", "Video", "Insert Video from file manager");
+            ((Gtk.Button) btn_video).clicked.connect (() => {
+                prompt_insert_media.begin (true);
             });
 
             var btn_link = RibbonFactory.create_tool_button ("insert-link-symbolic", "Hyperlink", "Insert Hyperlink");
@@ -1102,7 +1106,7 @@ namespace Imladris {
                 if (d != null) d.source_buffer.insert_at_cursor ("\n---\n", -1);
             });
 
-            box.append (RibbonFactory.create_linked_group ({ btn_img, btn_link, btn_break }));
+            box.append (RibbonFactory.create_linked_group ({ btn_img, btn_video, btn_link, btn_break }));
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 4: Symbols, Diagrams & Visuals
@@ -1537,6 +1541,83 @@ namespace Imladris {
             });
 
             dialog.present (this);
+        }
+
+        public async void prompt_insert_media (bool is_video) {
+            var doc = get_active_document ();
+            if (doc == null) return;
+
+            var file_dialog = new Gtk.FileDialog () {
+                title = is_video ? "Insert Video into Document" : "Insert Image into Document"
+            };
+
+            var filter_list = new GLib.ListStore (typeof (Gtk.FileFilter));
+
+            if (!is_video) {
+                var img_filter = new Gtk.FileFilter () { name = "Image Files (*.png, *.jpg, *.svg, *.webp, *.gif)" };
+                img_filter.add_pattern ("*.png");
+                img_filter.add_pattern ("*.jpg");
+                img_filter.add_pattern ("*.jpeg");
+                img_filter.add_pattern ("*.svg");
+                img_filter.add_pattern ("*.webp");
+                img_filter.add_pattern ("*.gif");
+                img_filter.add_pattern ("*.bmp");
+                img_filter.add_pattern ("*.avif");
+                img_filter.add_pattern ("*.PNG");
+                img_filter.add_pattern ("*.JPG");
+                img_filter.add_pattern ("*.JPEG");
+                img_filter.add_pattern ("*.SVG");
+                filter_list.append (img_filter);
+            } else {
+                var vid_filter = new Gtk.FileFilter () { name = "Video Files (*.mp4, *.webm, *.ogg, *.mov, *.mkv)" };
+                vid_filter.add_pattern ("*.mp4");
+                vid_filter.add_pattern ("*.webm");
+                vid_filter.add_pattern ("*.ogg");
+                vid_filter.add_pattern ("*.mov");
+                vid_filter.add_pattern ("*.mkv");
+                vid_filter.add_pattern ("*.m4v");
+                vid_filter.add_pattern ("*.MP4");
+                vid_filter.add_pattern ("*.WEBM");
+                filter_list.append (vid_filter);
+            }
+
+            var all_filter = new Gtk.FileFilter () { name = "All Files (*.*)" };
+            all_filter.add_pattern ("*");
+            filter_list.append (all_filter);
+
+            file_dialog.filters = filter_list;
+
+            if (doc.file_location != null) {
+                file_dialog.initial_folder = doc.file_location.get_parent ();
+            } else if (current_project_dir != "" && FileUtils.test (current_project_dir, FileTest.IS_DIR)) {
+                file_dialog.initial_folder = File.new_for_path (current_project_dir);
+            }
+
+            try {
+                var selected_file = yield file_dialog.open (this, null);
+                if (selected_file != null) {
+                    string src_path = selected_file.get_path ();
+                    if (src_path != null) {
+                        string? pdir = (current_project_dir != "") ? current_project_dir : null;
+                        bool sandboxed = (current_project_type == ProjectType.SANDBOXED);
+                        string? doc_path = (doc.file_location != null) ? doc.file_location.get_path () : null;
+                        string sel_caption = doc.get_selected_text ();
+
+                        string snippet = Services.MediaHelper.process_and_link_media (
+                            src_path,
+                            pdir,
+                            sandboxed,
+                            doc_path,
+                            is_video,
+                            sel_caption
+                        );
+
+                        doc.insert_media_snippet (snippet);
+                    }
+                }
+            } catch (Error e) {
+                // User cancelled or dialog closed
+            }
         }
 
         public async void run_python_pip_and_snapshot (string py_bin, string[] args, string working_dir, bool sandboxed, string display_label = "") {

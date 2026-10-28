@@ -45,9 +45,44 @@ namespace Imladris.Adapters {
 
             // Convert Code chunk annotations ```{r} or ```{python} to styled blocks
             string processed_body = transform_code_chunks (body);
+            processed_body = transform_media_tags (processed_body);
             builder.append (basic_markdown_to_html (processed_body));
 
             return builder.str;
+        }
+
+        private static GLib.Regex? img_regex = null;
+        private static GLib.Regex? video_regex = null;
+
+        private static string transform_media_tags (string text) {
+            string result = text;
+            try {
+                // Quarto video shortcodes: {{< video path >}}
+                if (video_regex == null) {
+                    video_regex = new GLib.Regex ("\\{\\{<\\s*video\\s+([^\\s>]+)[^>]*>\\}\\}");
+                }
+                result = video_regex.replace_eval (result, -1, 0, 0, (match_info, res) => {
+                    string vpath = match_info.fetch (1);
+                    res.append_printf ("<div class=\"media-video-container\" style=\"margin: 16px 0; text-align: center;\"><video src=\"%s\" controls style=\"max-width: 100%%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\"></video></div>", vpath);
+                    return false;
+                });
+
+                // Markdown images: ![caption](path)
+                if (img_regex == null) {
+                    img_regex = new GLib.Regex ("!\\[([^\\]]*)\\]\\(([^\\)]+)\\)");
+                }
+                result = img_regex.replace_eval (result, -1, 0, 0, (match_info, res) => {
+                    string alt = match_info.fetch (1);
+                    string ipath = match_info.fetch (2);
+                    res.append_printf ("<figure style=\"margin: 16px 0; text-align: center;\"><img src=\"%s\" alt=\"%s\" style=\"max-width: 100%%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\"/>", ipath, GLib.Markup.escape_text (alt));
+                    if (alt.strip ().length > 0) {
+                        res.append_printf ("<figcaption style=\"font-size: 0.9em; color: #64748b; margin-top: 6px;\">%s</figcaption>", GLib.Markup.escape_text (alt));
+                    }
+                    res.append ("</figure>");
+                    return false;
+                });
+            } catch (GLib.RegexError e) {}
+            return result;
         }
 
         private static string transform_code_chunks (string text) {
@@ -82,7 +117,9 @@ namespace Imladris.Adapters {
             bool in_ul = false;
 
             foreach (var line in lines) {
-                if (line.has_prefix ("<div class=\"code-chunk-card\"") || line.has_prefix ("</div>") || line.has_prefix ("<header")) {
+                if (line.has_prefix ("<div class=\"code-chunk-card\"") || line.has_prefix ("</div>") || line.has_prefix ("<header") ||
+                    line.has_prefix ("<figure") || line.has_prefix ("</figure>") || line.has_prefix ("<div class=\"media-video-container\"") ||
+                    line.has_prefix ("<video") || line.has_prefix ("</video>")) {
                     res.append (line);
                     res.append ("\n");
                     continue;
