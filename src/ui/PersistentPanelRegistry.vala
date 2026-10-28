@@ -52,6 +52,7 @@ namespace Imladris.UI {
 
             var current_parent = widget.get_parent ();
             if (current_parent == target_viewport) {
+                widget.visible = true;
                 return;
             }
             if (current_parent != null) {
@@ -65,6 +66,7 @@ namespace Imladris.UI {
 
             widget.hexpand = true;
             widget.vexpand = true;
+            widget.visible = true;
             target_viewport.append (widget);
         }
 

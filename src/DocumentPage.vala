@@ -134,12 +134,18 @@ namespace Imladris {
             settings.enable_developer_extras = true;
             settings.enable_javascript = true;
 
+            int web_process_crashes = 0;
             web_view.web_process_terminated.connect ((reason) => {
-                GLib.warning ("WebKit WebProcess terminated (reason: %d), recovering preview...", (int) reason);
-                GLib.Idle.add (() => {
-                    refresh_live_preview ();
-                    return GLib.Source.REMOVE;
-                });
+                web_process_crashes++;
+                GLib.warning ("WebKit WebProcess terminated (reason: %d, count: %d)", (int) reason, web_process_crashes);
+                if (web_process_crashes <= 2) {
+                    var s = web_view.get_settings ();
+                    s.hardware_acceleration_policy = WebKit.HardwareAccelerationPolicy.NEVER;
+                    GLib.Idle.add (() => {
+                        refresh_live_preview ();
+                        return GLib.Source.REMOVE;
+                    });
+                }
             });
 
             console_view = new Gtk.TextView () {
@@ -163,11 +169,11 @@ namespace Imladris {
             paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
                 hexpand = true,
                 vexpand = true,
-                position = 780,
+                position = 600,
                 resize_start_child = true,
                 resize_end_child = true,
-                shrink_start_child = false,
-                shrink_end_child = false
+                shrink_start_child = true,
+                shrink_end_child = true
             };
 
             apostrophe_editor_host = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
@@ -177,11 +183,15 @@ namespace Imladris {
 
             console_revealer = new Gtk.Revealer () {
                 transition_type = Gtk.RevealerTransitionType.SLIDE_LEFT,
-                reveal_child = true
+                reveal_child = true,
+                hexpand = true,
+                vexpand = true
             };
 
             right_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
-                width_request = 480
+                hexpand = true,
+                vexpand = true,
+                width_request = 260
             };
 
             var right_header = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6) {
@@ -453,7 +463,7 @@ print("Python Interpreter:", sys.version.split()[0])
                 var parent = file_location.get_parent ();
                 base_uri = parent != null ? parent.get_uri () + "/" : file_location.get_uri ();
             } else {
-                base_uri = "file://" + GLib.Environment.get_current_dir () + "/";
+                base_uri = "file://localhost/";
             }
 
             if (doc_type == "html") {
@@ -606,7 +616,15 @@ print("Python Interpreter:", sys.version.split()[0])
                     paned.orientation = Gtk.Orientation.VERTICAL;
                     right_stack.visible_child_name = "preview";
                     int h = paned.get_height ();
-                    if (h > 100) paned.set_position (h / 2);
+                    if (h > 100) {
+                        paned.set_position (h / 2);
+                    } else {
+                        GLib.Idle.add (() => {
+                            int cur_h = paned.get_height ();
+                            if (cur_h > 100) paned.set_position (cur_h / 2);
+                            return GLib.Source.REMOVE;
+                        });
+                    }
                     break;
                 case Services.SplitMode.VERTICAL_SPLIT:
                 default:
@@ -616,7 +634,15 @@ print("Python Interpreter:", sys.version.split()[0])
                     paned.orientation = Gtk.Orientation.HORIZONTAL;
                     right_stack.visible_child_name = "preview";
                     int w = paned.get_width ();
-                    if (w > 100) paned.set_position (w / 2);
+                    if (w > 100) {
+                        paned.set_position (w / 2);
+                    } else {
+                        GLib.Idle.add (() => {
+                            int cur_w = paned.get_width ();
+                            if (cur_w > 100) paned.set_position (cur_w / 2);
+                            return GLib.Source.REMOVE;
+                        });
+                    }
                     break;
             }
         }
@@ -628,6 +654,10 @@ print("Python Interpreter:", sys.version.split()[0])
                 console_revealer.visible = true;
                 console_revealer.reveal_child = true;
                 right_stack.visible_child_name = "preview";
+                int cur_w = paned.get_width ();
+                if (cur_w > 100 && (paned.position > cur_w - 50 || paned.position < 50)) {
+                    paned.position = cur_w / 2;
+                }
             }
             if (uri != null) {
                 web_view.load_uri (uri);

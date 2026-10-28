@@ -60,6 +60,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.14.1" date="2026-10-28">
+      <description>
+        <p>Release v0.14.1 resolves critical live preview display and application crash issues, and introduces direct Pandoc-powered document exports: Fixes GLib-GIO file opening crash by implementing HANDLES_OPEN and application open hooks; resolves Gtk.IconTheme display singleton assertion crash; resolves WebKit WebProcess crash loops and pane width squashing on laptop displays; hardens WebKit local file access and sandbox configuration; adds native Pandoc HTML (standalone with embedded resources) and PDF export pipeline with graceful fallback renderers; and sanitizes Pango markup escaping across preferences and plugin views.</p>
+      </description>
+    </release>
     <release version="0.14.0" date="2026-10-28">
       <description>
         <p>Release v0.14.0 introduces three major workbench pillars: (1) R and Python Global Environment Management with broom clear confirmation, dynamic object querying, and an interactive virtualized Dataframe &amp; Matrix Viewer backed by GtkColumnView and GioListStore with View(x) hooks; (2) Customizable detachable workbench layout engine supporting 2x2 Quad, Left Tall, and Right Tall topologies, standalone floating window undocking and automatic re-docking, and layout preset persistence in ~/.config/imladris/layouts/; and (3) Integrated Elrond AI Copilot tab in the bottom-left quadrant with context toggle chips (+Active File, +Dataframe Schemas, +Last Error), streamed chat history, and one-click 'Insert at Cursor' and 'Run in Console' code actions.</p>

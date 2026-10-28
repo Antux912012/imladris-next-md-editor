@@ -49,7 +49,7 @@ namespace Imladris.UI {
             gen_page.add (appearance_group);
 
             var hw_group = new Adw.PreferencesGroup () {
-                title = "Hardware & Rendering",
+                title = "Hardware &amp; Rendering",
                 description = "Configure GPU acceleration for previews and plots"
             };
 
@@ -96,7 +96,7 @@ namespace Imladris.UI {
             var ai_config_mgr = AiConfigManager.get_default ();
 
             var ai_page = new Adw.PreferencesPage () {
-                title = "AI & Elrond",
+                title = "AI &amp; Elrond",
                 icon_name = "system-run-symbolic"
             };
 
@@ -140,10 +140,10 @@ namespace Imladris.UI {
                         elrond_level_row.subtitle = "Low: On-Demand Only (Manual 'Write with Elrond' trigger)";
                         break;
                     case 1:
-                        elrond_level_row.subtitle = "Medium: Smart Autocomplete & Dataframe Awareness (Recommended)";
+                        elrond_level_row.subtitle = "Medium: Smart Autocomplete &amp; Dataframe Awareness (Recommended)";
                         break;
                     case 2:
-                        elrond_level_row.subtitle = "High: Full Elrond Copilot & Proactive Code/Graph Suggestions";
+                        elrond_level_row.subtitle = "High: Full Elrond Copilot &amp; Proactive Code/Graph Suggestions";
                         break;
                     default:
                         elrond_level_row.subtitle = "Select assistance level";
@@ -205,7 +205,7 @@ namespace Imladris.UI {
             elrond_group.add (inline_edit_row);
 
             var panel_pos_row = new Adw.ActionRow () {
-                title = "AI Chat & Side Panel Position",
+                title = "AI Chat &amp; Side Panel Position",
                 subtitle = "Keep the LLM chat and preview panel docked on the left or right side of the editor"
             };
 
@@ -248,7 +248,7 @@ namespace Imladris.UI {
             mode_strings.append ("⚙️ Custom Local Server");
 
             var mode_row = new Adw.ComboRow () {
-                title = "Local AI Server & Harness Bridge",
+                title = "Local AI Server &amp; Harness Bridge",
                 subtitle = "Connect to running local inference servers or host agent harnesses",
                 model = mode_strings,
                 selected = (uint) settings.elrond_mode
@@ -285,7 +285,7 @@ namespace Imladris.UI {
 
             // Local AI Ecosystem Setup Guide
             var guide_expander = new Adw.ExpanderRow () {
-                title = "Local AI & Agent Harness Setup Guide",
+                title = "Local AI &amp; Agent Harness Setup Guide",
                 subtitle = "Supported local engines: Ollama, LM Studio, Cherry Studio, and Antigravity"
             };
             guide_expander.add_prefix (new Gtk.Image.from_icon_name ("dialog-information-symbolic"));
@@ -299,13 +299,13 @@ namespace Imladris.UI {
 
             var guide_lm_row = new Adw.ActionRow () {
                 title = "LM Studio (Port 1234)",
-                subtitle = "Open LM Studio -> Developer tab (<->) -> Select model and click 'Start Server'"
+                subtitle = "Open LM Studio → Developer tab (↔) → Select model and click 'Start Server'"
             };
             guide_lm_row.add_prefix (new Gtk.Image.from_icon_name ("ai-lmstudio") { pixel_size = 22 });
             guide_expander.add_row (guide_lm_row);
 
             var guide_cherry_row = new Adw.ActionRow () {
-                title = "Cherry Studio & LocalAI (Port 23333 or 8080)",
+                title = "Cherry Studio &amp; LocalAI (Port 23333 or 8080)",
                 subtitle = "Runs local OpenAI-compatible inference servers across multiple backends"
             };
             guide_cherry_row.add_prefix (new Gtk.Image.from_icon_name ("ai-custom") { pixel_size = 22 });
@@ -366,7 +366,7 @@ namespace Imladris.UI {
             ai_general_group.add (temp_row);
 
             var config_row = new Adw.ActionRow () {
-                title = "Provider Credentials & Models",
+                title = "Provider Credentials &amp; Models",
                 subtitle = "Configure API keys, custom base URLs, and model identifiers"
             };
             var btn_configure_keys = new Gtk.Button.with_label ("Configure Providers...") {
@@ -383,7 +383,7 @@ namespace Imladris.UI {
 
             // Cloud API Keys Quick Links Group
             var keys_group = new Adw.PreferencesGroup () {
-                title = "API Credentials & Portals",
+                title = "API Credentials &amp; Portals",
                 description = "Quick access to generate and manage developer API keys"
             };
 
@@ -594,8 +594,8 @@ namespace Imladris.UI {
             foreach (var p in pm.plugins.values) {
                 string p_icon = (p.manifest.icon != null && p.manifest.icon != "") ? p.manifest.icon : "application-x-addon-symbolic";
                 var exp_row = new Adw.ExpanderRow () {
-                    title = p.manifest.name,
-                    subtitle = @"v$(p.manifest.version) by $(p.manifest.author) • $(p.manifest.license)"
+                    title = GLib.Markup.escape_text (p.manifest.name),
+                    subtitle = @"v$(p.manifest.version) by $(GLib.Markup.escape_text (p.manifest.author)) • $(GLib.Markup.escape_text (p.manifest.license))"
                 };
                 exp_row.add_prefix (new Gtk.Image.from_icon_name (p_icon));
 
@@ -636,13 +636,13 @@ namespace Imladris.UI {
 
                 var desc_row = new Adw.ActionRow () {
                     title = "Description",
-                    subtitle = p.manifest.description
+                    subtitle = GLib.Markup.escape_text (p.manifest.description)
                 };
                 exp_row.add_row (desc_row);
 
                 var perm_row = new Adw.ActionRow () {
                     title = "Permissions",
-                    subtitle = p.manifest.format_permissions_summary ()
+                    subtitle = GLib.Markup.escape_text (p.manifest.format_permissions_summary ())
                 };
                 exp_row.add_row (perm_row);
 

@@ -1,5 +1,5 @@
 Name:           imladris
-Version:        0.14.0
+Version:        0.14.1
 Release:        1%{?dist}
 Summary:        Scientific notebook studio and Markdown editor
 
@@ -56,6 +56,14 @@ export GSETTINGS_BACKEND=memory
 %{_datadir}/imladris/
 
 %changelog
+* Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.14.1-1
+- Release 0.14.1: Live Preview Stability, Pandoc Export, and Crash Fixes:
+  * Implement GLib.ApplicationFlags.HANDLES_OPEN and application open hooks to resolve file opening crash.
+  * Resolve Gtk.IconTheme display singleton assertion crash.
+  * Resolve WebKit WebProcess crash loop and squashed live preview pane sizing on laptop screens.
+  * Enable Pandoc HTML (standalone + embedded resources) and PDF export pipeline with fallback renderers.
+  * Sanitize Pango markup across preferences and plugin descriptions.
+
 * Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.14.0-1
 - Release 0.14.0: Environment Management & Dataframe Viewer, Detachable Dynamic Docking, and Integrated Elrond AI Copilot Tab:
   * Global Environment toolbar with broom variable cleanup (Adw.AlertDialog confirmation) and dynamic REPL inspection.

@@ -917,10 +917,7 @@ namespace Imladris {
 
         public async void export_document_dialog_async (string format) {
             var doc = get_active_document ();
-            if (doc == null || doc.file_location == null) {
-                if (doc != null) {
-                    doc.append_console_log (@"⚠ Please save the document before exporting to $(format.up ()).");
-                }
+            if (doc == null) {
                 return;
             }
 
@@ -932,7 +929,7 @@ namespace Imladris {
                 title = @"Export to $(format.up ())",
                 modal = true
             };
-            string base_name = doc.file_location.get_basename ();
+            string base_name = doc.file_location != null ? doc.file_location.get_basename () : @"untitled.$(doc.doc_type)";
             int dot_idx = base_name.last_index_of (".");
             string base_prefix = dot_idx >= 0 ? base_name.substring (0, dot_idx) : base_name;
             dialog.initial_name = @"$base_prefix.$format";
@@ -940,10 +937,13 @@ namespace Imladris {
             try {
                 var file = yield dialog.save (this, null);
                 if (file != null) {
-                    yield save_document_async ();
-                    doc.append_console_log (@"▶ Exporting $(doc.file_location.get_basename ()) to $(file.get_basename ())...");
+                    if (doc.file_location != null) {
+                        yield save_document_async ();
+                    }
+                    doc.append_console_log (@"▶ Exporting $base_name to $(file.get_basename ())...");
+                    string src_path = doc.file_location != null ? doc.file_location.get_path () : @"/tmp/$base_prefix.md";
                     bool ok = yield Services.ExportService.get_default ().export_document_async (
-                        doc.file_location.get_path (),
+                        src_path,
                         file.get_path (),
                         format,
                         doc.source_buffer.text
@@ -1085,17 +1085,7 @@ namespace Imladris {
         }
 
         public void trigger_render (string target_format) {
-            var doc = get_active_document ();
-            if (doc != null) {
-                if (target_format == "html") {
-                    doc.show_live_preview ();
-                }
-                ExecutionEngine.run_command_async.begin (
-                    { "quarto", "--version" },
-                    doc
-                );
-                doc.append_console_log (@"▶ Preparing Quarto / RMarkdown render pipeline for format: $(target_format.up ())");
-            }
+            export_document_dialog_async.begin (target_format);
         }
 
         private void setup_actions () {

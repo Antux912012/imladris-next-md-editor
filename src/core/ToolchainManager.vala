@@ -181,6 +181,7 @@ namespace Imladris.Core {
             if (install_quarto) {
                 pkgs.add ("quarto");
                 pkgs.add ("typst");
+                pkgs.add ("pandoc");
             }
 
             if (pkgs.length == 0) {

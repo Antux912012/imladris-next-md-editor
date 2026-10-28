@@ -268,6 +268,205 @@ namespace Imladris.Services {
             }
         }
 
+        /**
+         * Exports a document to standalone HTML using Pandoc (or Quarto/RMarkdown for notebooks),
+         * with fallback to the high-fidelity internal DocumentAdapter HTML generator.
+         */
+        public static void export_to_html (string input_path, string output_path, string? raw_buffer_fallback = null) throws GLib.Error {
+            var fmt = DocumentFormat.from_filename (input_path);
+            bool cli_succeeded = false;
+
+            string out_dir = GLib.Path.get_dirname (output_path);
+            string out_file = GLib.Path.get_basename (output_path);
+            ensure_parent_dir (output_path);
+
+            string? actual_input = input_path;
+            string? temp_md = null;
+            if (!GLib.FileUtils.test (input_path, GLib.FileTest.EXISTS) && raw_buffer_fallback != null) {
+                temp_md = GLib.Path.build_filename (
+                    Core.PlatformUtils.get_shared_cache_dir ("tmp"),
+                    @"imladris_export_$(GLib.Random.next_int ()).md"
+                );
+                GLib.FileUtils.set_contents (temp_md, raw_buffer_fallback);
+                actual_input = temp_md;
+            }
+
+            if ((fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB) &&
+                Core.PlatformUtils.is_program_available ("quarto", out_dir)) {
+                cli_succeeded = run_tool_process ("quarto", { "render", actual_input, "--to", "html", "--output", out_file }, out_dir);
+            } else if (fmt == DocumentFormat.RMD &&
+                       Core.PlatformUtils.is_program_available ("Rscript", out_dir)) {
+                string r_expr = "if (requireNamespace('rmarkdown', quietly=TRUE)) rmarkdown::render('%s', output_format = 'html_document', output_file = '%s', quiet = TRUE) else stop('no rmarkdown')".printf (
+                    actual_input.replace ("'", "\\'"),
+                    output_path.replace ("'", "\\'")
+                );
+                cli_succeeded = run_tool_process ("Rscript", { "-e", r_expr }, out_dir);
+            }
+
+            if (!cli_succeeded && Core.PlatformUtils.is_program_available ("pandoc", out_dir)) {
+                cli_succeeded = run_tool_process ("pandoc", { actual_input, "-f", "markdown", "-t", "html5", "--standalone", "--embed-resources", "-o", output_path }, out_dir);
+                if (!cli_succeeded) {
+                    cli_succeeded = run_tool_process ("pandoc", { actual_input, "-f", "markdown", "-t", "html5", "--standalone", "-o", output_path }, out_dir);
+                }
+            }
+
+            if (temp_md != null && GLib.FileUtils.test (temp_md, GLib.FileTest.EXISTS)) {
+                GLib.FileUtils.remove (temp_md);
+            }
+
+            if (!cli_succeeded || !GLib.FileUtils.test (output_path, GLib.FileTest.EXISTS)) {
+                string source_text = read_source_or_fallback (input_path, raw_buffer_fallback);
+                string body_html = Adapters.DocumentAdapter.render_html (source_text, fmt);
+                string doc_title = GLib.Path.get_basename (input_path);
+                string html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>%s</title>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      background: #ffffff;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    h1, h2, h3, h4 { color: #0f172a; margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 700; }
+    h1 { font-size: 2.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
+    h2 { font-size: 1.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.2em; }
+    p, li { font-size: 1.05rem; }
+    pre {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.92rem;
+    }
+    code { font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+    pre code { background: transparent; padding: 0; }
+    .badge { display: inline-block; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; }
+    .code-chunk-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; margin: 16px 0; overflow: hidden; }
+    .code-chunk-header { background: #e2e8f0; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #475569; }
+    blockquote { border-left: 4px solid #38bdf8; margin: 16px 0; padding-left: 16px; color: #64748b; }
+    table { border-collapse: collapse; width: 100%%; margin: 20px 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+    th { background: #f1f5f9; font-weight: 600; }
+  </style>
+</head>
+<body>
+%s
+</body>
+</html>""".printf (doc_title, body_html);
+
+                GLib.FileUtils.set_contents (output_path, html);
+            }
+        }
+
+        /**
+         * Exports a document to PDF using Pandoc (with typst/latex/weasyprint engine),
+         * falling back to headless LibreOffice via intermediate ODT.
+         */
+        public static void export_to_pdf (string input_path, string output_path, string? raw_buffer_fallback = null) throws GLib.Error {
+            var fmt = DocumentFormat.from_filename (input_path);
+            bool cli_succeeded = false;
+
+            string out_dir = GLib.Path.get_dirname (output_path);
+            string out_file = GLib.Path.get_basename (output_path);
+            ensure_parent_dir (output_path);
+
+            string? actual_input = input_path;
+            string? temp_md = null;
+            if (!GLib.FileUtils.test (input_path, GLib.FileTest.EXISTS) && raw_buffer_fallback != null) {
+                temp_md = GLib.Path.build_filename (
+                    Core.PlatformUtils.get_shared_cache_dir ("tmp"),
+                    @"imladris_export_$(GLib.Random.next_int ()).md"
+                );
+                GLib.FileUtils.set_contents (temp_md, raw_buffer_fallback);
+                actual_input = temp_md;
+            }
+
+            // Stage 1: Try Quarto / RMarkdown direct PDF render if notebook
+            if ((fmt == DocumentFormat.QMD || fmt == DocumentFormat.IPYNB) &&
+                Core.PlatformUtils.is_program_available ("quarto", out_dir)) {
+                cli_succeeded = run_tool_process ("quarto", { "render", actual_input, "--to", "pdf", "--output", out_file }, out_dir);
+            } else if (fmt == DocumentFormat.RMD &&
+                       Core.PlatformUtils.is_program_available ("Rscript", out_dir)) {
+                string r_expr = "if (requireNamespace('rmarkdown', quietly=TRUE)) rmarkdown::render('%s', output_format = 'pdf_document', output_file = '%s', quiet = TRUE) else stop('no rmarkdown')".printf (
+                    actual_input.replace ("'", "\\'"),
+                    output_path.replace ("'", "\\'")
+                );
+                cli_succeeded = run_tool_process ("Rscript", { "-e", r_expr }, out_dir);
+            }
+
+            // Stage 2: Try Pandoc with detected PDF engines
+            if (!cli_succeeded && Core.PlatformUtils.is_program_available ("pandoc", out_dir)) {
+                string[] pdf_engines = { "typst", "weasyprint", "xelatex", "pdflatex", "lualatex", "wkhtmltopdf" };
+                string? detected_engine = null;
+                foreach (var eng in pdf_engines) {
+                    if (Core.PlatformUtils.is_program_available (eng, out_dir)) {
+                        detected_engine = eng;
+                        break;
+                    }
+                }
+
+                if (detected_engine != null) {
+                    cli_succeeded = run_tool_process ("pandoc", { actual_input, "-f", "markdown", @"--pdf-engine=$detected_engine", "--standalone", "-o", output_path }, out_dir);
+                } else {
+                    cli_succeeded = run_tool_process ("pandoc", { actual_input, "-f", "markdown", "--standalone", "-o", output_path }, out_dir);
+                }
+            }
+
+            // Stage 3: High-fidelity LibreOffice headless fallback via intermediate ODT
+            if (!cli_succeeded || !GLib.FileUtils.test (output_path, GLib.FileTest.EXISTS)) {
+                string? soffice_bin = Core.PlatformUtils.find_program ("soffice", out_dir)
+                    ?? Core.PlatformUtils.find_program ("libreoffice", out_dir);
+
+                if (soffice_bin != null) {
+                    string tmp_odt = GLib.Path.build_filename (
+                        Core.PlatformUtils.get_shared_cache_dir ("tmp"),
+                        @"imladris_pdf_$(GLib.Random.next_int ()).odt"
+                    );
+                    export_to_odt (actual_input, tmp_odt, raw_buffer_fallback);
+                    if (GLib.FileUtils.test (tmp_odt, GLib.FileTest.EXISTS)) {
+                        try {
+                            string[] raw_lo_argv = { soffice_bin, "--headless", "--convert-to", "pdf", tmp_odt, "--outdir", out_dir };
+                            string[] lo_argv = Core.PlatformUtils.build_host_command (raw_lo_argv, out_dir);
+                            var lo_proc = new GLib.Subprocess.newv (lo_argv, GLib.SubprocessFlags.STDOUT_PIPE | GLib.SubprocessFlags.STDERR_MERGE);
+                            if (lo_proc.wait_check ()) {
+                                string converted_name = GLib.Path.get_basename (tmp_odt);
+                                if (converted_name.has_suffix (".odt")) {
+                                    converted_name = converted_name.substring (0, converted_name.length - 4) + ".pdf";
+                                }
+                                string converted_path = GLib.Path.build_filename (out_dir, converted_name);
+                                if (GLib.FileUtils.test (converted_path, GLib.FileTest.EXISTS)) {
+                                    var src_f = GLib.File.new_for_path (converted_path);
+                                    var dst_f = GLib.File.new_for_path (output_path);
+                                    src_f.move (dst_f, GLib.FileCopyFlags.OVERWRITE, null, null);
+                                    cli_succeeded = true;
+                                }
+                            }
+                        } catch (GLib.Error e) {}
+                        GLib.FileUtils.remove (tmp_odt);
+                    }
+                }
+            }
+
+            if (temp_md != null && GLib.FileUtils.test (temp_md, GLib.FileTest.EXISTS)) {
+                GLib.FileUtils.remove (temp_md);
+            }
+
+            if (!cli_succeeded || !GLib.FileUtils.test (output_path, GLib.FileTest.EXISTS)) {
+                throw new GLib.IOError.FAILED (
+                    "PDF export requires Pandoc (with typst, weasyprint, or pdflatex) or LibreOffice. Please install pandoc or typst via your package manager."
+                );
+            }
+        }
+
         private static ExportService? _instance = null;
 
         public static ExportService get_default () {
@@ -288,8 +487,13 @@ namespace Imladris.Services {
             GLib.SourceFunc callback = export_document_async.callback;
             new GLib.Thread<void*> ("imladris-export-worker", () => {
                 try {
-                    if (format_target.down () == "odp") {
+                    string target = format_target.down ();
+                    if (target == "odp") {
                         export_to_odp (src_path, output_path, raw_text);
+                    } else if (target == "html" || target == "htm") {
+                        export_to_html (src_path, output_path, raw_text);
+                    } else if (target == "pdf") {
+                        export_to_pdf (src_path, output_path, raw_text);
                     } else {
                         export_to_odt (src_path, output_path, raw_text);
                     }

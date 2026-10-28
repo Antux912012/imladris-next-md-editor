@@ -36,6 +36,8 @@ namespace Imladris.UI {
                 ? WebKit.HardwareAccelerationPolicy.ALWAYS
                 : WebKit.HardwareAccelerationPolicy.NEVER;
             settings.enable_webgl = hw_accel;
+            settings.allow_file_access_from_file_urls = true;
+            settings.allow_universal_access_from_file_urls = true;
         }
     }
 }

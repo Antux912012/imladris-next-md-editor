@@ -2,7 +2,7 @@ namespace Imladris {
 
     public class Application : Adw.Application {
 
-        public const string APP_VERSION = "0.14.0";
+        public const string APP_VERSION = "0.14.1";
 
         private const GLib.ActionEntry[] APP_ACTIONS = {
             { "new_project_modal", on_new_project_modal },
@@ -44,7 +44,7 @@ namespace Imladris {
         public Application () {
             Object (
                 application_id: "io.github.Antux912012.Imladris",
-                flags: GLib.ApplicationFlags.DEFAULT_FLAGS
+                flags: GLib.ApplicationFlags.HANDLES_OPEN
             );
         }
 
@@ -93,6 +93,17 @@ namespace Imladris {
             var win = this.active_window as Window;
             if (win == null) {
                 win = new Window (this);
+            }
+            win.present ();
+        }
+
+        protected override void open (GLib.File[] files, string hint) {
+            var win = this.active_window as Window;
+            if (win == null) {
+                win = new Window (this);
+            }
+            foreach (var file in files) {
+                win.open_file_from_path.begin (file.get_path ());
             }
             win.present ();
         }
@@ -154,12 +165,12 @@ namespace Imladris {
 
         private void on_export_pdf () {
             var win = this.active_window as Window;
-            if (win != null) win.trigger_render ("pdf");
+            if (win != null) win.export_document_dialog_async.begin ("pdf");
         }
 
         private void on_export_html () {
             var win = this.active_window as Window;
-            if (win != null) win.trigger_render ("html");
+            if (win != null) win.export_document_dialog_async.begin ("html");
         }
 
         private void on_export_odt () {
@@ -270,7 +281,6 @@ namespace Imladris {
             var display = Gdk.Display.get_default ();
             if (display != null) {
                 var icon_theme = Gtk.IconTheme.get_for_display (display);
-                icon_theme.set_theme_name ("Papirus");
 
                 // Add bundled Papirus SVG resource path as a guaranteed fallback
                 icon_theme.add_resource_path ("/org/imladris/icons/papirus");

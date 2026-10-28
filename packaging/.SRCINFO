@@ -1,6 +1,6 @@
 pkgbase = imladris
 	pkgdesc = Polyglot Scientific & Markdown IDE with Elrond Local AI Copilot, R, Python, and Libadwaita UI
-	pkgver = 0.14.0
+	pkgver = 0.14.1
 	pkgrel = 1
 	url = https://github.com/Antux912012/imladris-next-md-editor
 	arch = x86_64
@@ -28,7 +28,7 @@ pkgbase = imladris
 	optdepends = quarto-cli-bin: Quarto document rendering
 	optdepends = pandoc: Document export to PDF, HTML, and Word
 	optdepends = libreoffice: Presentation and spreadsheet export
-	source = imladris-0.12.2.tar.gz::https://github.com/Antux912012/imladris-next-md-editor/archive/refs/tags/v0.12.2.tar.gz
+	source = imladris-0.14.1.tar.gz::https://github.com/Antux912012/imladris-next-md-editor/archive/refs/tags/v0.14.1.tar.gz
 	sha256sums = SKIP
 
 pkgname = imladris
