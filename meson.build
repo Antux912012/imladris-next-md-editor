@@ -37,6 +37,7 @@ sources = files(
   'src/ExecutionEngine.vala',
   'src/AiClient.vala',
   'src/ai/ElrondEngineController.vala',
+  'src/ai/AiCompletionProvider.vala',
   'src/McpServer.vala',
   'src/AssistantPanel.vala',
   'src/Window.vala',

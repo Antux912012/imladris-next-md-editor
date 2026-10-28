@@ -156,6 +156,55 @@ namespace Imladris.UI {
             elrond_group.add (elrond_enable_row);
             elrond_group.add (elrond_level_row);
 
+            var inline_autocomplete_row = new Adw.SwitchRow () {
+                title = "Inline AI Autocomplete",
+                subtitle = "Suggest code completions inline as you type in R, Python, SQL, and Markdown",
+                active = settings.inline_completion_enabled
+            };
+            inline_autocomplete_row.notify["active"].connect (() => {
+                settings.inline_completion_enabled = inline_autocomplete_row.active;
+            });
+            elrond_group.add (inline_autocomplete_row);
+
+            // Model file chooser row
+            var model_row = new Adw.ActionRow () {
+                title = "Local Model File (.gguf)",
+                subtitle = (settings.custom_model_path.length > 0)
+                    ? settings.custom_model_path
+                    : "Default: %s (Auto-detected)".printf (settings.active_model_name)
+            };
+            var btn_browse_model = new Gtk.Button.with_label ("Browse...") {
+                valign = Gtk.Align.CENTER
+            };
+            btn_browse_model.clicked.connect (() => {
+                var file_dialog = new Gtk.FileDialog () {
+                    title = "Select Local GGUF Model File"
+                };
+                var filter = new Gtk.FileFilter ();
+                filter.name = "GGUF Models (*.gguf)";
+                filter.add_pattern ("*.gguf");
+                var filters = new GLib.ListStore (typeof (Gtk.FileFilter));
+                filters.append (filter);
+                file_dialog.filters = filters;
+
+                file_dialog.open.begin (this.get_root () as Gtk.Window, null, (obj, res) => {
+                    try {
+                        var file = file_dialog.open.end (res);
+                        if (file != null) {
+                            string path = file.get_path ();
+                            settings.custom_model_path = path;
+                            string bname = file.get_basename ();
+                            if (bname.has_suffix (".gguf")) {
+                                settings.active_model_name = bname.substring (0, bname.length - 5);
+                            }
+                            model_row.subtitle = path;
+                        }
+                    } catch (Error e) {}
+                });
+            });
+            model_row.add_suffix (btn_browse_model);
+            elrond_group.add (model_row);
+
             // Hardware Acceleration Backend Selector (Vulkan vs NVIDIA CUDA)
             var backend_row = new Adw.ActionRow () {
                 title = "Hardware Acceleration Backend",

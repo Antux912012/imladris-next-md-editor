@@ -412,7 +412,12 @@ namespace Imladris {
         }
 
         public void trigger_elrond_assistance () {
-            trigger_ai_assistant ();
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.show_inline_prompt_popover ();
+            } else {
+                trigger_ai_assistant ();
+            }
         }
 
         public void add_document_tab (string title, string lang_id, string? initial_text = null, GLib.File? file = null) {

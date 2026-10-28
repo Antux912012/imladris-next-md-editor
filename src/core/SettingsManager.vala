@@ -201,6 +201,8 @@ namespace Imladris.Core {
         private AiAssistanceLevel _elrond_level = AiAssistanceLevel.MEDIUM;
         private ElrondBackend _elrond_backend = ElrondBackend.VULKAN;
         private string _active_model_name = "Qwen2.5-Coder-3B";
+        private bool _inline_completion_enabled = true;
+        private string _custom_model_path = "";
         private KeyFile config_keyfile = new KeyFile ();
         private string config_ini_path = "";
 
@@ -242,6 +244,28 @@ namespace Imladris.Core {
             set {
                 if (_active_model_name != value) {
                     _active_model_name = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public bool inline_completion_enabled {
+            get { return _inline_completion_enabled; }
+            set {
+                if (_inline_completion_enabled != value) {
+                    _inline_completion_enabled = value;
+                    save_ini ();
+                    ai_settings_changed ();
+                }
+            }
+        }
+
+        public string custom_model_path {
+            get { return _custom_model_path; }
+            set {
+                if (_custom_model_path != value) {
+                    _custom_model_path = value;
                     save_ini ();
                     ai_settings_changed ();
                 }
@@ -365,6 +389,12 @@ namespace Imladris.Core {
                     if (config_keyfile.has_key ("ElrondAI", "model_name")) {
                         _active_model_name = config_keyfile.get_string ("ElrondAI", "model_name");
                     }
+                    if (config_keyfile.has_key ("ElrondAI", "inline_completion")) {
+                        _inline_completion_enabled = config_keyfile.get_boolean ("ElrondAI", "inline_completion");
+                    }
+                    if (config_keyfile.has_key ("ElrondAI", "custom_model_path")) {
+                        _custom_model_path = config_keyfile.get_string ("ElrondAI", "custom_model_path");
+                    }
                 } catch (Error e) {}
             }
         }
@@ -380,6 +410,8 @@ namespace Imladris.Core {
                 config_keyfile.set_integer ("ElrondAI", "level", (int) _elrond_level);
                 config_keyfile.set_integer ("ElrondAI", "backend", (int) _elrond_backend);
                 config_keyfile.set_string ("ElrondAI", "model_name", _active_model_name);
+                config_keyfile.set_boolean ("ElrondAI", "inline_completion", _inline_completion_enabled);
+                config_keyfile.set_string ("ElrondAI", "custom_model_path", _custom_model_path);
                 FileUtils.set_contents (config_ini_path, config_keyfile.to_data ());
             } catch (Error e) {}
         }

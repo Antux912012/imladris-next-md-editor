@@ -49,7 +49,65 @@ namespace Imladris.AI {
             return _instance;
         }
 
+        private static string? scan_dir_for_gguf (string dir_path, int max_depth = 2) {
+            if (!FileUtils.test (dir_path, FileTest.IS_DIR)) {
+                return null;
+            }
+            try {
+                var dir = Dir.open (dir_path, 0);
+                string? name = null;
+                while ((name = dir.read_name ()) != null) {
+                    string full_path = GLib.Path.build_filename (dir_path, name);
+                    if (FileUtils.test (full_path, FileTest.IS_DIR) && max_depth > 1) {
+                        string? sub_found = scan_dir_for_gguf (full_path, max_depth - 1);
+                        if (sub_found != null) return sub_found;
+                    } else if (name.has_suffix (".gguf")) {
+                        return full_path;
+                    }
+                }
+            } catch (Error e) {}
+            return null;
+        }
+
+        public static string? find_any_available_model () {
+            var settings = SettingsManager.get_default ();
+            if (settings.custom_model_path != "" && FileUtils.test (settings.custom_model_path, FileTest.EXISTS)) {
+                return settings.custom_model_path;
+            }
+
+            string imladris_default = GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "models", DEFAULT_MODEL_FILENAME);
+            if (FileUtils.test (imladris_default, FileTest.EXISTS)) {
+                return imladris_default;
+            }
+
+            // Check imladris models directory for any .gguf
+            string imladris_models_dir = GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "models");
+            string? found = scan_dir_for_gguf (imladris_models_dir);
+            if (found != null) return found;
+
+            // Check LM Studio models directory
+            string lmstudio_dir = GLib.Path.build_filename (Environment.get_home_dir (), ".var", "app", "ai.lmstudio.lm-studio", ".lmstudio", "models");
+            found = scan_dir_for_gguf (lmstudio_dir, 4);
+            if (found != null) return found;
+
+            // Check HuggingFace hub cache
+            string hf_dir = GLib.Path.build_filename (Environment.get_home_dir (), ".cache", "huggingface", "hub");
+            found = scan_dir_for_gguf (hf_dir, 4);
+            if (found != null) return found;
+
+            // Check Ollama models directory
+            string ollama_dir = GLib.Path.build_filename (Environment.get_home_dir (), ".ollama", "models");
+            found = scan_dir_for_gguf (ollama_dir, 3);
+            if (found != null) return found;
+
+            return null;
+        }
+
         public string get_model_path () {
+            string? found = find_any_available_model ();
+            if (found != null) {
+                return found;
+            }
             string model_dir = GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "models");
             DirUtils.create_with_parents (model_dir, 0755);
             return GLib.Path.build_filename (model_dir, DEFAULT_MODEL_FILENAME);
@@ -73,6 +131,12 @@ namespace Imladris.AI {
             if (!FileUtils.test (model_path, FileTest.EXISTS)) {
                 bool ok = yield auto_download_default_model (model_path);
                 if (!ok) return;
+            }
+
+            // Update active model display name if custom or discovered model is used
+            string basename = GLib.Path.get_basename (model_path);
+            if (basename.has_suffix (".gguf")) {
+                settings.active_model_name = basename.substring (0, basename.length - 5);
             }
 
             yield start_preconfigured_daemon (
@@ -245,7 +309,7 @@ namespace Imladris.AI {
             string flavor_dir
         ) {
             try {
-                string script = "tar -xzf \"$1\" -C \"$2\" && find \"$2\" -mindepth 2 -type f \\( -name '*.so*' -o -name 'llama-server' \\) -exec cp -f {} \"$2/\" \\; && chmod 755 \"$2/llama-server\" && cp -f \"$2/llama-server\" \"$3/llama-server-$4\" && cp -f \"$2/llama-server\" \"$3/llama-server\" && chmod 755 \"$3/llama-server-$4\" \"$3/llama-server\" 2>/dev/null || true";
+                string script = "tar -xzf \"$1\" -C \"$2\" && find \"$2\" -mindepth 2 -type f \\( -name '*.so*' -o -name 'llama-server' \\) -exec cp -f {} \"$2/\" \\; && chmod 755 \"$2/llama-server\" && cp -f \"$2/\"*.so* \"$3/\" 2>/dev/null || true && cp -f \"$2/llama-server\" \"$3/llama-server-$4\" && cp -f \"$2/llama-server\" \"$3/llama-server\" && chmod 755 \"$3/llama-server-$4\" \"$3/llama-server\" 2>/dev/null || true";
                 string[] argv = { "sh", "-c", script, "_", tarball_path, target_subdir, data_bin_dir, flavor_dir };
 
                 var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_SILENCE | SubprocessFlags.STDERR_SILENCE);
@@ -328,15 +392,34 @@ namespace Imladris.AI {
                 "--port", active_port.to_string (),
                 "--ctx-size", ctx_size,
                 "--n-gpu-layers", ngl,
-                "--threads", threads,
-                "--flash-attn"
+                "--threads", threads
             };
 
             try {
                 var launcher = new SubprocessLauncher (SubprocessFlags.STDOUT_SILENCE | SubprocessFlags.STDERR_SILENCE);
+
+                // Build comprehensive LD_LIBRARY_PATH including all flavor subdirectories and system library paths
                 string bin_dir = GLib.Path.get_dirname (llama_bin);
+                string user_bin_dir = GLib.Path.build_filename (Environment.get_user_data_dir (), "imladris", "bin");
+                string vulkan_lib_dir = GLib.Path.build_filename (user_bin_dir, "vulkan");
+                string cuda_lib_dir = GLib.Path.build_filename (user_bin_dir, "cuda");
                 string existing_ld = Environment.get_variable ("LD_LIBRARY_PATH") ?? "";
-                launcher.setenv ("LD_LIBRARY_PATH", bin_dir + (existing_ld.length > 0 ? ":" + existing_ld : ""), true);
+
+                string custom_ld = string.join (":",
+                    bin_dir,
+                    vulkan_lib_dir,
+                    cuda_lib_dir,
+                    user_bin_dir,
+                    "/app/lib",
+                    "/usr/local/lib",
+                    "/usr/lib64",
+                    existing_ld
+                );
+                launcher.setenv ("LD_LIBRARY_PATH", custom_ld, true);
+
+                status_updated ("Starting %s engine...".printf (backend.get_display_name ()), true, 0.2);
+                statusbar_telemetry_updated ("Elrond: Starting...", true);
+
                 llama_proc = launcher.spawnv (argv);
                 daemon_pid_str = llama_proc.get_identifier ();
                 running_on_vulkan = (backend == ElrondBackend.CUDA) ? true : try_vulkan;
@@ -350,23 +433,72 @@ namespace Imladris.AI {
                     cached_model_size_gb = 2.0;
                 }
 
-                // Health check after 600ms: if Vulkan failed on older GPU, automatically fall back to CPU
-                Timeout.add (600, () => {
-                    if (llama_proc != null && llama_proc.get_if_exited () && try_vulkan && backend == ElrondBackend.VULKAN) {
-                        start_preconfigured_daemon.begin (model_path, false, level);
-                    } else if (llama_proc != null && !llama_proc.get_if_exited ()) {
-                        is_ready = true;
-                        string accel = (backend == ElrondBackend.CUDA) ? "NVIDIA CUDA" : (running_on_vulkan ? "Vulkan GPU" : "CPU Mode");
-                        status_updated ("Elrond Active (%s • Level: %s)".printf (accel, level.to_string ()), false, 1.0);
-                        update_memory_telemetry ();
-                        start_telemetry_polling ();
-                    }
+                // Schedule health check polling
+                Timeout.add (250, () => {
+                    poll_daemon_health (model_path, try_vulkan, level, 1);
                     return Source.REMOVE;
                 });
             } catch (Error e) {
                 is_ready = false;
                 status_updated ("Failed to start Elrond: %s".printf (e.message), false, 0.0);
                 statusbar_telemetry_updated ("Elrond AI: Error", false);
+            }
+        }
+
+        private void poll_daemon_health (string model_path, bool try_vulkan, AiAssistanceLevel level, int poll_count) {
+            if (llama_proc == null) {
+                return;
+            }
+
+            var backend = SettingsManager.get_default ().elrond_backend;
+
+            if (llama_proc.get_if_exited ()) {
+                int code = llama_proc.get_exit_status ();
+                if (try_vulkan && backend == ElrondBackend.VULKAN) {
+                    status_updated ("Vulkan GPU mode failed (code %d), falling back to CPU...".printf (code), true, 0.4);
+                    start_preconfigured_daemon.begin (model_path, false, level);
+                } else {
+                    is_ready = false;
+                    status_updated ("Elrond engine stopped (exit code %d)".printf (code), false, 0.0);
+                    statusbar_telemetry_updated ("Elrond AI: Error", false);
+                }
+                return;
+            }
+
+            int max_polls = 40;
+            check_server_health.begin ((obj, res) => {
+                bool healthy = check_server_health.end (res);
+                if (healthy) {
+                    is_ready = true;
+                    string accel = (backend == ElrondBackend.CUDA) ? "NVIDIA CUDA" : (running_on_vulkan ? "Vulkan GPU" : "CPU Mode");
+                    status_updated ("Elrond Active (%s • Level: %s)".printf (accel, level.to_string ()), false, 1.0);
+                    update_memory_telemetry ();
+                    start_telemetry_polling ();
+                } else if (poll_count < max_polls) {
+                    status_updated ("Loading model into memory (attempt %d/%d)...".printf (poll_count, max_polls), true, 0.2 + 0.7 * ((double) poll_count / (double) max_polls));
+                    Timeout.add (250, () => {
+                        poll_daemon_health (model_path, try_vulkan, level, poll_count + 1);
+                        return Source.REMOVE;
+                    });
+                } else {
+                    if (try_vulkan && backend == ElrondBackend.VULKAN) {
+                        start_preconfigured_daemon.begin (model_path, false, level);
+                    } else {
+                        is_ready = false;
+                        status_updated ("Elrond initialization timed out after 10s", false, 0.0);
+                        statusbar_telemetry_updated ("Elrond AI: Timeout", false);
+                    }
+                }
+            });
+        }
+
+        private async bool check_server_health () {
+            try {
+                var msg = new Soup.Message ("GET", "http://127.0.0.1:%u/health".printf (active_port));
+                yield soup_session.send_and_read_async (msg, Priority.DEFAULT, null);
+                return (msg.status_code == Soup.Status.OK);
+            } catch (Error e) {
+                return false;
             }
         }
 
@@ -521,6 +653,90 @@ Analyze the report narrative and active dataframe columns to suggest the optimal
                 .get_object_element (0)
                 .get_object_member ("message")
                 .get_string_member ("content");
+        }
+
+        private static string clean_completion_output (string raw) {
+            string text = raw.strip ();
+            if (text.has_prefix ("```")) {
+                int first_nl = text.index_of ("\n");
+                if (first_nl != -1) {
+                    text = text.substring (first_nl + 1);
+                }
+                if (text.has_suffix ("```")) {
+                    text = text.substring (0, text.length - 3);
+                }
+            }
+            return text.strip ();
+        }
+
+        public async string complete_code_async (
+            string prefix,
+            string suffix,
+            string language = "",
+            Cancellable? cancellable = null
+        ) throws Error {
+            if (!is_ready) {
+                throw new IOError.NOT_CONNECTED ("Elrond Assistance is not running.");
+            }
+
+            string system_prompt = "You are an expert AI code completion engine for %s. Return ONLY the code continuation to fill at the cursor. Do not wrap in markdown quotes, backticks, or conversational text.".printf (language.length > 0 ? language : "R, Python, and SQL");
+            string user_prompt = "[PREFIX]\n%s\n[CURSOR]\n%s\n[COMPLETION]".printf (prefix, suffix);
+
+            var builder = new Json.Builder ();
+            builder.begin_object ();
+            builder.set_member_name ("temperature");
+            builder.add_double_value (0.1);
+            builder.set_member_name ("max_tokens");
+            builder.add_int_value (128);
+            builder.set_member_name ("messages");
+            builder.begin_array ();
+
+            builder.begin_object ();
+            builder.set_member_name ("role");
+            builder.add_string_value ("system");
+            builder.set_member_name ("content");
+            builder.add_string_value (system_prompt);
+            builder.end_object ();
+
+            builder.begin_object ();
+            builder.set_member_name ("role");
+            builder.add_string_value ("user");
+            builder.set_member_name ("content");
+            builder.add_string_value (user_prompt);
+            builder.end_object ();
+
+            builder.end_array ();
+            builder.end_object ();
+
+            var gen = new Json.Generator ();
+            gen.set_root (builder.get_root ());
+            string payload = gen.to_data (null);
+
+            var msg = new Soup.Message ("POST", "http://127.0.0.1:%u/v1/chat/completions".printf (active_port));
+            msg.set_request_body_from_bytes ("application/json", new Bytes (payload.data));
+
+            Bytes bytes = yield soup_session.send_and_read_async (msg, Priority.DEFAULT, cancellable);
+            var parser = new Json.Parser ();
+            yield parser.load_from_stream_async (new MemoryInputStream.from_bytes (bytes), cancellable);
+
+            var root = parser.get_root ();
+            if (root == null || root.get_node_type () != Json.NodeType.OBJECT) {
+                return "";
+            }
+
+            var root_obj = root.get_object ();
+            if (!root_obj.has_member ("choices")) return "";
+
+            var choices = root_obj.get_array_member ("choices");
+            if (choices.get_length () == 0) return "";
+
+            var choice = choices.get_object_element (0);
+            if (!choice.has_member ("message")) return "";
+
+            var message = choice.get_object_member ("message");
+            if (!message.has_member ("content")) return "";
+
+            return clean_completion_output (message.get_string_member ("content"));
         }
     }
 }

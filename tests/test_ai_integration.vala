@@ -6,6 +6,7 @@ using Imladris.Core;
 namespace Imladris.Tests {
 
     public static int main (string[] args) {
+        GLib.Environment.set_variable ("GSETTINGS_BACKEND", "memory", true);
         GLib.Test.init (ref args);
 
         GLib.Test.add_func ("/ai/provider_metadata", test_ai_provider_metadata);

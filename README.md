@@ -61,7 +61,10 @@ A `.mallorn` file is RStudio's `.Rproj` DCF syntax with a few namespaced `Imladr
 ### "Write with Elrond Assistance (AI)" — Zero-Config Local Copilot
 Imladris features a built-in, zero-configuration local AI coding and data science copilot branded as **Elrond Assistance (AI)**, specialized in **R (tidyverse, ggplot2), Python (pandas, numpy, matplotlib), SQL, HTML, and Quarto/RMarkdown data analysis**:
 - **Zero-Setup "Click-and-Run"**: Enable Elrond with a single switch in **Preferences → AI & Elrond**. If missing, the optimal vertical coding model (`Qwen2.5-Coder-3B`) is automatically bootstrapped in the background with live download progress.
+- **Inline AI Autocompletion**: Real-time inline code completions as you type in R, Python, SQL, and Markdown powered by GtkSourceView completion providers (enabled by default, configurable in Preferences).
+- **Custom GGUF Model Support & Auto-Discovery**: Choose your own custom `.gguf` file via the file picker in Preferences, or let Elrond auto-discover local models already installed by LM Studio, HuggingFace cache, Ollama, or Imladris.
 - **Dual Hardware Acceleration (Vulkan & CUDA)**: Toggle seamlessly between **Vulkan GPU compute** (default, universally compatible across Intel, AMD, and NVIDIA) and dedicated **NVIDIA CUDA** backends, falling back cleanly to multi-threaded CPU execution if no dedicated GPU is detected.
+- **Robust Daemon Health Handshake**: Resilient HTTP `/health` polling daemon startup with dynamic `LD_LIBRARY_PATH` loading for bundled Vulkan/CUDA libraries, avoiding stalls or silent failures.
 - **3-Stop Assistance Level Slider**: An intuitive discrete slider in Preferences lets you tune the copilot interaction:
   - **Low** *(On-Demand Only)*: Activated strictly via the *"Write with Elrond Assistance"* button or `Ctrl+Shift+E` / `Ctrl+Space`. Uses a lean `--ctx-size 2048` profile.
   - **Medium** *(Smart Autocomplete)*: Debounced inline code completions with active dataframe column awareness (`mtcars`, `df.dtypes`).
@@ -70,7 +73,7 @@ Imladris features a built-in, zero-configuration local AI coding and data scienc
 - **Non-Blocking Background Auto-Installer**: If `llama-server` is not installed on `$PATH`, clicking *"Install Engine Now"* downloads and installs a standalone binary to `~/.local/share/imladris/bin/` asynchronously without locking the UI.
 - **Live Status Bar Telemetry Monitor**: Positioned directly next to the word/line counter in the bottom status bar, continuously displaying live memory metrics every 2 seconds with zero main-thread I/O blocking:
   > `Elrond running on Qwen2.5-Coder-3B - 0.24 GB RAM / 2.08 GB VRAM used`
-- **Editor Context Menu & Shortcut**: Right-click anywhere in the editor or press `Ctrl+Shift+E` to trigger **"Write with Elrond Assistance (AI)"**.
+- **Editor Context Menu & Shortcut**: Right-click anywhere in the editor or press `Ctrl+Shift+E` to trigger the inline **"Write with Elrond Assistance (AI)"** generation popover.
 
 #### ⚠️ Important Notice: Local AI Requirements (`llama.cpp`)
 In order to use the built-in local AI functions (Elrond Assistance, offline statistical coding, and local telemetry), **`llama.cpp`** (`llama-server`) is required on your system.

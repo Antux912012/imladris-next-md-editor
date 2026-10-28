@@ -43,6 +43,7 @@ writing environment for technical authors, data scientists, and researchers.
 %meson_install
 
 %check
+export GSETTINGS_BACKEND=memory
 %meson_test
 
 %files

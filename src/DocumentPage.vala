@@ -587,6 +587,9 @@ print("Python Interpreter:", sys.version.split()[0])
         private void setup_completion () {
             var completion = source_view.get_completion ();
 
+            var ai_provider = new AI.AiCompletionProvider ();
+            completion.add_provider (ai_provider);
+
             var words_provider = new GtkSource.CompletionWords ("Document Vocabulary");
             words_provider.register (source_buffer);
             words_provider.minimum_word_size = 2;
@@ -596,6 +599,141 @@ print("Python Interpreter:", sys.version.split()[0])
             var snippets_provider = new GtkSource.CompletionSnippets ();
             snippets_provider.priority = 20;
             completion.add_provider (snippets_provider);
+        }
+
+        public string get_selected_text () {
+            Gtk.TextIter start, end;
+            if (source_buffer.get_selection_bounds (out start, out end)) {
+                return source_buffer.get_text (start, end, false);
+            }
+            return "";
+        }
+
+        public void insert_ai_code_at_cursor (string code) {
+            string cleaned = code.strip ();
+            source_buffer.begin_user_action ();
+            Gtk.TextIter start, end;
+            if (source_buffer.get_selection_bounds (out start, out end)) {
+                source_buffer.delete (ref start, ref end);
+                source_buffer.insert (ref start, cleaned, -1);
+            } else {
+                source_buffer.insert_at_cursor ("\n" + cleaned + "\n", -1);
+            }
+            source_buffer.end_user_action ();
+        }
+
+        public void show_inline_prompt_popover () {
+            Gtk.TextIter cursor_iter;
+            source_buffer.get_iter_at_mark (out cursor_iter, source_buffer.get_insert ());
+            Gdk.Rectangle rect;
+            source_view.get_iter_location (cursor_iter, out rect);
+
+            int win_x, win_y;
+            source_view.buffer_to_window_coords (Gtk.TextWindowType.WIDGET, rect.x, rect.y, out win_x, out win_y);
+            var pointing_rect = Gdk.Rectangle () {
+                x = win_x,
+                y = win_y,
+                width = 1,
+                height = rect.height
+            };
+
+            var popover = new Gtk.Popover ();
+            popover.set_parent (source_view);
+            popover.set_pointing_to (pointing_rect);
+            popover.has_arrow = true;
+            popover.autohide = true;
+
+            var content_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 8) {
+                margin_top = 8,
+                margin_bottom = 8,
+                margin_start = 8,
+                margin_end = 8,
+                width_request = 380
+            };
+
+            var header_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6);
+            var icon = new Gtk.Image.from_icon_name ("system-run-symbolic");
+            var title_lbl = new Gtk.Label ("Write with Elrond Assistance (AI)") {
+                css_classes = { "heading" },
+                hexpand = true,
+                xalign = 0.0f
+            };
+            header_box.append (icon);
+            header_box.append (title_lbl);
+            content_box.append (header_box);
+
+            var prompt_entry = new Gtk.Entry () {
+                placeholder_text = "Prompt Elrond (e.g. plot scatter, clean dataframe, linear model)...",
+                hexpand = true
+            };
+            content_box.append (prompt_entry);
+
+            var actions_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6) {
+                halign = Gtk.Align.END
+            };
+            var spinner = new Gtk.Spinner () { visible = false };
+            var btn_generate = new Gtk.Button.with_label ("Generate & Insert") {
+                css_classes = { "suggested-action" }
+            };
+
+            actions_box.append (spinner);
+            actions_box.append (btn_generate);
+            content_box.append (actions_box);
+
+            SourceFunc execute_generation = () => {
+                string prompt = prompt_entry.text.strip ();
+                if (prompt.length == 0) return Source.REMOVE;
+
+                prompt_entry.sensitive = false;
+                btn_generate.sensitive = false;
+                spinner.visible = true;
+                spinner.start ();
+
+                string sel = get_selected_text ();
+                string doc_lang = this.doc_type;
+                string doc_text = source_buffer.text;
+
+                var elrond = Imladris.AI.ElrondEngineController.get_default ();
+                if (elrond.is_ready) {
+                    elrond.write_with_elrond.begin (doc_lang, doc_text, "", prompt + (sel.length > 0 ? "\n[Selected Code]:\n" + sel : ""), (obj, res) => {
+                        spinner.stop ();
+                        spinner.visible = false;
+                        popover.popdown ();
+                        try {
+                            string generated = elrond.write_with_elrond.end (res);
+                            insert_ai_code_at_cursor (generated);
+                        } catch (Error e) {
+                            warning ("Elrond inline generation error: %s", e.message);
+                        }
+                    });
+                } else {
+                    var ai_client = new AiClient ();
+                    string sys_prompt = "You are Elrond Assistance (AI), an expert scientific and coding assistant. Generate clean, correct code or statistical functions. Return only the code or visualization chunk.";
+                    ai_client.send_chat_completion_async.begin (sys_prompt, prompt + (sel.length > 0 ? "\n[Selected Code]:\n" + sel : ""), null, (obj, res) => {
+                        spinner.stop ();
+                        spinner.visible = false;
+                        popover.popdown ();
+                        try {
+                            string generated = ai_client.send_chat_completion_async.end (res);
+                            insert_ai_code_at_cursor (generated);
+                        } catch (Error e) {
+                            warning ("AI client inline generation error: %s", e.message);
+                        }
+                    });
+                }
+                return Source.REMOVE;
+            };
+
+            prompt_entry.activate.connect (() => {
+                execute_generation ();
+            });
+            btn_generate.clicked.connect (() => {
+                execute_generation ();
+            });
+
+            popover.set_child (content_box);
+            popover.popup ();
+            prompt_entry.grab_focus ();
         }
 
         public void apply_tag_or_syntax (string tag_name, string md_wrapper) {
