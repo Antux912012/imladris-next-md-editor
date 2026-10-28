@@ -157,7 +157,7 @@ namespace Imladris {
             dock_layout_state.load_from_disk ();
 
             panel_registry = new PersistentPanelRegistry (this, parent_window);
-            rstudio_dock_grid = new RStudioDockGrid (dock_layout_state, panel_registry);
+            rstudio_dock_grid = new RStudioDockGrid (dock_layout_state, panel_registry, parent_window);
 
             // 4. Build Apostrophe Shell (Single-Pane / Clean Split Writer View)
             paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
@@ -878,8 +878,18 @@ print("Python Interpreter:", sys.version.split()[0])
         }
 
         public void emit_buffer_stats () {
-            string txt = source_buffer.text.strip ();
-            int words = txt.length == 0 ? 0 : txt.split_set (" \n\t\r").length;
+            string txt = source_buffer.text;
+            int words = 0;
+            bool in_word = false;
+            for (int i = 0; i < txt.length; i++) {
+                char c = txt[i];
+                if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
+                    in_word = false;
+                } else if (!in_word) {
+                    in_word = true;
+                    words++;
+                }
+            }
             int lines = source_buffer.get_line_count ();
             stats_changed (words, lines, doc_type.up ());
         }

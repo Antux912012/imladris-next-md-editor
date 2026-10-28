@@ -84,6 +84,18 @@ namespace Imladris.Plugins {
             return string.joinv (", ", parts.to_array ());
         }
 
+        public static bool is_valid_plugin_id (string id) {
+            if (id.length == 0 || id.length > 64) return false;
+            if (id.contains ("..") || id.contains ("/") || id.contains ("\\")) return false;
+            for (int i = 0; i < id.length; i++) {
+                char c = id[i];
+                if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_')) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         public static PluginManifest? from_json (string json_content) {
             try {
                 var parser = new Json.Parser ();
@@ -95,7 +107,7 @@ namespace Imladris.Plugins {
                 var obj = root.get_object ();
 
                 var m = new PluginManifest ();
-                m.id = obj.has_member ("id") ? obj.get_string_member ("id") : "";
+                m.id = obj.has_member ("id") ? obj.get_string_member ("id").strip () : "";
                 m.name = obj.has_member ("name") ? obj.get_string_member ("name") : m.id;
                 m.version = obj.has_member ("version") ? obj.get_string_member ("version") : "1.0.0";
                 m.author = obj.has_member ("author") ? obj.get_string_member ("author") : "Unknown";
@@ -112,7 +124,10 @@ namespace Imladris.Plugins {
                     }
                 }
 
-                if (m.id.strip () == "") return null;
+                if (!is_valid_plugin_id (m.id)) {
+                    debug ("Invalid or unsafe plugin id: '%s'", m.id);
+                    return null;
+                }
                 return m;
             } catch (GLib.Error e) {
                 debug ("Failed to parse plugin manifest: %s", e.message);
@@ -331,7 +346,7 @@ namespace Imladris.Plugins {
                     unowned PluginInstance plugin = (PluginInstance) instance;
                     if (jsc_args != null && jsc_args.length > 0) {
                         string asset_rel = jsc_args.get (0).to_string ();
-                        if (!asset_rel.contains ("..")) {
+                        if (!asset_rel.has_prefix ("/") && !asset_rel.contains ("..")) {
                             string asset_path = Path.build_filename (plugin.dir_path, asset_rel);
                             if (FileUtils.test (asset_path, FileTest.EXISTS)) {
                                 try {
@@ -1010,12 +1025,15 @@ function onunload() {
             );
             FileInfo? info = null;
             while ((info = enumerator.next_file ()) != null) {
+                if (info.get_file_type () == FileType.SYMBOLIC_LINK) {
+                    continue; // Skip symlinks for package integrity and security
+                }
                 var child_src = source.get_child (info.get_name ());
                 var child_dest = destination.get_child (info.get_name ());
                 if (info.get_file_type () == FileType.DIRECTORY) {
                     copy_directory_recursive (child_src, child_dest);
                 } else {
-                    child_src.copy (child_dest, FileCopyFlags.OVERWRITE);
+                    child_src.copy (child_dest, FileCopyFlags.OVERWRITE | FileCopyFlags.NOFOLLOW_SYMLINKS);
                 }
             }
         }

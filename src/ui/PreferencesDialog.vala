@@ -133,7 +133,8 @@ namespace Imladris.UI {
             level_scale.add_mark (2.0, Gtk.PositionType.BOTTOM, "High");
             level_scale.set_value ((double) settings.elrond_level);
 
-            void update_level_subtitle (int val) {
+            GLib.Func<int?> update_level_subtitle = (val_boxed) => {
+                int val = val_boxed != null ? (int) val_boxed : 0;
                 switch (val) {
                     case 0:
                         elrond_level_row.subtitle = "Low: On-Demand Only (Manual 'Write with Elrond' trigger)";
@@ -148,7 +149,7 @@ namespace Imladris.UI {
                         elrond_level_row.subtitle = "Select assistance level";
                         break;
                 }
-            }
+            };
             update_level_subtitle ((int) settings.elrond_level);
 
             level_scale.value_changed.connect (() => {
@@ -591,11 +592,12 @@ namespace Imladris.UI {
             }
 
             foreach (var p in pm.plugins.values) {
+                string p_icon = (p.manifest.icon != null && p.manifest.icon != "") ? p.manifest.icon : "application-x-addon-symbolic";
                 var exp_row = new Adw.ExpanderRow () {
                     title = p.manifest.name,
-                    subtitle = @"v$(p.manifest.version) by $(p.manifest.author) • $(p.manifest.license)",
-                    icon_name = (p.manifest.icon != null && p.manifest.icon != "") ? p.manifest.icon : "application-x-addon-symbolic"
+                    subtitle = @"v$(p.manifest.version) by $(p.manifest.author) • $(p.manifest.license)"
                 };
+                exp_row.add_prefix (new Gtk.Image.from_icon_name (p_icon));
 
                 var toggle = new Gtk.Switch () {
                     valign = Gtk.Align.CENTER,

@@ -5,6 +5,7 @@ namespace Imladris.UI {
     public class DockQuadrant : Gtk.Box {
 
         public QuadrantId quad_id { get; private set; }
+        public signal void popout_tab_requested (PanelId pid);
         private unowned RStudioDockLayoutState dock_state;
         private unowned PersistentPanelRegistry registry;
 
@@ -79,6 +80,53 @@ namespace Imladris.UI {
                 dock_state.toggle_maximize (quad_id);
             });
             controls_box.append (max_btn);
+
+            var popout_btn = new Gtk.Button.from_icon_name ("window-new-symbolic") {
+                tooltip_text = "Pop-out Active Tab into Floating Window"
+            };
+            popout_btn.add_css_class ("flat");
+            popout_btn.add_css_class ("DockControlBtn");
+            popout_btn.clicked.connect (() => {
+                var qc = dock_state.quadrants.get (quad_id);
+                if (qc != null && qc.active_tab != null) {
+                    popout_tab_requested (qc.active_tab);
+                }
+            });
+            controls_box.append (popout_btn);
+
+            var move_btn = new Gtk.MenuButton () {
+                icon_name = "view-more-symbolic",
+                tooltip_text = "Move Active Tab to Another Quadrant..."
+            };
+            move_btn.add_css_class ("flat");
+            move_btn.add_css_class ("DockControlBtn");
+
+            var popover = new Gtk.Popover ();
+            var pop_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 4) {
+                margin_start = 6, margin_end = 6, margin_top = 6, margin_bottom = 6
+            };
+            pop_box.append (new Gtk.Label ("Move active tab to:") { css_classes = { "dim-label", "caption" }, xalign = 0 });
+
+            QuadrantId[] dest_qids = { QuadrantId.Q1_TOP_LEFT, QuadrantId.Q2_BOTTOM_LEFT, QuadrantId.Q3_TOP_RIGHT, QuadrantId.Q4_BOTTOM_RIGHT };
+            string[] dest_labels = { "Top-Left (Editor)", "Bottom-Left (Console)", "Top-Right (Environment)", "Bottom-Right (Outputs)" };
+
+            for (int d = 0; d < dest_qids.length; d++) {
+                var target_qid = dest_qids[d];
+                string tname = dest_labels[d];
+                var b = new Gtk.Button.with_label (tname) { halign = Gtk.Align.START };
+                b.add_css_class ("flat");
+                b.clicked.connect (() => {
+                    popover.popdown ();
+                    var qc = dock_state.quadrants.get (quad_id);
+                    if (qc != null && qc.active_tab != null && target_qid != quad_id) {
+                        dock_state.move_tab (quad_id, target_qid, qc.active_tab);
+                    }
+                });
+                pop_box.append (b);
+            }
+            popover.set_child (pop_box);
+            move_btn.set_popover (popover);
+            controls_box.append (move_btn);
 
             header_box.append (controls_box);
             this.append (header_box);
@@ -267,7 +315,9 @@ namespace Imladris.UI {
     public class RStudioDockGrid : Gtk.Box {
 
         public RStudioDockLayoutState dock_state { get; private set; }
+        public WorkspaceDockManager dock_manager { get; private set; }
         private unowned PersistentPanelRegistry registry;
+        private unowned Window? parent_window;
 
         private Gtk.Overlay root_overlay;
         private Gtk.Paned main_hpaned;
@@ -282,10 +332,12 @@ namespace Imladris.UI {
         private double drag_start_right_px = 0;
         private bool syncing_ratios = false;
 
-        public RStudioDockGrid (RStudioDockLayoutState state, PersistentPanelRegistry reg) {
+        public RStudioDockGrid (RStudioDockLayoutState state, PersistentPanelRegistry reg, Window? win = null) {
             Object (orientation: Gtk.Orientation.VERTICAL, spacing: 0);
             this.dock_state = state;
             this.registry = reg;
+            this.parent_window = win;
+            this.dock_manager = new WorkspaceDockManager (state, reg, win);
             this.hexpand = true;
             this.vexpand = true;
             this.add_css_class ("rstudio-dock-grid");
@@ -298,7 +350,11 @@ namespace Imladris.UI {
 
             quadrant_widgets = new Gee.HashMap<QuadrantId, DockQuadrant> ();
             foreach (var qid in QuadrantId.all ()) {
-                quadrant_widgets.set (qid, new DockQuadrant (qid, dock_state, registry));
+                var qw = new DockQuadrant (qid, dock_state, registry);
+                qw.popout_tab_requested.connect ((pid) => {
+                    dock_manager.undock_panel (pid);
+                });
+                quadrant_widgets.set (qid, qw);
             }
 
             // Build 2x2 Resizable Split Grid
@@ -448,16 +504,36 @@ namespace Imladris.UI {
                 return;
             }
 
-            // Normal 4-Quadrant view
+            // Normal Workbench view (check topology)
             left_vpaned.visible = true;
             right_vpaned.visible = true;
-            center_crosshair.visible = true;
 
-            foreach (var qid in QuadrantId.all ()) {
-                var qw = quadrant_widgets.get (qid);
-                if (qw != null) {
-                    qw.visible = true;
-                    qw.sync_from_state ();
+            if (dock_state.topology == LayoutTopology.LEFT_TALL_3) {
+                center_crosshair.visible = false;
+                foreach (var qid in QuadrantId.all ()) {
+                    var qw = quadrant_widgets.get (qid);
+                    if (qw != null) {
+                        qw.visible = (qid != QuadrantId.Q2_BOTTOM_LEFT);
+                        if (qw.visible) qw.sync_from_state ();
+                    }
+                }
+            } else if (dock_state.topology == LayoutTopology.RIGHT_TALL_3) {
+                center_crosshair.visible = false;
+                foreach (var qid in QuadrantId.all ()) {
+                    var qw = quadrant_widgets.get (qid);
+                    if (qw != null) {
+                        qw.visible = (qid != QuadrantId.Q3_TOP_RIGHT);
+                        if (qw.visible) qw.sync_from_state ();
+                    }
+                }
+            } else {
+                center_crosshair.visible = true;
+                foreach (var qid in QuadrantId.all ()) {
+                    var qw = quadrant_widgets.get (qid);
+                    if (qw != null) {
+                        qw.visible = true;
+                        qw.sync_from_state ();
+                    }
                 }
             }
 

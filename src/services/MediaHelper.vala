@@ -83,7 +83,7 @@ namespace Imladris.Services {
                 if (needs_copy) {
                     var src_f = File.new_for_path (src_path);
                     var dst_f = File.new_for_path (dest_path);
-                    src_f.copy (dst_f, FileCopyFlags.OVERWRITE, null, null);
+                    src_f.copy (dst_f, FileCopyFlags.OVERWRITE | FileCopyFlags.NOFOLLOW_SYMLINKS, null, null);
                     final_file = dst_f;
                 }
             }

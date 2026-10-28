@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.13.0',
+  version: '0.14.0',
   default_options: ['warning_level=1']
 )
 
@@ -61,6 +61,11 @@ sources = files(
   'src/core/layout/DockTypes.vala',
   'src/ui/PersistentPanelRegistry.vala',
   'src/ui/RStudioDockGrid.vala',
+  'src/ui/DataGridViewer.vala',
+  'src/ui/EnvironmentController.vala',
+  'src/ui/ElrondChatPanel.vala',
+  'src/ui/LayoutSerializer.vala',
+  'src/ui/WorkspaceDockManager.vala',
   'src/ui/new_project_dialog.vala',
   'src/ui/PackagesRibbonBar.vala',
   'src/ui/InlineChunkOutputWidget.vala',
@@ -180,5 +185,36 @@ plugin_test_exe = executable('test_plugin_engine',
 )
 
 test('plugin_engine_tests', plugin_test_exe, timeout: 30)
+
+dock_test_sources = files(
+  'tests/test_dock_environment.vala',
+  'src/core/frontmatter_parser.vala',
+  'src/core/notebook_serializer.vala',
+  'src/core/project_scaffolder.vala',
+  'src/core/MallornManager.vala',
+  'src/adapters/DocumentAdapter.vala',
+  'src/services/SandboxController.vala',
+  'src/services/PersistentSessionManager.vala',
+  'src/services/ExportService.vala',
+  'src/services/MediaHelper.vala',
+  'src/core/ChunkParser.vala',
+  'src/console/ReplBridge.vala',
+  'src/editor/ChunkExecutionEngine.vala',
+  'src/core/PlatformUtils.vala',
+  'src/core/ToolchainManager.vala',
+  'src/core/layout/DockTypes.vala',
+  'src/ui/LayoutSerializer.vala',
+  'src/ui/DataGridViewer.vala',
+  'src/ui/EnvironmentController.vala',
+)
+
+dock_test_exe = executable('test_dock_environment',
+  dock_test_sources,
+  dependencies: deps,
+  vala_args: ['--target-glib=2.76'],
+)
+
+test('dock_environment_tests', dock_test_exe, timeout: 30)
+
 
 

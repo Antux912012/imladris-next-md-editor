@@ -78,6 +78,18 @@ namespace Imladris {
                 }
             });
 
+            this.close_request.connect (() => {
+                for (int i = 0; i < tab_view.n_pages; i++) {
+                    var page = tab_view.get_nth_page (i);
+                    var doc = page.child as DocumentPage;
+                    if (doc != null) {
+                        doc.cleanup ();
+                    }
+                }
+                Plugins.PluginManager.get_default ().active_window = null;
+                return false;
+            });
+
             var toolbar_view = new Adw.ToolbarView ();
             this.set_content (toolbar_view);
 
@@ -534,13 +546,18 @@ namespace Imladris {
             string root = get_workspace_root ();
             var results = new Gee.ArrayList<string> ();
             if (root == "" || !GLib.FileUtils.test (root, GLib.FileTest.IS_DIR)) {
-                return results.to_array ();
+                return new string[0];
             }
-            scan_dir_for_workspace_files (root, root, results);
-            return results.to_array ();
+            var spec = (pattern.length > 0 && pattern != "*") ? new GLib.PatternSpec (pattern) : null;
+            scan_dir_for_workspace_files (root, root, results, spec);
+            string[] arr = new string[results.size];
+            for (int i = 0; i < results.size; i++) {
+                arr[i] = results[i];
+            }
+            return arr;
         }
 
-        private void scan_dir_for_workspace_files (string base_dir, string current_dir, Gee.ArrayList<string> results) {
+        private void scan_dir_for_workspace_files (string base_dir, string current_dir, Gee.ArrayList<string> results, GLib.PatternSpec? spec) {
             try {
                 var dir = GLib.Dir.open (current_dir, 0);
                 string? name = null;
@@ -550,13 +567,21 @@ namespace Imladris {
                     }
                     string full_path = GLib.Path.build_filename (current_dir, name);
                     if (GLib.FileUtils.test (full_path, GLib.FileTest.IS_DIR)) {
-                        scan_dir_for_workspace_files (base_dir, full_path, results);
-                    } else if (name.has_suffix (".md") || name.has_suffix (".qmd") || name.has_suffix (".Rmd")) {
-                        string rel_path = full_path.substring (base_dir.length);
-                        if (rel_path.has_prefix ("/")) {
-                            rel_path = rel_path.substring (1);
+                        scan_dir_for_workspace_files (base_dir, full_path, results, spec);
+                    } else {
+                        bool matches = false;
+                        if (spec != null) {
+                            matches = spec.match_string (name);
+                        } else {
+                            matches = (name.has_suffix (".md") || name.has_suffix (".qmd") || name.has_suffix (".Rmd") || name.has_suffix (".ipynb"));
                         }
-                        results.add (rel_path);
+                        if (matches) {
+                            string rel_path = full_path.substring (base_dir.length);
+                            if (rel_path.has_prefix ("/")) {
+                                rel_path = rel_path.substring (1);
+                            }
+                            results.add (rel_path);
+                        }
                     }
                 }
             } catch (GLib.Error e) {
@@ -566,7 +591,7 @@ namespace Imladris {
 
         public string read_workspace_file (string relative_path) {
             string root = get_workspace_root ();
-            if (root == "" || relative_path.contains ("..")) {
+            if (root == "" || relative_path.has_prefix ("/") || relative_path.contains ("..")) {
                 return "";
             }
             string full_path = GLib.Path.build_filename (root, relative_path);
@@ -584,7 +609,7 @@ namespace Imladris {
 
         public void open_workspace_file (string relative_path, int line) {
             string root = get_workspace_root ();
-            if (root == "" || relative_path.contains ("..")) {
+            if (root == "" || relative_path.has_prefix ("/") || relative_path.contains ("..")) {
                 return;
             }
             string full_path = GLib.Path.build_filename (root, relative_path);
@@ -605,7 +630,7 @@ namespace Imladris {
 
             var webview = UI.WebViewFactory.create ();
             var ucm = webview.get_user_content_manager ();
-            ucm.register_script_message_handler ("imladrisHost", (!) null);
+            ucm.register_script_message_handler ("imladrisHost", (string) (void*) null);
             ucm.script_message_received.connect ((val) => {
                 try {
                     string json_str = val.to_json (0);
@@ -1756,14 +1781,13 @@ namespace Imladris {
         }
 
         public void show_about_dialog () {
+            string[] devs = { "Antonio De Gaetano <https://github.com/Antux912012>" };
             var dialog = new Adw.AboutDialog () {
                 application_name = "Imladris",
                 application_icon = "io.github.Antux912012.Imladris",
-                version = "0.12.2",
+                version = Application.APP_VERSION,
                 developer_name = "Antonio De Gaetano",
-                developers = {
-                    "Antonio De Gaetano <https://github.com/Antux912012>"
-                },
+                developers = devs,
                 copyright = "© 2026 Antonio De Gaetano",
                 license_type = Gtk.License.GPL_3_0_ONLY,
                 website = "https://github.com/Antux912012/imladris-next-md-editor",
@@ -2035,6 +2059,38 @@ namespace Imladris {
             doc.panel_registry.run_code_snippet_in_console (engine, code);
         }
 
+        private void prompt_save_layout () {
+            var doc = get_active_document ();
+            if (doc == null) return;
+
+            var dialog = new Adw.AlertDialog ("Save Layout Preset", "Enter a name for this custom workbench layout:");
+            var entry = new Gtk.Entry () {
+                placeholder_text = "e.g. Dual-Screen or Biostats-Focus",
+                margin_start = 12, margin_end = 12, margin_top = 8, margin_bottom = 8
+            };
+            dialog.set_extra_child (entry);
+            dialog.add_response ("cancel", "Cancel");
+            dialog.add_response ("save", "Save");
+            dialog.set_response_appearance ("save", Adw.ResponseAppearance.SUGGESTED);
+            dialog.set_default_response ("save");
+            dialog.set_close_response ("cancel");
+
+            dialog.response.connect ((resp) => {
+                if (resp == "save") {
+                    string name = entry.text.strip ();
+                    if (name.length > 0) {
+                        try {
+                            UI.LayoutSerializer.save_layout (name, doc.dock_layout_state);
+                            show_toast (@"Saved layout preset '$name'");
+                        } catch (GLib.Error e) {
+                            show_toast (@"Failed to save layout: $(e.message)");
+                        }
+                    }
+                }
+            });
+            dialog.present (this);
+        }
+
         // =====================================================================
         // 5. VIEW RIBBON (Layouts, Split Modes, Zoom & Display Options)
         // =====================================================================
@@ -2058,6 +2114,78 @@ namespace Imladris {
             });
 
             box.append (RibbonFactory.create_linked_group ({ btn_mode_apostrophe, btn_mode_rstudio }));
+            box.append (RibbonFactory.create_vseparator ());
+
+            // Group 2: Workbench Layout Topologies (QUAD_4, LEFT_TALL_3, RIGHT_TALL_3)
+            var btn_topo_quad = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("view-grid-symbolic", "2×2 Quad", "2×2 Quadrant Grid Topology", true, true, true);
+            var btn_topo_left_tall = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("view-column-symbolic", "Left Tall", "Editor Full-Height on Left, Stacked Right", true, false, true);
+            var btn_topo_right_tall = (Gtk.ToggleButton) RibbonFactory.create_tool_button ("view-paged-symbolic", "Right Tall", "Outputs Full-Height on Right, Stacked Left", true, false, true);
+            btn_topo_left_tall.set_group (btn_topo_quad);
+            btn_topo_right_tall.set_group (btn_topo_quad);
+
+            btn_topo_quad.toggled.connect (() => {
+                if (btn_topo_quad.active) {
+                    var d = get_active_document ();
+                    if (d != null) {
+                        UI.LayoutSerializer.apply_topology_preset (Imladris.Core.Layout.LayoutTopology.QUAD_4, d.dock_layout_state);
+                    }
+                }
+            });
+            btn_topo_left_tall.toggled.connect (() => {
+                if (btn_topo_left_tall.active) {
+                    var d = get_active_document ();
+                    if (d != null) {
+                        UI.LayoutSerializer.apply_topology_preset (Imladris.Core.Layout.LayoutTopology.LEFT_TALL_3, d.dock_layout_state);
+                    }
+                }
+            });
+            btn_topo_right_tall.toggled.connect (() => {
+                if (btn_topo_right_tall.active) {
+                    var d = get_active_document ();
+                    if (d != null) {
+                        UI.LayoutSerializer.apply_topology_preset (Imladris.Core.Layout.LayoutTopology.RIGHT_TALL_3, d.dock_layout_state);
+                    }
+                }
+            });
+
+            box.append (RibbonFactory.create_linked_group ({ btn_topo_quad, btn_topo_left_tall, btn_topo_right_tall }));
+
+            var btn_layout_presets = new Gtk.MenuButton () {
+                icon_name = "view-more-symbolic",
+                tooltip_text = "Layout Presets & Persistence",
+                valign = Gtk.Align.CENTER
+            };
+            btn_layout_presets.add_css_class ("flat");
+
+            var layout_pop = new Gtk.Popover ();
+            var lpop_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 4) {
+                margin_start = 6, margin_end = 6, margin_top = 6, margin_bottom = 6
+            };
+            lpop_box.append (new Gtk.Label ("Layout Presets") { css_classes = { "dim-label", "caption" }, xalign = 0 });
+
+            var b_save_layout = new Gtk.Button.with_label ("Save Current Layout...") { halign = Gtk.Align.START };
+            b_save_layout.add_css_class ("flat");
+            b_save_layout.clicked.connect (() => {
+                layout_pop.popdown ();
+                prompt_save_layout ();
+            });
+            lpop_box.append (b_save_layout);
+
+            var b_reset_layout = new Gtk.Button.with_label ("Reset to Default Layout") { halign = Gtk.Align.START };
+            b_reset_layout.add_css_class ("flat");
+            b_reset_layout.clicked.connect (() => {
+                layout_pop.popdown ();
+                var d = get_active_document ();
+                if (d != null) {
+                    d.dock_layout_state.reset_to_default ();
+                    show_toast ("Reset workbench to default 4-quadrant layout");
+                }
+            });
+            lpop_box.append (b_reset_layout);
+
+            layout_pop.set_child (lpop_box);
+            btn_layout_presets.set_popover (layout_pop);
+            box.append (btn_layout_presets);
             box.append (RibbonFactory.create_vseparator ());
 
             // Group 2: Split Mode Switcher

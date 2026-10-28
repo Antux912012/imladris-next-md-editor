@@ -33,9 +33,11 @@ namespace Imladris.Core.Layout {
 
     public enum PanelId {
         SOURCE_EDITOR,
+        DATA_VIEWER,
         LIVE_PREVIEW,
         CONSOLE,
         TERMINAL,
+        ELROND_AI,
         ENVIRONMENT,
         OUTLINE,
         CITATIONS,
@@ -46,9 +48,11 @@ namespace Imladris.Core.Layout {
         public string to_id_string () {
             switch (this) {
                 case SOURCE_EDITOR: return "source-editor";
+                case DATA_VIEWER: return "data-viewer";
                 case LIVE_PREVIEW: return "live-preview";
                 case CONSOLE: return "console";
                 case TERMINAL: return "terminal";
+                case ELROND_AI: return "elrond-ai";
                 case ENVIRONMENT: return "environment";
                 case OUTLINE: return "outline";
                 case CITATIONS: return "citations";
@@ -62,9 +66,11 @@ namespace Imladris.Core.Layout {
         public static PanelId? from_id_string (string str) {
             switch (str) {
                 case "source-editor": return SOURCE_EDITOR;
+                case "data-viewer": return DATA_VIEWER;
                 case "live-preview": return LIVE_PREVIEW;
                 case "console": return CONSOLE;
                 case "terminal": return TERMINAL;
+                case "elrond-ai": return ELROND_AI;
                 case "environment": return ENVIRONMENT;
                 case "outline": return OUTLINE;
                 case "citations": return CITATIONS;
@@ -78,9 +84,11 @@ namespace Imladris.Core.Layout {
         public string to_title () {
             switch (this) {
                 case SOURCE_EDITOR: return "Source Editor";
+                case DATA_VIEWER: return "Data Viewer";
                 case LIVE_PREVIEW: return "Preview";
                 case CONSOLE: return "Console";
                 case TERMINAL: return "Terminal";
+                case ELROND_AI: return "Elrond AI";
                 case ENVIRONMENT: return "Environment";
                 case OUTLINE: return "Outline";
                 case CITATIONS: return "Citations";
@@ -94,9 +102,11 @@ namespace Imladris.Core.Layout {
         public string to_icon_name () {
             switch (this) {
                 case SOURCE_EDITOR: return "document-edit-symbolic";
+                case DATA_VIEWER: return "view-grid-symbolic";
                 case LIVE_PREVIEW: return "applications-internet-symbolic";
                 case CONSOLE: return "utilities-terminal-symbolic";
                 case TERMINAL: return "utilities-terminal-symbolic";
+                case ELROND_AI: return "ai-elrond";
                 case ENVIRONMENT: return "view-list-symbolic";
                 case OUTLINE: return "view-list-bullet-symbolic";
                 case CITATIONS: return "accessories-dictionary-symbolic";
@@ -104,6 +114,39 @@ namespace Imladris.Core.Layout {
                 case FILES: return "folder-symbolic";
                 case HELP: return "help-browser-symbolic";
                 default: return "application-x-addon-symbolic";
+            }
+        }
+    }
+
+    public enum LayoutTopology {
+        QUAD_4,
+        LEFT_TALL_3,
+        RIGHT_TALL_3;
+
+        public string to_id_string () {
+            switch (this) {
+                case LEFT_TALL_3: return "LEFT_TALL_3";
+                case RIGHT_TALL_3: return "RIGHT_TALL_3";
+                case QUAD_4:
+                default: return "QUAD_4";
+            }
+        }
+
+        public static LayoutTopology from_id_string (string str) {
+            switch (str) {
+                case "LEFT_TALL_3": return LEFT_TALL_3;
+                case "RIGHT_TALL_3": return RIGHT_TALL_3;
+                case "QUAD_4":
+                default: return QUAD_4;
+            }
+        }
+
+        public string to_title () {
+            switch (this) {
+                case LEFT_TALL_3: return "Left Editor Full-Height (3 Panels)";
+                case RIGHT_TALL_3: return "Right Side Full-Height (3 Panels)";
+                case QUAD_4:
+                default: return "2×2 Quadrant Grid (4 Panels)";
             }
         }
     }
@@ -175,32 +218,59 @@ namespace Imladris.Core.Layout {
     public class RStudioDockLayoutState : GLib.Object {
         public string mode { get; set; default = "RSTUDIO"; }
         public bool user_locked_mode { get; set; default = false; }
+        public LayoutTopology topology { get; set; default = LayoutTopology.QUAD_4; }
         public QuadrantId? maximized_quadrant = null;
         public SplitterRatios ratios { get; owned set; }
         public Gee.HashMap<QuadrantId, QuadrantConfig> quadrants { get; owned set; }
+        public Gee.HashSet<PanelId> popped_out_panels { get; private set; }
 
         public signal void state_updated ();
+        public signal void panel_undocked (PanelId pid);
+        public signal void panel_redocked (PanelId pid);
 
         public RStudioDockLayoutState () {
             ratios = new SplitterRatios ();
             quadrants = new Gee.HashMap<QuadrantId, QuadrantConfig> ();
+            popped_out_panels = new Gee.HashSet<PanelId> ();
             reset_to_default ();
+        }
+
+        public void switch_topology (LayoutTopology top) {
+            this.topology = top;
+            save_to_disk ();
+            state_updated ();
+        }
+
+        public void undock_panel (PanelId pid) {
+            popped_out_panels.add (pid);
+            panel_undocked (pid);
+            state_updated ();
+        }
+
+        public void redock_panel (PanelId pid) {
+            if (popped_out_panels.contains (pid)) {
+                popped_out_panels.remove (pid);
+                panel_redocked (pid);
+                state_updated ();
+            }
         }
 
         public void reset_to_default () {
             mode = "RSTUDIO";
             user_locked_mode = false;
+            topology = LayoutTopology.QUAD_4;
             maximized_quadrant = null;
             ratios.set_clamped (0.55, 0.68, 0.45);
             quadrants.clear ();
+            popped_out_panels.clear ();
 
             quadrants.set (
                 QuadrantId.Q1_TOP_LEFT,
-                new QuadrantConfig (QuadrantId.Q1_TOP_LEFT, { PanelId.SOURCE_EDITOR }, PanelId.SOURCE_EDITOR)
+                new QuadrantConfig (QuadrantId.Q1_TOP_LEFT, { PanelId.SOURCE_EDITOR, PanelId.DATA_VIEWER }, PanelId.SOURCE_EDITOR)
             );
             quadrants.set (
                 QuadrantId.Q2_BOTTOM_LEFT,
-                new QuadrantConfig (QuadrantId.Q2_BOTTOM_LEFT, { PanelId.CONSOLE, PanelId.TERMINAL }, PanelId.CONSOLE)
+                new QuadrantConfig (QuadrantId.Q2_BOTTOM_LEFT, { PanelId.CONSOLE, PanelId.TERMINAL, PanelId.ELROND_AI }, PanelId.CONSOLE)
             );
             quadrants.set (
                 QuadrantId.Q3_TOP_RIGHT,
@@ -330,6 +400,8 @@ namespace Imladris.Core.Layout {
                 builder.add_string_value (mode);
                 builder.set_member_name ("userLockedMode");
                 builder.add_boolean_value (user_locked_mode);
+                builder.set_member_name ("topology");
+                builder.add_string_value (topology.to_id_string ());
 
                 builder.set_member_name ("maximizedQuadrant");
                 if (maximized_quadrant != null) {
@@ -397,6 +469,13 @@ namespace Imladris.Core.Layout {
                 var root = parser.get_root ();
                 if (root == null || root.get_node_type () != Json.NodeType.OBJECT) return;
                 var obj = root.get_object ();
+
+                if (obj.has_member ("userLockedMode")) {
+                    user_locked_mode = obj.get_boolean_member ("userLockedMode");
+                }
+                if (obj.has_member ("topology")) {
+                    topology = LayoutTopology.from_id_string (obj.get_string_member ("topology"));
+                }
 
                 if (obj.has_member ("ratios")) {
                     var r_obj = obj.get_object_member ("ratios");

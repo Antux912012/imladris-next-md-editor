@@ -63,7 +63,7 @@ namespace Imladris.Adapters {
                 }
                 result = video_regex.replace_eval (result, -1, 0, 0, (match_info, res) => {
                     string vpath = match_info.fetch (1);
-                    res.append_printf ("<div class=\"media-video-container\" style=\"margin: 16px 0; text-align: center;\"><video src=\"%s\" controls style=\"max-width: 100%%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\"></video></div>", vpath);
+                    res.append_printf ("<div class=\"media-video-container\" style=\"margin: 16px 0; text-align: center;\"><video src=\"%s\" controls style=\"max-width: 100%%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\"></video></div>", GLib.Markup.escape_text (vpath));
                     return false;
                 });
 
@@ -74,7 +74,7 @@ namespace Imladris.Adapters {
                 result = img_regex.replace_eval (result, -1, 0, 0, (match_info, res) => {
                     string alt = match_info.fetch (1);
                     string ipath = match_info.fetch (2);
-                    res.append_printf ("<figure style=\"margin: 16px 0; text-align: center;\"><img src=\"%s\" alt=\"%s\" style=\"max-width: 100%%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\"/>", ipath, GLib.Markup.escape_text (alt));
+                    res.append_printf ("<figure style=\"margin: 16px 0; text-align: center;\"><img src=\"%s\" alt=\"%s\" style=\"max-width: 100%%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\"/>", GLib.Markup.escape_text (ipath), GLib.Markup.escape_text (alt));
                     if (alt.strip ().length > 0) {
                         res.append_printf ("<figcaption style=\"font-size: 0.9em; color: #64748b; margin-top: 6px;\">%s</figcaption>", GLib.Markup.escape_text (alt));
                     }

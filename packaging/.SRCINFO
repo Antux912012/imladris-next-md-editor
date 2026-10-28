@@ -1,6 +1,6 @@
 pkgbase = imladris
 	pkgdesc = Polyglot Scientific & Markdown IDE with Elrond Local AI Copilot, R, Python, and Libadwaita UI
-	pkgver = 0.13.0
+	pkgver = 0.14.0
 	pkgrel = 1
 	url = https://github.com/Antux912012/imladris-next-md-editor
 	arch = x86_64

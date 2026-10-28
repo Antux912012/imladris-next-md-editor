@@ -60,6 +60,16 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.14.0" date="2026-10-28">
+      <description>
+        <p>Release v0.14.0 introduces three major workbench pillars: (1) R and Python Global Environment Management with broom clear confirmation, dynamic object querying, and an interactive virtualized Dataframe &amp; Matrix Viewer backed by GtkColumnView and GioListStore with View(x) hooks; (2) Customizable detachable workbench layout engine supporting 2x2 Quad, Left Tall, and Right Tall topologies, standalone floating window undocking and automatic re-docking, and layout preset persistence in ~/.config/imladris/layouts/; and (3) Integrated Elrond AI Copilot tab in the bottom-left quadrant with context toggle chips (+Active File, +Dataframe Schemas, +Last Error), streamed chat history, and one-click 'Insert at Cursor' and 'Run in Console' code actions.</p>
+      </description>
+    </release>
+    <release version="0.13.1" date="2026-10-28">
+      <description>
+        <p>Release v0.13.1 brings critical security hardening, memory safety, and live preview rendering fixes: Resolves WebKitGTK 6.0 inner bwrap sandbox credential handshake collisions in Flatpak (WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1) ensuring reliable live preview; adds base URI directory resolution for relative images and stylesheets; introduces automatic WebProcess crash recovery; hardens plugin ID validation against directory traversal and blocks symlink expansion during archive extraction; secures workspace file access against path traversal; optimizes real-time word counting to zero-allocation streaming; cleans up deprecated Libadwaita expander row icons; and implements application window close resource cleanup.</p>
+      </description>
+    </release>
     <release version="0.13.0" date="2026-10-28">
       <description>
         <p>Release v0.13.0 introduces an Obsidian-style JavaScript Extension &amp; Plugin Engine powered by JavaScriptCore (JSC.Context): Enables lightweight, isolated JavaScript plugins with onload/onunload lifecycle hooks; provides declarative imladris bridge exposing native toasts, dynamic ribbon buttons in the Extensions ribbon group, safe GtkSource.Buffer read/insert actions, gated R and Python console execution, and Elrond AI queries; supports one-click bundle imports (.implugin and .zip) with permission and GPLv3 license consent modals; and adds an Extensions management page in Preferences.</p>

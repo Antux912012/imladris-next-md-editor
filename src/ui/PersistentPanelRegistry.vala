@@ -15,6 +15,9 @@ namespace Imladris.UI {
         public Gtk.Box console_panel { get; private set; }
         public Gtk.TextView terminal_view { get; private set; }
         public Gtk.ListBox environment_list { get; private set; }
+        public EnvironmentController environment_controller { get; private set; }
+        public DataGridViewer data_grid_viewer { get; private set; }
+        public ElrondChatPanel elrond_chat_panel { get; private set; }
         public Gtk.ListBox outline_list { get; private set; }
         public Gtk.ListBox citations_list { get; private set; }
         public WebKit.WebView plots_webview { get; private set; }
@@ -276,42 +279,23 @@ namespace Imladris.UI {
             panels.set (PanelId.TERMINAL, term_box);
 
             // 5. ENVIRONMENT PANEL (Active Dataframe & Variable Inspector)
-            var env_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
-                hexpand = true,
-                vexpand = true
-            };
-            var env_toolbar = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 6) {
-                margin_top = 4,
-                margin_bottom = 4,
-                margin_start = 8,
-                margin_end = 8
-            };
-            env_toolbar.append (new Gtk.Label ("Global Environment & Dataframes") { css_classes = { "dim-label", "caption" } });
-            env_toolbar.append (new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0) { hexpand = true });
-            var refresh_env_btn = new Gtk.Button.from_icon_name ("view-refresh-symbolic") {
-                tooltip_text = "Inspect Variables from Buffer & Kernel"
-            };
-            refresh_env_btn.add_css_class ("flat");
-            refresh_env_btn.clicked.connect (() => {
-                refresh_environment_and_outline ();
+            environment_controller = new EnvironmentController (main_window);
+            environment_controller.view_dataframe_requested.connect ((name, eng) => {
+                open_dataframe_in_viewer (name, eng);
             });
-            env_toolbar.append (refresh_env_btn);
-            env_box.append (env_toolbar);
+            environment_controller.toast_requested.connect ((msg) => {
+                if (main_window != null) main_window.show_toast (msg);
+            });
+            environment_list = new Gtk.ListBox (); // dummy placeholder for AST variables
+            panels.set (PanelId.ENVIRONMENT, environment_controller);
 
-            environment_list = new Gtk.ListBox () {
-                selection_mode = Gtk.SelectionMode.NONE,
-                css_classes = { "boxed-list" },
-                margin_start = 8,
-                margin_end = 8,
-                margin_bottom = 8
-            };
-            var env_scroll = new Gtk.ScrolledWindow () {
-                child = environment_list,
-                hexpand = true,
-                vexpand = true
-            };
-            env_box.append (env_scroll);
-            panels.set (PanelId.ENVIRONMENT, env_box);
+            // DATA VIEWER PANEL (Virtualized Matrix & Dataframe Inspector)
+            data_grid_viewer = new DataGridViewer ();
+            panels.set (PanelId.DATA_VIEWER, data_grid_viewer);
+
+            // ELROND AI CHAT PANEL (Local Copilot Tab)
+            elrond_chat_panel = new ElrondChatPanel (doc_page, this, main_window);
+            panels.set (PanelId.ELROND_AI, elrond_chat_panel);
 
             // 6. OUTLINE PANEL (Document AST Table of Contents)
             var outline_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
@@ -619,10 +603,39 @@ namespace Imladris.UI {
             }
         }
 
+        public void open_dataframe_in_viewer (string object_name, string engine = "r") {
+            data_grid_viewer.fetch_and_display.begin (object_name, engine);
+
+            foreach (var qid in QuadrantId.all ()) {
+                var qc = doc_page.dock_layout_state.quadrants.get (qid);
+                if (qc != null && qc.tabs.contains (PanelId.DATA_VIEWER)) {
+                    doc_page.dock_layout_state.activate_tab (qid, PanelId.DATA_VIEWER);
+                    return;
+                }
+            }
+
+            // If not found in any quadrant, mount in Q1_TOP_LEFT
+            doc_page.dock_layout_state.move_tab (QuadrantId.Q1_TOP_LEFT, QuadrantId.Q1_TOP_LEFT, PanelId.DATA_VIEWER, 1);
+            doc_page.dock_layout_state.activate_tab (QuadrantId.Q1_TOP_LEFT, PanelId.DATA_VIEWER);
+        }
+
         public void run_code_snippet_in_console (string engine, string code, int inline_chunk_line = -1) {
             execution_counter++;
             int count = execution_counter;
             doc_page.append_console_log (@"\nIn [$count] ($engine):\n$code");
+
+            // Hook R/Python View(...) command to open interactive matrix & dataframe viewer
+            if (code.contains ("View(") || code.contains ("View (")) {
+                int v_idx = code.index_of ("View");
+                int open_paren = code.index_of ("(", v_idx);
+                int close_paren = code.index_of (")", open_paren);
+                if (open_paren != -1 && close_paren != -1 && close_paren > open_paren) {
+                    string obj = code.substring (open_paren + 1, close_paren - open_paren - 1).strip ();
+                    if (obj.length > 0 && !obj.contains ("\n")) {
+                        open_dataframe_in_viewer (obj, engine);
+                    }
+                }
+            }
 
             if (engine == "r") {
                 string? plot_file = null;
@@ -653,6 +666,8 @@ namespace Imladris.UI {
                         doc_page.display_inline_chunk_output (inline_chunk_line, output, plot_file, count);
                     }
                     refresh_environment_and_outline ();
+                    environment_controller.active_engine = "r";
+                    environment_controller.refresh_environment.begin ();
                 });
             } else if (engine == "python") {
                 string? plot_file = null;
@@ -683,6 +698,8 @@ namespace Imladris.UI {
                         doc_page.display_inline_chunk_output (inline_chunk_line, output, plot_file, count);
                     }
                     refresh_environment_and_outline ();
+                    environment_controller.active_engine = "python";
+                    environment_controller.refresh_environment.begin ();
                 });
             } else {
                 ExecutionEngine.capture_command_async.begin ({ "bash", "-c", code }, (obj, res) => {

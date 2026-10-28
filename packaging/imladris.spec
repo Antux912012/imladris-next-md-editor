@@ -1,5 +1,5 @@
 Name:           imladris
-Version:        0.13.0
+Version:        0.14.0
 Release:        1%{?dist}
 Summary:        Scientific notebook studio and Markdown editor
 
@@ -56,6 +56,16 @@ export GSETTINGS_BACKEND=memory
 %{_datadir}/imladris/
 
 %changelog
+* Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.14.0-1
+- Release 0.14.0: Environment Management & Dataframe Viewer, Detachable Dynamic Docking, and Integrated Elrond AI Copilot Tab:
+  * Global Environment toolbar with broom variable cleanup (Adw.AlertDialog confirmation) and dynamic REPL inspection.
+  * Interactive virtualized Matrix & Dataframe Viewer (Gtk.ColumnView + Gio.ListStore) with column sorting, filtering, and R View(x) hooks.
+  * Customizable detachable panel layout engine with 2x2 Quad, Left Tall, and Right Tall topologies, floating window undocking/redocking, and ~/.config/imladris/layouts/ preset persistence.
+  * Integrated Elrond AI Copilot tab in bottom-left quadrant with context chips (+Active File, +Dataframe Schemas, +Last Error), and one-click 'Insert at Cursor' and 'Run in Console' code actions.
+
+* Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.13.1-1
+- Release 0.13.1: Security hardening and live preview fix: resolve WebKitGTK inner sandbox credential handshake abort in Flatpak, provide directory base URI resolution for relative images/assets, add WebProcess crash recovery, sanitize plugin IDs and block symlinks in archive extraction, protect workspace files against path traversal, optimize real-time buffer word count to streaming zero-allocation, clean deprecated Libadwaita API calls, and enforce window close cleanup.
+
 * Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.13.0-1
 - Release 0.13.0: Obsidian-style JavaScript Extension & Plugin Engine (javascriptcoregtk-6.0 / JSC.Context) with VM isolation, declarative imladris UI and editor bridge, permission guardrails, one-click .implugin/.zip archive bundle import with Adw.AlertDialog consent modal, and Preferences Extensions manager.
 
