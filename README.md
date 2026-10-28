@@ -75,6 +75,10 @@ Imladris features a built-in, zero-configuration local AI coding and data scienc
   > `Elrond running on Qwen2.5-Coder-3B - 0.24 GB RAM / 2.08 GB VRAM used`
 - **Editor Context Menu & Shortcut**: Right-click anywhere in the editor or press `Ctrl+Shift+E` to trigger the inline **"Write with Elrond Assistance (AI)"** generation popover.
 
+<p align="center">
+  <img src="data/screenshots/imladris-ai-copilot.png" alt="Elrond AI Copilot, Antigravity Agent Harness, and Live Computational Analysis" width="850">
+</p>
+
 #### ⚠️ Important Notice: Local AI Requirements (`llama.cpp`)
 In order to use the built-in local AI functions (Elrond Assistance, offline statistical coding, and local telemetry), **`llama.cpp`** (`llama-server`) is required on your system.
 
