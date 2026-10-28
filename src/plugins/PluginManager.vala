@@ -566,20 +566,40 @@ function onunload() {
             plugins.clear ();
             var enabled_set = load_enabled_set ();
 
-            try {
-                var dir = Dir.open (user_plugins_dir, 0);
-                string? name = null;
-                while ((name = dir.read_name ()) != null) {
-                    string plugin_dir = Path.build_filename (user_plugins_dir, name);
-                    if (FileUtils.test (plugin_dir, FileTest.IS_DIR)) {
-                        load_plugin_from_directory (plugin_dir, enabled_set);
-                    }
-                }
-            } catch (GLib.Error e) {
-                warning ("Error reading user plugins dir: %s", e.message);
+            // 1. Scan primary user plugins directory (in Flatpak: ~/.var/app/.../data/imladris/plugins)
+            scan_and_load_plugins_dir (user_plugins_dir, enabled_set);
+
+            // 2. Scan host plugins directory (~/.local/share/imladris/plugins) to discover host-installed extensions
+            string host_dir = Path.build_filename (Environment.get_home_dir (), ".local", "share", "imladris", "plugins");
+            if (host_dir != user_plugins_dir && FileUtils.test (host_dir, FileTest.IS_DIR)) {
+                scan_and_load_plugins_dir (host_dir, enabled_set);
             }
 
             plugins_changed ();
+        }
+
+        private void scan_and_load_plugins_dir (string dir_path, ArrayList<string> enabled_set) {
+            try {
+                var dir = Dir.open (dir_path, 0);
+                string? name = null;
+                while ((name = dir.read_name ()) != null) {
+                    string plugin_dir = Path.build_filename (dir_path, name);
+                    if (FileUtils.test (plugin_dir, FileTest.IS_DIR)) {
+                        // Do not reload if already loaded from earlier directory
+                        string manifest_path = Path.build_filename (plugin_dir, "manifest.json");
+                        if (FileUtils.test (manifest_path, FileTest.EXISTS)) {
+                            string? json = null;
+                            FileUtils.get_contents (manifest_path, out json);
+                            var m = PluginManifest.from_json (json);
+                            if (m != null && m.id != "" && !plugins.has_key (m.id)) {
+                                load_plugin_from_directory (plugin_dir, enabled_set);
+                            }
+                        }
+                    }
+                }
+            } catch (GLib.Error e) {
+                warning ("Error reading plugins dir %s: %s", dir_path, e.message);
+            }
         }
 
         public PluginInstance? load_plugin_from_directory (string plugin_dir, ArrayList<string>? enabled_set = null) {
@@ -843,14 +863,20 @@ function onunload() {
         }
 
         public async bool import_plugin_archive (string archive_path, Gtk.Window parent_window) throws GLib.Error {
-            if (!FileUtils.test (archive_path, FileTest.EXISTS)) {
+            var src_file = File.new_for_path (archive_path);
+            if (!src_file.query_exists ()) {
                 throw new IOError.NOT_FOUND (@"Archive file not found: $archive_path");
             }
 
             string tmp_dir = DirUtils.make_tmp ("imladris_plugin_import_XXXXXX");
             try {
+                // Copy source archive into local temp dir first to ensure access across Flatpak document portals
+                string local_archive = Path.build_filename (tmp_dir, "archive.zip");
+                var dest_file = File.new_for_path (local_archive);
+                src_file.copy (dest_file, FileCopyFlags.OVERWRITE);
+
                 // Extract using python3 -m zipfile
-                string[] argv = { "python3", "-m", "zipfile", "-e", archive_path, tmp_dir };
+                string[] argv = { "python3", "-m", "zipfile", "-e", local_archive, tmp_dir };
                 var subp = new Subprocess.newv (argv, SubprocessFlags.STDOUT_SILENCE | SubprocessFlags.STDERR_SILENCE);
                 yield subp.wait_check_async ();
 
