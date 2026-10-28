@@ -60,6 +60,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.13.0" date="2026-10-28">
+      <description>
+        <p>Release v0.13.0 introduces an Obsidian-style JavaScript Extension &amp; Plugin Engine powered by JavaScriptCore (JSC.Context): Enables lightweight, isolated JavaScript plugins with onload/onunload lifecycle hooks; provides declarative imladris bridge exposing native toasts, dynamic ribbon buttons in the Extensions ribbon group, safe GtkSource.Buffer read/insert actions, gated R and Python console execution, and Elrond AI queries; supports one-click bundle imports (.implugin and .zip) with permission and GPLv3 license consent modals; and adds an Extensions management page in Preferences.</p>
+      </description>
+    </release>
     <release version="0.12.2" date="2026-10-28">
       <description>
         <p>Release v0.12.2 delivers the complete Conventional Software Architecture and Engineering Audit refactoring: Eliminates dormant proto-code and uncalled methods in MallornManager and ElrondEngineController; resolves GObject lifecycle memory retention across document tabs via Adw.TabView close_page hooks and explicit signal disconnection; fixes syntax language mapping for .qmd files in GtkSourceView; eliminates whole-document string duplication in frontmatter parsing; resolves nested block formatting in basic_markdown_to_html; optimizes host command generation; and synchronizes MCP server protocol metadata.</p>

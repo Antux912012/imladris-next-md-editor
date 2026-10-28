@@ -484,23 +484,169 @@ namespace Imladris.UI {
 
             ai_page.add (keys_group);
             this.add (ai_page);
+
+            // Page 6: Extensions & Plugins (Obsidian-Style JSC Engine)
+            var ext_page = new Adw.PreferencesPage () {
+                title = "Extensions",
+                icon_name = "application-x-addon-symbolic"
+            };
+
+            var mgr_group = new Adw.PreferencesGroup () {
+                title = "Plugin Manager",
+                description = "Install and manage JavaScript plugins with native GTK4/Libadwaita integration."
+            };
+
+            var import_row = new Adw.ActionRow () {
+                title = "Import Plugin Bundle",
+                subtitle = "Install third-party extensions from .implugin or .zip archives"
+            };
+            var btn_import = new Gtk.Button.with_label ("Import Plugin…") {
+                valign = Gtk.Align.CENTER
+            };
+            btn_import.add_css_class ("suggested-action");
+            btn_import.clicked.connect (() => {
+                var dialog = new Gtk.FileDialog () {
+                    title = "Import Imladris Plugin Bundle"
+                };
+                var filter_bundle = new Gtk.FileFilter ();
+                filter_bundle.set_filter_name ("Imladris Plugin Bundles (*.implugin, *.zip)");
+                filter_bundle.add_pattern ("*.implugin");
+                filter_bundle.add_pattern ("*.zip");
+                var filters = new GLib.ListStore (typeof (Gtk.FileFilter));
+                filters.append (filter_bundle);
+                dialog.filters = filters;
+
+                dialog.open.begin (this.root as Gtk.Window, null, (obj, res) => {
+                    try {
+                        var file = dialog.open.end (res);
+                        if (file != null) {
+                            Imladris.Plugins.PluginManager.get_default ().import_plugin_archive.begin (file.get_path (), this.root as Gtk.Window, (o, r) => {
+                                try {
+                                    Imladris.Plugins.PluginManager.get_default ().import_plugin_archive.end (r);
+                                } catch (GLib.Error err) {
+                                    var err_alert = new Adw.AlertDialog ("Import Failed", err.message);
+                                    err_alert.add_response ("ok", "OK");
+                                    err_alert.present (this.root as Gtk.Window);
+                                }
+                            });
+                        }
+                    } catch (GLib.Error err) {
+                        // User cancelled
+                    }
+                });
+            });
+            import_row.add_suffix (btn_import);
+            mgr_group.add (import_row);
+
+            var dir_row = new Adw.ActionRow () {
+                title = "Plugins Directory",
+                subtitle = Imladris.Plugins.PluginManager.get_default ().user_plugins_dir
+            };
+            var btn_open_dir = new Gtk.Button.from_icon_name ("folder-open-symbolic") {
+                valign = Gtk.Align.CENTER,
+                tooltip_text = "Open Plugins Folder"
+            };
+            btn_open_dir.clicked.connect (() => {
+                var file = GLib.File.new_for_path (Imladris.Plugins.PluginManager.get_default ().user_plugins_dir);
+                var launcher = new Gtk.FileLauncher (file);
+                launcher.launch.begin (this.root as Gtk.Window, null, null);
+            });
+            dir_row.add_suffix (btn_open_dir);
+            mgr_group.add (dir_row);
+
+            ext_page.add (mgr_group);
+
+            var plugins_group = new Adw.PreferencesGroup () {
+                title = "Installed Plugins",
+                description = "Enable or disable extensions, inspect permissions, or remove plugins."
+            };
+            ext_page.add (plugins_group);
+
+            populate_plugins_group (plugins_group);
+
+            Imladris.Plugins.PluginManager.get_default ().plugins_changed.connect (() => {
+                populate_plugins_group (plugins_group);
+            });
+
+            this.add (ext_page);
         }
 
-        private Adw.ActionRow create_distro_cmd_row (string distro_name, string command_str) {
-            var row = new Adw.ActionRow () {
-                title = distro_name,
-                subtitle = command_str
-            };
-            var copy_btn = new Gtk.Button.from_icon_name ("edit-copy-symbolic") {
-                valign = Gtk.Align.CENTER,
-                tooltip_text = "Copy command to clipboard"
-            };
-            copy_btn.clicked.connect (() => {
-                var clipboard = copy_btn.get_clipboard ();
-                clipboard.set_text (command_str);
-            });
-            row.add_suffix (copy_btn);
-            return row;
+        private Gee.ArrayList<Gtk.Widget> plugin_rows = new Gee.ArrayList<Gtk.Widget> ();
+
+        private void populate_plugins_group (Adw.PreferencesGroup group) {
+            foreach (var w in plugin_rows) {
+                group.remove (w);
+            }
+            plugin_rows.clear ();
+
+            var pm = Imladris.Plugins.PluginManager.get_default ();
+            if (pm.plugins.is_empty) {
+                var empty_row = new Adw.ActionRow () {
+                    title = "No plugins installed",
+                    subtitle = "Click 'Import Plugin…' above or place extensions into your plugins folder."
+                };
+                plugin_rows.add (empty_row);
+                group.add (empty_row);
+                return;
+            }
+
+            foreach (var p in pm.plugins.values) {
+                var exp_row = new Adw.ExpanderRow () {
+                    title = p.manifest.name,
+                    subtitle = @"v$(p.manifest.version) by $(p.manifest.author) • $(p.manifest.license)",
+                    icon_name = (p.manifest.icon != null && p.manifest.icon != "") ? p.manifest.icon : "application-x-addon-symbolic"
+                };
+
+                var toggle = new Gtk.Switch () {
+                    valign = Gtk.Align.CENTER,
+                    active = p.is_enabled
+                };
+                toggle.notify["active"].connect (() => {
+                    if (toggle.active) {
+                        pm.enable_plugin (p.manifest.id);
+                    } else {
+                        pm.disable_plugin (p.manifest.id);
+                    }
+                });
+                exp_row.add_suffix (toggle);
+
+                var del_btn = new Gtk.Button.from_icon_name ("user-trash-symbolic") {
+                    valign = Gtk.Align.CENTER,
+                    tooltip_text = @"Uninstall $(p.manifest.name)"
+                };
+                del_btn.add_css_class ("flat");
+                del_btn.clicked.connect (() => {
+                    var confirm_alert = new Adw.AlertDialog (
+                        @"Uninstall $(p.manifest.name)?",
+                        "This will permanently delete the plugin files and remove all associated ribbon buttons."
+                    );
+                    confirm_alert.add_response ("cancel", "Cancel");
+                    confirm_alert.add_response ("delete", "Uninstall");
+                    confirm_alert.set_response_appearance ("delete", Adw.ResponseAppearance.DESTRUCTIVE);
+                    confirm_alert.set_default_response ("cancel");
+                    confirm_alert.choose.begin (this.root as Gtk.Window, null, (o, r) => {
+                        if (confirm_alert.choose.end (r) == "delete") {
+                            pm.delete_plugin (p.manifest.id);
+                        }
+                    });
+                });
+                exp_row.add_suffix (del_btn);
+
+                var desc_row = new Adw.ActionRow () {
+                    title = "Description",
+                    subtitle = p.manifest.description
+                };
+                exp_row.add_row (desc_row);
+
+                var perm_row = new Adw.ActionRow () {
+                    title = "Permissions",
+                    subtitle = p.manifest.format_permissions_summary ()
+                };
+                exp_row.add_row (perm_row);
+
+                plugin_rows.add (exp_row);
+                group.add (exp_row);
+            }
         }
     }
 }

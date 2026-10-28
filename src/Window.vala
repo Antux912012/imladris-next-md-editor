@@ -1,6 +1,6 @@
 namespace Imladris {
 
-    public class Window : Adw.ApplicationWindow {
+    public class Window : Adw.ApplicationWindow, Imladris.Plugins.PluginHostWindow {
 
         private Gtk.Stack ribbon_stack;
         private Gtk.ScrolledWindow ribbon_scroller;
@@ -46,6 +46,11 @@ namespace Imladris {
         private Gtk.Widget? btn_export_rstudio = null;
         private Gtk.Widget? btn_export_jupyter = null;
         private Gtk.Widget? btn_live_preview = null;
+
+        // Plugin Extension Ribbon Tracking
+        private Gtk.Box? extensions_ribbon_box = null;
+        private Gtk.Separator? ext_separator = null;
+        private Gee.HashMap<string, Gtk.Widget> plugin_ribbon_buttons = new Gee.HashMap<string, Gtk.Widget> ();
 
         private UI.PackageIndexCache pkg_index_cache = new UI.PackageIndexCache ();
 
@@ -371,6 +376,29 @@ namespace Imladris {
 
             add_document_tab ("Document1.qmd", "markdown");
 
+            var pm = Imladris.Plugins.PluginManager.get_default ();
+            pm.active_window = this;
+            pm.ribbon_button_added.connect (on_plugin_ribbon_button_added);
+            pm.ribbon_button_removed.connect (on_plugin_ribbon_button_removed);
+            pm.toast_requested.connect ((msg) => {
+                this.show_toast (msg);
+            });
+
+            this.notify["is-active"].connect (() => {
+                if (this.is_active) {
+                    Imladris.Plugins.PluginManager.get_default ().active_window = this;
+                }
+            });
+
+            // Re-sync already loaded plugin buttons
+            foreach (var p in pm.plugins.values) {
+                if (p.is_enabled) {
+                    foreach (var btn_id in p.registered_buttons) {
+                        on_plugin_ribbon_button_added (p.manifest.id, btn_id, btn_id, p.manifest.icon);
+                    }
+                }
+            }
+
             // Check for crash recovery snapshots on launch
             GLib.Idle.add (() => {
                 check_and_prompt_recovery ();
@@ -430,6 +458,83 @@ namespace Imladris {
                 }
             } else {
                 trigger_ai_assistant ();
+            }
+        }
+
+        public string get_active_editor_text () {
+            var doc = get_active_document ();
+            if (doc != null && doc.source_buffer != null) {
+                return doc.source_buffer.text;
+            }
+            return "";
+        }
+
+        public string get_active_selected_text () {
+            var doc = get_active_document ();
+            if (doc != null && doc.source_buffer != null) {
+                Gtk.TextIter start, end;
+                if (doc.source_buffer.get_selection_bounds (out start, out end)) {
+                    return doc.source_buffer.get_text (start, end, false);
+                }
+            }
+            return "";
+        }
+
+        public void insert_in_active_editor (string text) {
+            var doc = get_active_document ();
+            if (doc != null && doc.source_buffer != null) {
+                doc.source_buffer.begin_user_action ();
+                doc.source_buffer.insert_at_cursor (text, -1);
+                doc.source_buffer.end_user_action ();
+            }
+        }
+
+        public void ask_elrond (string prompt) {
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.show_ai_assistant ();
+                if (doc.assistant_panel != null) {
+                    doc.assistant_panel.send_prompt (prompt);
+                }
+            } else {
+                trigger_elrond_assistance ();
+            }
+        }
+
+        public void append_console_log (string text) {
+            var doc = get_active_document ();
+            if (doc != null) {
+                doc.append_console_log (text);
+            }
+        }
+
+        private void on_plugin_ribbon_button_added (string plugin_id, string button_id, string label, string icon) {
+            if (extensions_ribbon_box == null) return;
+            string key = plugin_id + ":" + button_id;
+            if (plugin_ribbon_buttons.has_key (key)) return;
+
+            string icon_name = (icon != null && icon.strip () != "") ? icon : "application-x-addon-symbolic";
+            var btn = RibbonFactory.create_tool_button (icon_name, label, @"$label ($plugin_id)");
+            ((Gtk.Button) btn).clicked.connect (() => {
+                Imladris.Plugins.PluginManager.get_default ().trigger_ribbon_button (plugin_id, button_id);
+            });
+            plugin_ribbon_buttons.set (key, btn);
+            extensions_ribbon_box.append (btn);
+            if (ext_separator != null) ext_separator.visible = true;
+            extensions_ribbon_box.visible = true;
+        }
+
+        private void on_plugin_ribbon_button_removed (string plugin_id, string button_id) {
+            if (extensions_ribbon_box == null) return;
+            string key = plugin_id + ":" + button_id;
+            if (plugin_ribbon_buttons.has_key (key)) {
+                var btn = plugin_ribbon_buttons.get (key);
+                extensions_ribbon_box.remove (btn);
+                plugin_ribbon_buttons.unset (key);
+            }
+            if (plugin_ribbon_buttons.is_empty) {
+                if (ext_separator != null) ext_separator.visible = false;
+                extensions_ribbon_box.visible = false;
             }
         }
 
@@ -1037,6 +1142,17 @@ namespace Imladris {
 
             box.append (RibbonFactory.create_tool_button ("emblem-system-symbolic", "Preferences", "Open Preferences (Ctrl+,)", false, false, true, null, "app.preferences"));
             box.append (RibbonFactory.create_tool_button ("help-browser-symbolic", "About", "About Imladris & Credits", false, false, true, null, "app.about"));
+
+            // Group 5: Extensions (Obsidian-Style JSC Plugins)
+            ext_separator = (Gtk.Separator) RibbonFactory.create_vseparator ();
+            ext_separator.visible = false;
+            box.append (ext_separator);
+
+            extensions_ribbon_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) {
+                valign = Gtk.Align.CENTER,
+                visible = false
+            };
+            box.append (extensions_ribbon_box);
 
             return box;
         }

@@ -1,5 +1,5 @@
 Name:           imladris
-Version:        0.12.2
+Version:        0.13.0
 Release:        1%{?dist}
 Summary:        Scientific notebook studio and Markdown editor
 
@@ -56,6 +56,9 @@ export GSETTINGS_BACKEND=memory
 %{_datadir}/imladris/
 
 %changelog
+* Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.13.0-1
+- Release 0.13.0: Obsidian-style JavaScript Extension & Plugin Engine (javascriptcoregtk-6.0 / JSC.Context) with VM isolation, declarative imladris UI and editor bridge, permission guardrails, one-click .implugin/.zip archive bundle import with Adw.AlertDialog consent modal, and Preferences Extensions manager.
+
 * Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.12.2-1
 - Release 0.12.2: Comprehensive Conventional Software Architecture and Engineering Audit refactoring: dormant code elimination, GObject tab lifecycle memory leak remediation, syntax mapping correction for .qmd files, zero-allocation frontmatter scanning, and command pipeline optimizations.
 

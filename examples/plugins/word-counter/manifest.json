@@ -1,0 +1,10 @@
+{
+  "id": "word-counter",
+  "name": "Word & Text Counter",
+  "version": "1.0.0",
+  "author": "Imladris Team",
+  "description": "Calculates words, characters, lines and reading time statistics in the active document.",
+  "license": "GPL-3.0-or-later",
+  "icon": "format-text-bold-symbolic",
+  "permissions": ["editor"]
+}

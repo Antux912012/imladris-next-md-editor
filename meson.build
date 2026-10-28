@@ -1,5 +1,5 @@
 project('imladris', 'vala', 'c',
-  version: '0.12.2',
+  version: '0.13.0',
   default_options: ['warning_level=1']
 )
 
@@ -12,6 +12,7 @@ deps = [
   dependency('libadwaita-1', version: '>= 1.5'),
   dependency('gtksourceview-5', version: '>= 5.10'),
   dependency('webkitgtk-6.0'),
+  dependency('javascriptcoregtk-6.0'),
   dependency('libsoup-3.0'),
   dependency('json-glib-1.0'),
   dependency('gee-0.8'),
@@ -56,6 +57,7 @@ sources = files(
   'src/services/ExportService.vala',
   'src/services/MediaHelper.vala',
   'src/services/PackageIndexCache.vala',
+  'src/plugins/PluginManager.vala',
   'src/core/layout/DockTypes.vala',
   'src/ui/PersistentPanelRegistry.vala',
   'src/ui/RStudioDockGrid.vala',
@@ -151,5 +153,32 @@ ai_test_exe = executable('test_ai_integration',
 )
 
 test('ai_integration_tests', ai_test_exe, timeout: 30)
+
+plugin_test_sources = files(
+  'tests/test_plugin_engine.vala',
+  'src/plugins/PluginManager.vala',
+  'src/core/frontmatter_parser.vala',
+  'src/core/notebook_serializer.vala',
+  'src/core/project_scaffolder.vala',
+  'src/core/MallornManager.vala',
+  'src/adapters/DocumentAdapter.vala',
+  'src/services/SandboxController.vala',
+  'src/services/PersistentSessionManager.vala',
+  'src/services/ExportService.vala',
+  'src/services/MediaHelper.vala',
+  'src/core/ChunkParser.vala',
+  'src/console/ReplBridge.vala',
+  'src/editor/ChunkExecutionEngine.vala',
+  'src/core/PlatformUtils.vala',
+  'src/core/ToolchainManager.vala',
+)
+
+plugin_test_exe = executable('test_plugin_engine',
+  plugin_test_sources,
+  dependencies: deps,
+  vala_args: ['--target-glib=2.76'],
+)
+
+test('plugin_engine_tests', plugin_test_exe, timeout: 30)
 
 

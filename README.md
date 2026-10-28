@@ -162,6 +162,19 @@ Credentials and model choices are persisted locally in `~/.config/imladris/ai_co
   <img src="data/screenshots/imladris-preferences-theming.png" alt="Appearance Preferences and GNOME Accent Colors" width="700">
 </p>
 
+### Obsidian-Style JavaScript Extension & Plugin Engine (`JSC.Context`)
+Imladris v0.13.0 features an Obsidian-inspired third-party extension system powered by **`javascriptcoregtk-6.0`** (`JSC.Context`), enabling users and researchers to extend the IDE with simple JavaScript add-ons:
+- **Zero-Overhead & Strict VM Isolation**: Each plugin runs in its own isolated `JSC.Context` virtual machine. Variables or unhandled exceptions in one plugin cannot pollute another or crash the main GTK4 application.
+- **Declarative Native HIG UI**: Plugins never instantiate raw widgets or inject unstyled HTML. Instead, they interact declaratively via the sandboxed `imladris` host bridge:
+  - `imladris.ui.showToast(message)`: Triggers native `Adw.Toast` notifications on the active window.
+  - `imladris.ui.addRibbonButton(id, label, icon, callback)`: Dynamically adds native Libadwaita ribbon buttons with Papirus symbolic icons to the **Extensions** ribbon group.
+  - `imladris.editor.getText()` / `getSelectedText()` / `insertAtCursor(text)`: Safely inspects or inserts text into active `GtkSource.Buffer` with undo/redo action tracking.
+  - `imladris.repl.runR(code)` / `runPython(code)`: Dispatches code directly to active persistent R/Python REPL sessions.
+  - `imladris.elrond.ask(prompt)`: Queries the Elrond AI engine directly from plugin logic.
+- **Permission Guardrails & GPLv3 Compliance**: Plugins declare requested capabilities (`"editor"`, `"repl_r"`, `"repl_python"`, `"elrond_ai"`, `"export"`) and mandatory license in `manifest.json`.
+- **One-Click Package Import (`.implugin` / `.zip`)**: Import extensions directly in **Preferences → Extensions**. An `Adw.AlertDialog` prompts for explicit user consent showing author, version, license, and requested permissions before activating.
+- **Built-in Plugins**: Ships out of the box with `Word & Text Counter` and `Timestamp Injector` as both ready-to-use tools and reference templates in `$XDG_DATA_HOME/imladris/plugins/`.
+
 Built-in MCP server (`imladris --mcp-server`), and crash recovery that keeps shadow copies of unsaved work in `~/.cache/imladris/recovery/`. The AI assistant is off the critical path: nothing is sent anywhere unless you configure an endpoint and use it.
 
 ---
