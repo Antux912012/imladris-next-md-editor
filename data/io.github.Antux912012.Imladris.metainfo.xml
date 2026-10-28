@@ -56,6 +56,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.12.0" date="2026-10-28">
+      <description>
+        <p>Release v0.12.0 introduces major enhancements across AI architecture, GNOME 51 integration, and layout flexibility: Reworks the internal llama.cpp engine with soname symlink preservation, Flatpak host fallback, and 60-second health handshakes; modernizes UI spinners to Adw.Spinner with GNOME 51 platform targeting; adds user preferences for inline AI editing popovers and dynamic Left/Right side panel docking; bundles official vector SVG brand logos across all frontier and local AI models; and publishes the full architectural blueprint and bug localization matrix.</p>
+      </description>
+    </release>
     <release version="0.11.0" date="2026-10-28">
       <description>
         <p>Release v0.11.0 delivers enhanced UX controls and comprehensive performance optimizations: Introduces an intuitive 3-stop slider (Low, Medium, High) for Elrond Assistance Level, automatic host distribution detection displaying tailored llama.cpp installation commands across Debian, Fedora, Arch, openSUSE, Solus, and NixOS, and dual backend switching between Vulkan and NVIDIA CUDA. Also includes major codebase deduplication and performance tuning, caching telemetry size calculations, extracting the standalone PackageIndexCache service, and removing dormant legacy code.</p>

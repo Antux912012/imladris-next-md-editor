@@ -1,5 +1,5 @@
 Name:           imladris
-Version:        0.11.0
+Version:        0.12.0
 Release:        1%{?dist}
 Summary:        Scientific notebook studio and Markdown editor
 
@@ -57,6 +57,9 @@ export GSETTINGS_BACKEND=memory
 %{_datadir}/imladris/
 
 %changelog
+* Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.12.0-1
+- Release 0.12.0: Internal llama.cpp engine rework, GNOME 51 Adw.Spinner modernization, inline editing toggle, left/right side panel docking, official vector AI model logos, and comprehensive architecture blueprint.
+
 * Wed Oct 28 2026 Antonio De Gaetano <antux912012@users.noreply.github.com> - 0.11.0-1
 - Release 0.11.0: 3-stop Elrond assistance slider, distro-aware llama.cpp setup, Vulkan/CUDA backend toggle, and comprehensive codebase deduplication and performance optimizations.
 
